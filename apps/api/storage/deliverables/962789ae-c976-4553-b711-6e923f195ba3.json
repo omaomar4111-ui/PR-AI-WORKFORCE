@@ -1,0 +1,32 @@
+{
+  "qualification_score": {
+    "budget": "High (Approved quarterly marketing allocation)",
+    "authority": "Direct decision maker (Chief Communications Officer)",
+    "need": "Critical (Requires faster turnaround times without agency staff bloat)",
+    "timeline": "Immediate (Closing within current quarter)",
+    "total_score": 92
+  },
+  "outreach_cadence": [
+    {
+      "day": 1,
+      "touchpoint_channel": "Direct Executive Email",
+      "subject": "Quick question regarding Apex Financial Group's Q4 narrative velocity",
+      "email_body": "Hi Chief, noticed your recent expansion in GCC media. Most C-level teams we speak with spend 14 days waiting on PR agencies for a single campaign release—our autonomous system delivered Nile Media's complete bilingual rollout in 45 minutes. Open to a 10-minute briefing this Thursday?"
+    },
+    {
+      "day": 4,
+      "touchpoint_channel": "LinkedIn Direct Message",
+      "subject": "Follow up on media operations benchmark",
+      "email_body": "Thought you would find this useful: here is our 1-page benchmark on how AI workforce orchestration cuts enterprise PR retainer waste by 40%."
+    }
+  ],
+  "objection_rebuttals": [
+    {
+      "common_objection": "AI copy lacks the human touch our brand requires.",
+      "empathetic_acknowledgment": "Completely understand—most generic AI tools sound robotic and generic.",
+      "pivot_rebuttal": "Our 38 agents are governed by human directors (Fawzyia for design, Ragaa for strategy), ensuring 100% human-in-the-loop sign-off before anything goes live."
+    }
+  ],
+  "close_strategy": "Anchor the proposal on retainer ROI savings, offer a 14-day proof-of-concept pilot with zero cancellation penalty.",
+  "quality_score": 96
+}

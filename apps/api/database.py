@@ -64,6 +64,10 @@ WORKFLOWS_DB: Dict[str, Dict[str, Any]] = {}
 WORKFLOW_STEPS_DB: Dict[str, Dict[str, Any]] = {}
 EXECUTION_LOGS_DB: List[Dict[str, Any]] = []
 
+# Milestone 6: Persistent Multi-level Memories & Embeddings
+MEMORIES_DB: Dict[str, Dict[str, Any]] = {}
+MEMORY_EMBEDDINGS_DB: Dict[str, List[float]] = {}
+
 # Status to Progress mapping per Milestone 3 requirements
 STATUS_PROGRESS: Dict[str, int] = {
     "pending": 0,
@@ -90,6 +94,8 @@ def reset_db_for_tests():
     WORKFLOWS_DB.clear()
     WORKFLOW_STEPS_DB.clear()
     EXECUTION_LOGS_DB.clear()
+    MEMORIES_DB.clear()
+    MEMORY_EMBEDDINGS_DB.clear()
 
 
 # ── User Helpers ─────────────────────────────────────────────────────────────
@@ -685,6 +691,8 @@ def create_deliverable(data: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, 
         "agent_id": data["agent_id"],
         "agent_name": data["agent_name"],
         "title": data["title"],
+        "version": data.get("version", 1),
+        "parent_deliverable_id": data.get("parent_deliverable_id", None),
         "file_type": data.get("file_type", "json"),
         "file_url": data.get("file_url", f"/storage/deliverables/{deliv_id}.json"),
         "content_json": data.get("content_json", {}),
@@ -716,8 +724,10 @@ def create_deliverable(data: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, 
 def list_deliverables(
     user: Dict[str, Any],
     project_id: Optional[str] = None,
+    client_id: Optional[str] = None,
     agent_id: Optional[str] = None,
-    task_id: Optional[str] = None
+    task_id: Optional[str] = None,
+    deliverable_type: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     results = []
     for d in DELIVERABLES_DB.values():
@@ -728,12 +738,104 @@ def list_deliverables(
                 continue
             if task_id and d.get("task_id") != task_id:
                 continue
+            if deliverable_type and d.get("file_type") != deliverable_type and d.get("type") != deliverable_type:
+                continue
+
             d_copy = dict(d)
-            if d.get("project_id") and d["project_id"] in PROJECTS_DB:
-                d_copy["project_name"] = PROJECTS_DB[d["project_id"]]["name"]
+            # Resolve project & client
+            p_id = d.get("project_id")
+            if p_id and p_id in PROJECTS_DB:
+                proj = PROJECTS_DB[p_id]
+                d_copy["project_name"] = proj["name"]
+                d_copy["client_id"] = proj.get("client_id")
+                if proj.get("client_id") and proj["client_id"] in CLIENTS_DB:
+                    d_copy["client_name"] = CLIENTS_DB[proj["client_id"]]["name"]
+
+            # Filter by client_id if specified
+            if client_id and d_copy.get("client_id") != client_id and d.get("client_id") != client_id:
+                continue
+
+            # Ensure version defaults to 1
+            if "version" not in d_copy:
+                d_copy["version"] = 1
+            if "parent_deliverable_id" not in d_copy:
+                d_copy["parent_deliverable_id"] = None
+
             results.append(d_copy)
     results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return results
+
+
+def create_deliverable_version(
+    parent_id: str,
+    updates: Dict[str, Any],
+    user: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    parent = DELIVERABLES_DB.get(parent_id)
+    if not parent or not can_access_deliverable(parent, user):
+        return None
+
+    # Lineage root is either parent's parent_deliverable_id or parent itself
+    root_id = parent.get("parent_deliverable_id") or parent["id"]
+    
+    # Find all versions in this lineage to compute next version number
+    lineage = [
+        d for d in DELIVERABLES_DB.values()
+        if d["id"] == root_id or d.get("parent_deliverable_id") == root_id
+    ]
+    max_ver = max((d.get("version", 1) for d in lineage), default=1)
+    new_version = max_ver + 1
+
+    new_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    
+    new_deliv = dict(parent)
+    new_deliv.update({
+        "id": new_id,
+        "version": new_version,
+        "parent_deliverable_id": root_id,
+        "title": updates.get("title", f"{parent['title']} (v{new_version})"),
+        "raw_content": updates.get("raw_content", parent.get("raw_content", "")),
+        "content_json": updates.get("content_json", parent.get("content_json", {})),
+        "quality_score": updates.get("quality_score", parent.get("quality_score", 95)),
+        "status": updates.get("status", "delivered"),
+        "file_url": f"/storage/deliverables/{new_id}.json",
+        "created_at": now,
+        "updated_at": now,
+    })
+    DELIVERABLES_DB[new_id] = new_deliv
+    
+    deliv_copy = dict(new_deliv)
+    if deliv_copy.get("project_id") and deliv_copy["project_id"] in PROJECTS_DB:
+        proj = PROJECTS_DB[deliv_copy["project_id"]]
+        deliv_copy["project_name"] = proj["name"]
+        deliv_copy["client_id"] = proj.get("client_id")
+        if proj.get("client_id") and proj["client_id"] in CLIENTS_DB:
+            deliv_copy["client_name"] = CLIENTS_DB[proj["client_id"]]["name"]
+
+    return deliv_copy
+
+
+def get_deliverable_versions(deliverable_id: str, user: Dict[str, Any]) -> List[Dict[str, Any]]:
+    d = DELIVERABLES_DB.get(deliverable_id)
+    if not d or not can_access_deliverable(d, user):
+        return []
+
+    root_id = d.get("parent_deliverable_id") or d["id"]
+    versions = [
+        dict(item) for item in DELIVERABLES_DB.values()
+        if can_access_deliverable(item, user) and (item["id"] == root_id or item.get("parent_deliverable_id") == root_id)
+    ]
+    for v in versions:
+        if v.get("project_id") and v["project_id"] in PROJECTS_DB:
+            proj = PROJECTS_DB[v["project_id"]]
+            v["project_name"] = proj["name"]
+            v["client_id"] = proj.get("client_id")
+            if proj.get("client_id") and proj["client_id"] in CLIENTS_DB:
+                v["client_name"] = CLIENTS_DB[proj["client_id"]]["name"]
+
+    versions.sort(key=lambda x: x.get("version", 1))
+    return versions
 
 
 def get_deliverable(deliverable_id: str, user: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -932,6 +1034,71 @@ def get_execution_logs(workflow_id: str) -> List[Dict[str, Any]]:
     logs = [dict(l) for l in EXECUTION_LOGS_DB if l.get("workflow_id") == workflow_id]
     logs.sort(key=lambda x: x.get("timestamp", ""))
     return logs
+
+
+# ── Milestone 6: Memory Database Operations ──────────────────────────────────
+def create_memory(memory_record: Dict[str, Any], embedding: List[float]) -> Dict[str, Any]:
+    mem_id = memory_record["id"]
+    MEMORIES_DB[mem_id] = dict(memory_record)
+    MEMORY_EMBEDDINGS_DB[mem_id] = list(embedding)
+    return dict(memory_record)
+
+
+def get_memory(memory_id: str) -> Optional[Dict[str, Any]]:
+    m = MEMORIES_DB.get(memory_id)
+    return dict(m) if m else None
+
+
+def delete_memory(memory_id: str, org_id: Optional[str] = None) -> bool:
+    m = MEMORIES_DB.get(memory_id)
+    if not m:
+        return False
+    if org_id and m.get("org_id") != org_id:
+        return False
+    del MEMORIES_DB[memory_id]
+    if memory_id in MEMORY_EMBEDDINGS_DB:
+        del MEMORY_EMBEDDINGS_DB[memory_id]
+    return True
+
+
+def list_memories(
+    org_id: str,
+    type_filter: Optional[str] = None,
+    reference_id_filter: Optional[str] = None,
+    limit: int = 50,
+) -> List[Dict[str, Any]]:
+    results = []
+    for m in MEMORIES_DB.values():
+        if m.get("org_id") != org_id:
+            continue
+        if type_filter and m.get("type") != type_filter:
+            continue
+        if reference_id_filter and m.get("reference_id") != reference_id_filter:
+            continue
+        m_copy = dict(m)
+        results.append(m_copy)
+    results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return results[:limit]
+
+
+def get_memories_for_search(
+    org_id: str,
+    type_filter: Optional[str] = None,
+    reference_id_filter: Optional[str] = None,
+) -> tuple[List[Dict[str, Any]], Dict[str, List[float]]]:
+    memories = []
+    embeddings = {}
+    for mem_id, m in MEMORIES_DB.items():
+        if m.get("org_id") != org_id:
+            continue
+        if type_filter and m.get("type") != type_filter:
+            continue
+        if reference_id_filter and m.get("reference_id") != reference_id_filter:
+            continue
+        memories.append(dict(m))
+        embeddings[mem_id] = MEMORY_EMBEDDINGS_DB.get(mem_id, [])
+    return memories, embeddings
+
 
 
 

@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional, Set
 
 from agents.registry import get_agent
 import database
+from memory.service import search_memory
 
 logger = logging.getLogger("om_samah")
 
@@ -244,6 +245,43 @@ class OmSamahOrchestrator:
         )
         await notify_workflow_update(self.workflow_id, {"step_id": step_id, "status": "running"})
 
+        # Multi-level memory retrieval (Task 4)
+        org_id = self.user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+        wf = database.get_workflow(self.workflow_id, self.user) or {}
+        query_text = f"{step['title']} {wf.get('user_request', '')}"
+        
+        retrieved_memories: List[Dict[str, Any]] = []
+
+        # 1. Client context
+        client_id = None
+        if project_id and project_id in database.PROJECTS_DB:
+            client_id = database.PROJECTS_DB[project_id].get("client_id")
+        if client_id:
+            c_mems = search_memory(org_id=org_id, query=query_text, type="client", reference_id=client_id, limit=3)
+            retrieved_memories.extend(c_mems)
+
+        # 2. Project context
+        if project_id:
+            p_mems = search_memory(org_id=org_id, query=query_text, type="project", reference_id=project_id, limit=3)
+            retrieved_memories.extend(p_mems)
+
+        # 3. Agent past learnings
+        a_mems = search_memory(org_id=org_id, query=query_text, type="agent", reference_id=agent_id, limit=3)
+        retrieved_memories.extend(a_mems)
+
+        # 4. Organization context
+        o_mems = search_memory(org_id=org_id, query=query_text, type="organization", reference_id=org_id, limit=3)
+        retrieved_memories.extend(o_mems)
+
+        if retrieved_memories:
+            database.log_execution(
+                workflow_id=self.workflow_id,
+                step_id=step_id,
+                event_type="memory_injected",
+                message=f"Om Samah injected {len(retrieved_memories)} multi-level memories into {agent.name}",
+                metadata={"memory_count": len(retrieved_memories)}
+            )
+
         max_retries = 2
         attempt = 0
         last_error = None
@@ -256,7 +294,8 @@ class OmSamahOrchestrator:
                     task_input=step["input"],
                     user=self.user,
                     project_id=project_id,
-                    title=f"[Workflow] {step['title']}"
+                    title=f"[Workflow] {step['title']}",
+                    context_memories=retrieved_memories,
                 )
 
                 # Quality check

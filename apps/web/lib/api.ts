@@ -149,10 +149,14 @@ export interface Deliverable {
   organization_id: string;
   project_id?: string | null;
   project_name?: string;
+  client_id?: string | null;
+  client_name?: string | null;
   task_id?: string | null;
   agent_id: string;
   agent_name: string;
   title: string;
+  version?: number;
+  parent_deliverable_id?: string | null;
   file_type: string;
   file_url: string;
   content_json: Record<string, any>;
@@ -161,6 +165,22 @@ export interface Deliverable {
   status: "delivered" | "approved" | "rejected" | "in_review";
   created_at: string;
   updated_at: string;
+}
+
+// ── Milestone 6: Memory Interfaces ──────────────────────────────────────────
+export type MemoryType = "organization" | "client" | "project" | "agent";
+
+export interface Memory {
+  id: string;
+  org_id: string;
+  type: MemoryType;
+  reference_id: string;
+  content: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+  similarity?: number;
+  similarity_percent?: number;
+  cosine_distance?: number;
 }
 
 export interface AgentExecuteResult {
@@ -574,16 +594,20 @@ export async function executeAgent(
   return data;
 }
 
-// ── Milestone 4: Deliverables API ───────────────────────────────────────────
+// ── Milestone 4 & 6: Deliverables API ────────────────────────────────────────
 export async function fetchDeliverables(params?: {
   project_id?: string;
+  client_id?: string;
   agent_id?: string;
   task_id?: string;
+  type?: string;
 }): Promise<Deliverable[]> {
   const url = new URL(`${API_BASE_URL}/api/deliverables`);
   if (params?.project_id) url.searchParams.set("project_id", params.project_id);
+  if (params?.client_id) url.searchParams.set("client_id", params.client_id);
   if (params?.agent_id) url.searchParams.set("agent_id", params.agent_id);
   if (params?.task_id) url.searchParams.set("task_id", params.task_id);
+  if (params?.type) url.searchParams.set("type", params.type);
 
   const res = await fetch(url.toString(), {
     headers: authHeaders(),
@@ -600,6 +624,35 @@ export async function fetchDeliverable(deliverableId: string): Promise<Deliverab
   if (!res.ok) throw new Error("Failed to load deliverable");
   const data = await res.json();
   return data.deliverable;
+}
+
+export async function createDeliverableVersion(
+  deliverableId: string,
+  payload: {
+    title?: string;
+    raw_content?: string;
+    content_json?: Record<string, any>;
+    quality_score?: number;
+    status?: string;
+  }
+): Promise<Deliverable> {
+  const res = await fetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/version`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to create new deliverable version");
+  return data.deliverable;
+}
+
+export async function fetchDeliverableVersions(deliverableId: string): Promise<Deliverable[]> {
+  const res = await fetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/versions`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load deliverable versions");
+  const data = await res.json();
+  return data.versions;
 }
 
 // ── Milestone 5: Workflows API ──────────────────────────────────────────────
@@ -669,5 +722,73 @@ export async function cancelWorkflow(workflowId: string): Promise<void> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || "Failed to cancel workflow");
+  }
+}
+
+// ── Milestone 6: Memory API ─────────────────────────────────────────────────
+export async function fetchMemories(params?: {
+  type?: string;
+  reference_id?: string;
+  limit?: number;
+}): Promise<Memory[]> {
+  const url = new URL(`${API_BASE_URL}/api/memories`);
+  if (params?.type) url.searchParams.set("type", params.type);
+  if (params?.reference_id) url.searchParams.set("reference_id", params.reference_id);
+  if (params?.limit) url.searchParams.set("limit", params.limit.toString());
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load memories");
+  const data = await res.json();
+  return data.memories;
+}
+
+export async function searchMemories(
+  query: string,
+  params?: {
+    type?: string;
+    reference_id?: string;
+    limit?: number;
+  }
+): Promise<Memory[]> {
+  const url = new URL(`${API_BASE_URL}/api/memories/search`);
+  url.searchParams.set("q", query);
+  if (params?.type) url.searchParams.set("type", params.type);
+  if (params?.reference_id) url.searchParams.set("reference_id", params.reference_id);
+  if (params?.limit) url.searchParams.set("limit", params.limit.toString());
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to perform semantic search on memory");
+  const data = await res.json();
+  return data.memories;
+}
+
+export async function createMemory(payload: {
+  type: MemoryType;
+  reference_id: string;
+  content: string;
+  metadata?: Record<string, any>;
+}): Promise<Memory> {
+  const res = await fetch(`${API_BASE_URL}/api/memories`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to save memory");
+  return data.memory;
+}
+
+export async function deleteMemory(memoryId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/memories/${memoryId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Failed to delete memory");
   }
 }

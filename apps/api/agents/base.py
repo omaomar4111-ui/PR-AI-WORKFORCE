@@ -77,11 +77,12 @@ class BaseAgent:
         project_id: Optional[str] = None,
         task_id: Optional[str] = None,
         title: Optional[str] = None,
+        context_memories: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Full Agent Execution Lifecycle:
         1. Validate input against input_schema
-        2. Build prompt with system_prompt + task_input
+        2. Build prompt with system_prompt + retrieved memory + task_input
         3. Call LLM (Gemini / OpenAI / domain adapter)
         4. Validate output against output_schema
         5. Save deliverable to file storage & database
@@ -90,10 +91,23 @@ class BaseAgent:
         # Step 1: Input Validation
         self.validate_input(task_input)
 
-        # Step 2 & 3: Prompt Construction and LLM Execution
+        # Step 2: Inject retrieved memories if provided
+        active_system_prompt = self.system_prompt
+        memories = context_memories or task_input.get("retrieved_context")
+        if memories:
+            memory_block = "\n\n### RETRIEVED ORGANIZATIONAL & CLIENT MEMORY (GROUND TRUTH):\n"
+            for m in memories:
+                m_type = m.get("type", "context").upper()
+                m_content = m.get("content", "")
+                memory_block += f"- [{m_type}] {m_content}\n"
+            active_system_prompt += memory_block
+
+        self.last_injected_prompt = active_system_prompt
+
+        # Step 3: Prompt Construction and LLM Execution
         structured_output = await call_llm(
             agent_id=self.id,
-            system_prompt=self.system_prompt,
+            system_prompt=active_system_prompt,
             task_input=task_input,
             output_schema=self.output_schema,
             max_tokens=self.max_tokens,

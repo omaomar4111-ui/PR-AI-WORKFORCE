@@ -364,3 +364,40 @@ CREATE INDEX IF NOT EXISTS idx_execution_logs_timestamp ON public.execution_logs
 ALTER TABLE public.workflows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workflow_steps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.execution_logs ENABLE ROW LEVEL SECURITY;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- MILESTONE 6: MEMORY & DELIVERABLES V2
+-- ─────────────────────────────────────────────────────────────────────────────
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- 15. Memories Table
+CREATE TABLE IF NOT EXISTS public.memories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    type VARCHAR(32) NOT NULL CHECK (type IN ('organization', 'client', 'project', 'agent')),
+    reference_id VARCHAR(64) NOT NULL,
+    content TEXT NOT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 16. Memory Embeddings Table
+CREATE TABLE IF NOT EXISTS public.memory_embeddings (
+    memory_id UUID PRIMARY KEY REFERENCES public.memories(id) ON DELETE CASCADE,
+    embedding vector(1536) NOT NULL
+);
+
+-- Extend deliverables for versioning
+ALTER TABLE public.deliverables 
+    ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS parent_deliverable_id UUID REFERENCES public.deliverables(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_memories_org_type_ref ON public.memories(org_id, type, reference_id);
+CREATE INDEX IF NOT EXISTS idx_memories_created_at ON public.memories(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_deliverables_parent ON public.deliverables(parent_deliverable_id);
+CREATE INDEX IF NOT EXISTS idx_deliverables_version ON public.deliverables(version);
+
+ALTER TABLE public.memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.memory_embeddings ENABLE ROW LEVEL SECURITY;
+

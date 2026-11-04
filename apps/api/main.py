@@ -31,6 +31,8 @@ from database import (
     list_deliverables,
     get_deliverable,
     update_deliverable,
+    create_deliverable_version,
+    get_deliverable_versions,
     create_workflow,
     get_workflow,
     list_workflows,
@@ -40,6 +42,13 @@ from database import (
 )
 from auth import create_jwt_token, get_current_user
 from agents.registry import get_agent, list_agents, get_all_agents_dict
+from memory.service import (
+    save_memory,
+    search_memory,
+    delete_memory as delete_mem,
+    list_memories as list_mems,
+    get_memory as get_mem,
+)
 from orchestrator import (
     start_workflow_in_background,
     approve_workflow_step,
@@ -214,6 +223,21 @@ class StepApprovalRequest(BaseModel):
     step_id: str
     approved: bool = True
     notes: Optional[str] = None
+
+
+class MemoryCreateRequest(BaseModel):
+    type: str = Field(..., pattern="^(organization|client|project|agent)$")
+    reference_id: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1)
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class DeliverableVersionRequest(BaseModel):
+    title: Optional[str] = None
+    raw_content: Optional[str] = None
+    content_json: Optional[Dict[str, Any]] = None
+    quality_score: Optional[int] = 95
+    status: Optional[str] = "delivered"
 
 
 # ── Health Endpoint ──────────────────────────────────────────────────────────
@@ -544,18 +568,51 @@ async def execute_agent_task(
 @app.get("/api/deliverables")
 def list_deliverables_endpoint(
     project_id: Optional[str] = Query(None),
+    client_id: Optional[str] = Query(None),
     agent_id: Optional[str] = Query(None),
     task_id: Optional[str] = Query(None),
+    type: Optional[str] = Query(None),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Lists deliverables accessible to the current user."""
+    """Lists deliverables accessible to the current user with multi-faceted filtering."""
     deliverables = list_deliverables(
         user=current_user,
         project_id=project_id,
+        client_id=client_id,
         agent_id=agent_id,
-        task_id=task_id
+        task_id=task_id,
+        deliverable_type=type,
     )
     return {"deliverables": deliverables, "count": len(deliverables)}
+
+
+@app.post("/api/deliverables/{deliverable_id}/version", status_code=201)
+def create_deliverable_version_endpoint(
+    deliverable_id: str,
+    payload: DeliverableVersionRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Creates a new version of an existing deliverable, linked to the parent lineage."""
+    new_version = create_deliverable_version(
+        parent_id=deliverable_id,
+        updates=payload.model_dump(exclude_unset=True),
+        user=current_user
+    )
+    if not new_version:
+        raise HTTPException(status_code=404, detail="Deliverable not found or access denied")
+    return {"deliverable": new_version}
+
+
+@app.get("/api/deliverables/{deliverable_id}/versions")
+def get_deliverable_versions_endpoint(
+    deliverable_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Retrieves all versions in a deliverable's lineage."""
+    versions = get_deliverable_versions(deliverable_id, user=current_user)
+    if not versions:
+        raise HTTPException(status_code=404, detail="Deliverable not found or access denied")
+    return {"versions": versions, "count": len(versions)}
 
 
 @app.get("/api/deliverables/{deliverable_id}")
@@ -694,6 +751,81 @@ async def cancel_workflow_endpoint(
         "workflow_id": workflow_id,
     })
     return {"success": success, "message": "Workflow cancelled"}
+
+
+# ── Milestone 6: Multi-level Memory Endpoints ─────────────────────────────────
+@app.post("/api/memories", status_code=201)
+def create_memory_endpoint(
+    payload: MemoryCreateRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Creates and embeds a new memory item for org, client, project, or agent."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    try:
+        mem = save_memory(
+            org_id=org_id,
+            type=payload.type,
+            reference_id=payload.reference_id,
+            content=payload.content,
+            metadata=payload.metadata,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"memory": mem}
+
+
+@app.get("/api/memories/search")
+def search_memories_endpoint(
+    q: str = Query(..., min_length=1, description="Semantic search query"),
+    type: Optional[str] = Query(None, description="Memory type filter: organization, client, project, agent"),
+    reference_id: Optional[str] = Query(None, description="Reference ID filter"),
+    limit: int = Query(5, ge=1, le=50),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Performs real vector cosine similarity semantic search (<=>) on memories."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    results = search_memory(
+        org_id=org_id,
+        query=q,
+        type=type,
+        reference_id=reference_id,
+        limit=limit,
+    )
+    return {"memories": results, "count": len(results), "query": q}
+
+
+@app.get("/api/memories")
+def list_memories_endpoint(
+    type: Optional[str] = Query(None),
+    reference_id: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Lists organization memories without vector search."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    mems = list_mems(
+        org_id=org_id,
+        type=type,
+        reference_id=reference_id,
+        limit=limit,
+    )
+    return {"memories": mems, "count": len(mems)}
+
+
+@app.delete("/api/memories/{memory_id}")
+def delete_memory_endpoint(
+    memory_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Deletes a memory item. Enforces owner-only permission."""
+    if current_user.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Only organization owners can delete memories")
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    success = delete_mem(memory_id, org_id=org_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Memory item not found or access denied")
+    return {"success": True, "message": "Memory deleted successfully"}
+
 
 
 

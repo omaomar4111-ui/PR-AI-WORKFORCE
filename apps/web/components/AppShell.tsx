@@ -51,7 +51,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "workflows", labelKey: "nav.workflows", href: "/workflows", icon: Workflow, enabled: true },
   { id: "projects", labelKey: "nav.projects", href: "/projects", icon: FolderGit2, enabled: true },
   { id: "clients", labelKey: "nav.clients", href: "/clients", icon: Users, enabled: true },
-  { id: "memory", labelKey: "nav.memory", href: "/memory", icon: Brain, enabled: false },
+  { id: "memory", labelKey: "nav.memory", href: "/memory", icon: Brain, enabled: true },
   { id: "deliverables", labelKey: "nav.deliverables", href: "/deliverables", icon: Sparkles, enabled: true },
   { id: "analytics", labelKey: "nav.analytics", href: "/analytics", icon: BarChart3, enabled: false },
   { id: "integrations", labelKey: "nav.integrations", href: "/integrations", icon: Cable, enabled: false },
