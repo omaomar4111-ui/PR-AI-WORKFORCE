@@ -1,0 +1,13 @@
+{
+  "name": "pr-ai-workforce",
+  "version": "0.2.0",
+  "private": true,
+  "description": "PR AI WORKFORCE - Operating System",
+  "scripts": {
+    "test:backend": "cd apps/api && python -m pytest -v",
+    "test:e2e": "node tests/e2e_milestone_2.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}

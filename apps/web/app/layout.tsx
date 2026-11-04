@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "PR AI WORKFORCE — Operating System",
@@ -22,7 +23,9 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-[#0d0e12] text-white antialiased min-h-screen">
-        {children}
+        <I18nProvider>
+          {children}
+        </I18nProvider>
       </body>
     </html>
   );

@@ -1,329 +1,268 @@
 "use client";
-
+/**
+ * PR AI WORKFORCE — Central Command Center Dashboard
+ */
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  clearStoredSession,
-  fetchHealth,
-  fetchMe,
-  getStoredToken,
-  User,
-} from "@/lib/api";
+  Users,
+  FolderGit2,
+  DollarSign,
+  PlusCircle,
+  ArrowUpRight,
+  Sparkles,
+  Building2,
+  Briefcase,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 
-interface HealthData {
-  status: string;
-  version: string;
-  database: string;
-  redis: string;
-}
+import AppShell from "@/components/AppShell";
+import { useI18n } from "@/lib/i18n";
+import { DashboardStats, fetchDashboardStats } from "@/lib/api";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [health, setHealth] = useState<HealthData | null>(null);
+  const { t, isAr } = useI18n();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [lang, setLang] = useState<"ar" | "en">("ar");
+  const [error, setError] = useState<string | null>(null);
 
-  const isAr = lang === "ar";
-
-  useEffect(() => {
-    const token = getStoredToken();
-    if (!token) {
-      router.replace("/login");
-      return;
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchDashboardStats();
+      setStats(data);
+    } catch (err: any) {
+      console.error("Failed to load dashboard stats:", err);
+      setError(err.message || "Failed to load live data");
+    } finally {
+      setLoading(false);
     }
-
-    async function loadData() {
-      try {
-        const [meData, healthData] = await Promise.all([
-          fetchMe(),
-          fetchHealth().catch(() => ({
-            status: "degraded",
-            version: "1.0.0",
-            database: "unreachable",
-            redis: "unreachable",
-          })),
-        ]);
-        setUser(meData.user);
-        setHealth(healthData);
-      } catch (err) {
-        console.error("Authentication check failed:", err);
-        clearStoredSession();
-        router.replace("/login");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, [router]);
-
-  const handleLogout = () => {
-    clearStoredSession();
-    router.replace("/login");
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0d0e12] text-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#8b5cf6] border-t-transparent" />
-          <p className="text-sm font-medium text-gray-400">
-            {isAr ? "جارٍ تحميل لوحة التحكم..." : "Loading dashboard..."}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    loadStats();
+  }, []);
 
-  const isOwner = user?.role === "owner";
+  const totalClients = stats?.total_clients ?? 0;
+  const activeProjects = stats?.active_projects ?? 0;
+  const totalRetainer = stats?.total_retainer ?? 0;
+  const isEmpty = totalClients === 0 && activeProjects === 0;
 
   return (
-    <div
-      dir={isAr ? "rtl" : "ltr"}
-      className="min-h-screen bg-[#0d0e12] text-white selection:bg-[#8b5cf6] selection:text-white"
-    >
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 border-b border-gray-800/80 bg-[#12141c]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-[#8b5cf6] to-indigo-500 font-black text-white shadow-lg shadow-[#8b5cf6]/20">
-              PR
-            </div>
-            <div>
-              <h1 className="text-base font-bold tracking-tight text-white sm:text-lg">
-                PR AI WORKFORCE
-              </h1>
-              <p className="text-xs text-gray-400">
-                {isAr
-                  ? "نظام إدارة القوى العاملة الذكية"
-                  : "Workforce OS • PR Agency"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Lang switch */}
-            <button
-              onClick={() => setLang(isAr ? "en" : "ar")}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-800 bg-[#171923] px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:border-[#8b5cf6] hover:text-white"
-            >
-              <span>🌐</span>
-              <span>{isAr ? "English" : "العربية"}</span>
-            </button>
-
-            {/* User badge */}
-            <div className="hidden sm:flex items-center gap-2 rounded-xl border border-gray-800 bg-[#171923] px-3 py-1.5 text-xs">
-              <span className="font-semibold text-gray-200">
-                {user?.full_name || user?.email}
-              </span>
-              <span
-                className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                  isOwner
-                    ? "bg-[#8b5cf6]/20 text-[#a78bfa] border border-[#8b5cf6]/40"
-                    : "bg-blue-500/20 text-blue-400 border border-blue-500/40"
-                }`}
-              >
-                {isOwner
-                  ? isAr
-                    ? "👑 مالك (Owner)"
-                    : "👑 Owner"
-                  : isAr
-                  ? "👥 عضو (Member)"
-                  : "👥 Member"}
-              </span>
-            </div>
-
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
-            >
-              {isAr ? "تسجيل خروج" : "Logout"}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        {/* Welcome Hero Card */}
-        <div className="relative mb-8 overflow-hidden rounded-2xl border border-[#8b5cf6]/30 bg-gradient-to-br from-[#1b152e] via-[#12141c] to-[#0d0e12] p-6 sm:p-8">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#8b5cf6]/20 blur-3xl" />
-          <div className="relative z-10 max-w-2xl">
+    <AppShell>
+      {/* Header Banner */}
+      <div className="relative mb-8 overflow-hidden rounded-2xl border border-[#8b5cf6]/30 bg-gradient-to-br from-[#1c1430] via-[#12141c] to-[#0d0e12] p-6 sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#8b5cf6]/20 blur-3xl" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="max-w-2xl">
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#8b5cf6]/40 bg-[#8b5cf6]/10 px-3 py-1 text-xs font-semibold text-[#c4b5fd]">
               <span className="h-2 w-2 animate-pulse rounded-full bg-[#8b5cf6]" />
-              {isAr
-                ? "المرحلة الأولى: التأسيس والبنية التحتية بنجاح"
-                : "Milestone 1: Project Foundation Active"}
+              <span>{t("nav.command_center")} • Real-time Data</span>
             </div>
             <h2 className="text-2xl font-black text-white sm:text-3xl">
-              {isAr
-                ? `مرحباً بك، ${user?.full_name || "الفريق"}!`
-                : `Welcome, ${user?.full_name || "Team"}!`}
+              {t("dash.welcome")}
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-gray-300">
-              {isAr
-                ? "تم تجهيز بيئة التشغيل المركزية لمنصة PR AI WORKFORCE بنجاح. النظام مصمم لإدارة 38 موظف ذكاء اصطناعي متخصص بالإضافة لمنسق الإدارة التنفيذية (أم سماح)."
-                : "The central operating environment for PR AI WORKFORCE has been successfully initialized. Designed to coordinate 38 specialized AI employees and 1 CEO Orchestrator (Om Samah)."}
+            <p className="mt-2 text-xs sm:text-sm leading-relaxed text-gray-300">
+              {t("dash.welcome_sub")}
             </p>
           </div>
+
+          <div className="flex items-center gap-2 self-start md:self-center">
+            <button
+              onClick={loadStats}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-800 bg-[#171923] px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">تحديث / Refresh</span>
+            </button>
+            <Link
+              href="/clients"
+              className="flex items-center gap-1.5 rounded-lg bg-[#8b5cf6] px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-[#8b5cf6]/20 hover:bg-[#7c3aed]"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>{t("dash.add_client")}</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Real Data Stats Cards */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        {/* Total Clients */}
+        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-400">{t("dash.total_clients")}</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#8b5cf6]/10 text-[#a78bfa]">
+              <Users className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-white">
+              {loading ? "..." : totalClients}
+            </span>
+            <span className="text-xs text-gray-400">
+              {isAr ? "عميل مسجل" : "clients recorded"}
+            </span>
+          </div>
         </div>
 
-        {/* Status & Architecture Grid */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* System Health */}
+        {/* Active Projects */}
+        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-400">{t("dash.active_projects")}</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+              <FolderGit2 className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-white">
+              {loading ? "..." : activeProjects}
+            </span>
+            <span className="text-xs text-gray-400">
+              {isAr ? `من إجمالي ${stats?.total_projects ?? 0}` : `of ${stats?.total_projects ?? 0} total`}
+            </span>
+          </div>
+        </div>
+
+        {/* Total Retainer Revenue */}
+        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-400">{t("dash.total_retainer")}</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+              <DollarSign className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-white">
+              {loading ? "..." : `$${totalRetainer.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
+            </span>
+            <span className="text-xs text-emerald-400 font-semibold">
+              {isAr ? "/ شهرياً" : "/ month"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* If Database is Empty -> Show Clean CTA */}
+      {!loading && isEmpty && (
+        <div className="mt-8 rounded-2xl border border-dashed border-[#8b5cf6]/40 bg-[#151322] p-8 text-center sm:p-12">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#8b5cf6]/10 text-[#a78bfa] mb-4">
+            <Building2 className="h-7 w-7" />
+          </div>
+          <h3 className="text-lg font-bold text-white sm:text-xl">
+            {t("dash.empty_cta_title")}
+          </h3>
+          <p className="mx-auto mt-2 max-w-md text-xs sm:text-sm text-gray-400">
+            {t("dash.empty_cta_desc")}
+          </p>
+          <div className="mt-6">
+            <Link
+              href="/clients"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#8b5cf6] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#8b5cf6]/25 transition hover:bg-[#7c3aed]"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>{t("dash.add_client")}</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Clients & Projects Tables (When not empty) */}
+      {!loading && !isEmpty && (
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Recent Clients */}
           <div className="rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
             <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-              <h3 className="text-sm font-bold text-gray-200">
-                {isAr ? "حالة النظام (System Health)" : "System Health"}
-              </h3>
-              <span className="flex h-2.5 w-2.5 items-center justify-center">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-              </span>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-[#8b5cf6]" />
+                <h3 className="text-sm font-bold text-white">{t("dash.recent_clients")}</h3>
+              </div>
+              <Link href="/clients" className="text-xs text-[#a78bfa] hover:underline">
+                {t("dash.view_all")}
+              </Link>
             </div>
-            <div className="mt-4 space-y-3 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{isAr ? "الواجهة البرمجية (FastAPI):" : "FastAPI API:"}</span>
-                <span className="font-semibold text-emerald-400">
-                  {health?.status === "ok" ? "200 OK (Healthy)" : "Connected"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{isAr ? "إصدار المنصة:" : "Platform Version:"}</span>
-                <span className="font-mono text-gray-300">{health?.version || "1.0.0"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{isAr ? "قاعدة البيانات:" : "Database Engine:"}</span>
-                <span className="font-mono text-indigo-400">{health?.database || "PostgreSQL 16"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{isAr ? "ذاكرة التخزين المؤقت:" : "Redis Cache:"}</span>
-                <span className="font-mono text-indigo-400">{health?.redis || "Redis 7"}</span>
-              </div>
+
+            <div className="mt-4 divide-y divide-gray-800/60">
+              {stats?.recent_clients?.length ? (
+                stats.recent_clients.map((client) => (
+                  <Link
+                    key={client.id}
+                    href={`/clients/${client.id}`}
+                    className="flex items-center justify-between py-3 px-2 rounded-lg transition hover:bg-[#181a26]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-3.5 w-3.5 rounded-full"
+                        style={{ backgroundColor: client.brand_color || "#8b5cf6" }}
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-white">{client.name}</p>
+                        <p className="text-[10px] text-gray-400">{client.industry}</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <span>{client.contact_name || "—"}</span>
+                      <ArrowUpRight className="h-3 w-3 text-gray-500" />
+                    </span>
+                  </Link>
+                ))
+              ) : (
+                <p className="py-6 text-center text-xs text-gray-500">{t("dash.no_recent")}</p>
+              )}
             </div>
           </div>
 
-          {/* Active Workspace / Organization */}
+          {/* Recent Projects */}
           <div className="rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
             <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-              <h3 className="text-sm font-bold text-gray-200">
-                {isAr ? "المؤسسة والمستخدم" : "Organization & Identity"}
-              </h3>
-              <span className="text-base">🏢</span>
+              <div className="flex items-center gap-2">
+                <FolderGit2 className="h-4 w-4 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white">{t("dash.recent_projects")}</h3>
+              </div>
+              <Link href="/projects" className="text-xs text-emerald-400 hover:underline">
+                {t("dash.view_all")}
+              </Link>
             </div>
-            <div className="mt-4 space-y-3 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{isAr ? "اسم المؤسسة:" : "Org Name:"}</span>
-                <span className="font-semibold text-white">
-                  {user?.organization_name || "PR Agency Internal"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{isAr ? "معرف المؤسسة:" : "Org ID:"}</span>
-                <span className="font-mono text-gray-400">
-                  {user?.organization_id?.slice(0, 8)}...
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{isAr ? "البريد الإلكتروني:" : "Email:"}</span>
-                <span className="font-mono text-gray-300">{user?.email}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">{isAr ? "مستوى الصلاحية:" : "Access Role:"}</span>
-                <span className="font-semibold text-[#a78bfa] uppercase">
-                  {user?.role}
-                </span>
-              </div>
-            </div>
-          </div>
 
-          {/* Architecture Roadmap Milestone 1 Complete */}
-          <div className="rounded-xl border border-[#8b5cf6]/30 bg-[#151322] p-5 shadow-sm">
-            <div className="flex items-center justify-between pb-3 border-b border-[#8b5cf6]/20">
-              <h3 className="text-sm font-bold text-purple-300">
-                {isAr ? "المسار التقني (Roadmap)" : "Execution Roadmap"}
-              </h3>
-              <span className="rounded bg-[#8b5cf6]/20 px-1.5 py-0.5 text-[10px] font-bold text-[#c4b5fd]">
-                1 / 10
-              </span>
-            </div>
-            <div className="mt-4 space-y-2.5 text-xs">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <span>✓</span>
-                <span className="font-medium">
-                  {isAr ? "المرحلة 1: التأسيس والهيكلة" : "M1: Project Foundation"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <span className="text-yellow-400">⏳</span>
-                <span>
-                  {isAr
-                    ? "المرحلة 2: سجل وبنية الوكلاء (38 موظف + أم سماح)"
-                    : "M2: Agent Registry (38 Agents + CEO)"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <span>○</span>
-                <span>
-                  {isAr ? "المرحلة 3: غرفة عمليات الوكلاء" : "M3: Orchestrator Ops Room"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <span>○</span>
-                <span>
-                  {isAr ? "المرحلة 4: محرك سير العمل" : "M4: Workflow Engine"}
-                </span>
-              </div>
+            <div className="mt-4 divide-y divide-gray-800/60">
+              {stats?.recent_projects?.length ? (
+                stats.recent_projects.map((project) => (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className="flex items-center justify-between py-3 px-2 rounded-lg transition hover:bg-[#181a26]"
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-white">{project.name}</p>
+                      <p className="text-[10px] text-gray-400">{project.client_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-emerald-400">
+                        ${project.retainer_amount.toLocaleString()}
+                      </span>
+                      <span
+                        className={`block text-[9px] font-semibold uppercase ${
+                          project.status === "active"
+                            ? "text-emerald-400"
+                            : project.status === "paused"
+                            ? "text-amber-400"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        {project.status}
+                      </span>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <p className="py-6 text-center text-xs text-gray-500">{t("dash.no_recent")}</p>
+              )}
             </div>
           </div>
         </div>
-
-        {/* AI Workforce Teaser Cards */}
-        <div className="mt-8 rounded-xl border border-gray-800 bg-[#13151f] p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
-            <div>
-              <h3 className="text-base font-bold text-white">
-                {isAr ? "قوة العمل الذكية (AI Workforce)" : "AI Workforce Overview"}
-              </h3>
-              <p className="text-xs text-gray-400 mt-1">
-                {isAr
-                  ? "38 وكيلاً ذكياً في 7 أقسام متخصصة بقيادة منسق الإدارة التنفيذية أم سماح"
-                  : "38 specialized AI agents across 7 departments orchestrated by CEO Om Samah"}
-              </p>
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-300">
-              <span>🤖</span>
-              <span>{isAr ? "جاهز للتفعيل في المرحلة 2" : "Ready for Milestone 2"}</span>
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7 text-center">
-            {[
-              { en: "CEO Orchestrator", ar: "القيادة التنفيذية", count: "1 Agent", icon: "👑" },
-              { en: "Marketing & Growth", ar: "التسويق والنمو", count: "7 Agents", icon: "📈" },
-              { en: "Sales & CRM", ar: "المبيعات والعملاء", count: "5 Agents", icon: "🤝" },
-              { en: "Content & Copy", ar: "صناعة المحتوى", count: "8 Agents", icon: "✍️" },
-              { en: "Design & Media", ar: "التصميم والإنتاج", count: "6 Agents", icon: "🎨" },
-              { en: "Tech & Ops", ar: "التقنية والعمليات", count: "6 Agents", icon: "⚙️" },
-              { en: "Finance & Legal", ar: "المالية والقانون", count: "6 Agents", icon: "⚖️" },
-            ].map((dept, idx) => (
-              <div
-                key={idx}
-                className="flex flex-col items-center justify-center rounded-lg border border-gray-800/80 bg-[#171923] p-3 transition hover:border-[#8b5cf6]/50"
-              >
-                <div className="text-2xl mb-1">{dept.icon}</div>
-                <span className="text-xs font-bold text-gray-200">
-                  {isAr ? dept.ar : dept.en}
-                </span>
-                <span className="mt-1 text-[10px] text-[#a78bfa] font-mono">
-                  {dept.count}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
-    </div>
+      )}
+    </AppShell>
   );
 }
