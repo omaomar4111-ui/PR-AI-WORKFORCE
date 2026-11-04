@@ -173,6 +173,68 @@ export interface AgentExecuteResult {
   };
 }
 
+// ── Milestone 5: Workflows & Om Samah Interfaces ────────────────────────────
+export type WorkflowStatus =
+  | "planning"
+  | "running"
+  | "waiting_approval"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type WorkflowStepStatus =
+  | "pending"
+  | "running"
+  | "waiting_approval"
+  | "completed"
+  | "failed"
+  | "skipped";
+
+export interface WorkflowStep {
+  id: string;
+  workflow_id: string;
+  step_order: number;
+  task_id?: string | null;
+  assigned_agent_id: string;
+  assigned_agent_name: string;
+  title: string;
+  status: WorkflowStepStatus;
+  depends_on: string[];
+  input: Record<string, any>;
+  output: Record<string, any>;
+  quality_score: number;
+  requires_approval: boolean;
+  approval_status: "none" | "pending" | "approved" | "rejected";
+  approval_notes?: string | null;
+  retry_count: number;
+  deliverable_id?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+}
+
+export interface Workflow {
+  id: string;
+  org_id: string;
+  project_id?: string | null;
+  project_name?: string;
+  user_request: string;
+  status: WorkflowStatus;
+  compiled_deliverable_id?: string | null;
+  created_at: string;
+  completed_at?: string | null;
+  steps: WorkflowStep[];
+}
+
+export interface ExecutionLog {
+  id: string;
+  workflow_id: string;
+  step_id?: string | null;
+  event_type: string;
+  message: string;
+  metadata: Record<string, any>;
+  timestamp: string;
+}
+
 export interface DashboardStats {
   total_clients: number;
   active_projects: number;
@@ -538,4 +600,74 @@ export async function fetchDeliverable(deliverableId: string): Promise<Deliverab
   if (!res.ok) throw new Error("Failed to load deliverable");
   const data = await res.json();
   return data.deliverable;
+}
+
+// ── Milestone 5: Workflows API ──────────────────────────────────────────────
+export async function fetchWorkflows(params?: { project_id?: string }): Promise<Workflow[]> {
+  const url = new URL(`${API_BASE_URL}/api/workflows`);
+  if (params?.project_id) url.searchParams.set("project_id", params.project_id);
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load workflows");
+  const data = await res.json();
+  return data.workflows;
+}
+
+export async function fetchWorkflow(workflowId: string): Promise<Workflow> {
+  const res = await fetch(`${API_BASE_URL}/api/workflows/${workflowId}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load workflow");
+  const data = await res.json();
+  return data.workflow;
+}
+
+export async function createWorkflow(payload: {
+  user_request: string;
+  project_id?: string;
+}): Promise<Workflow> {
+  const res = await fetch(`${API_BASE_URL}/api/workflows`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to initiate workflow");
+  return data.workflow;
+}
+
+export async function fetchWorkflowLogs(workflowId: string): Promise<ExecutionLog[]> {
+  const res = await fetch(`${API_BASE_URL}/api/workflows/${workflowId}/logs`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load workflow logs");
+  const data = await res.json();
+  return data.logs;
+}
+
+export async function approveWorkflowStep(
+  workflowId: string,
+  payload: { step_id: string; approved: boolean; notes?: string }
+): Promise<WorkflowStep> {
+  const res = await fetch(`${API_BASE_URL}/api/workflows/${workflowId}/approve`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to approve workflow step");
+  return data.step;
+}
+
+export async function cancelWorkflow(workflowId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/workflows/${workflowId}/cancel`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Failed to cancel workflow");
+  }
 }

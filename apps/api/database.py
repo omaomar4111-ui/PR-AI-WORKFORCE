@@ -59,6 +59,11 @@ TASK_APPROVALS_DB: List[Dict[str, Any]] = []
 # Key: deliverable_id -> deliverable dict (Milestone 4)
 DELIVERABLES_DB: Dict[str, Dict[str, Any]] = {}
 
+# Milestone 5: Workflows, steps, execution logs
+WORKFLOWS_DB: Dict[str, Dict[str, Any]] = {}
+WORKFLOW_STEPS_DB: Dict[str, Dict[str, Any]] = {}
+EXECUTION_LOGS_DB: List[Dict[str, Any]] = []
+
 # Status to Progress mapping per Milestone 3 requirements
 STATUS_PROGRESS: Dict[str, int] = {
     "pending": 0,
@@ -82,6 +87,9 @@ def reset_db_for_tests():
     TASK_EVENTS_DB.clear()
     TASK_APPROVALS_DB.clear()
     DELIVERABLES_DB.clear()
+    WORKFLOWS_DB.clear()
+    WORKFLOW_STEPS_DB.clear()
+    EXECUTION_LOGS_DB.clear()
 
 
 # ── User Helpers ─────────────────────────────────────────────────────────────
@@ -757,4 +765,173 @@ def update_deliverable(
     if d.get("project_id") and d["project_id"] in PROJECTS_DB:
         d_copy["project_name"] = PROJECTS_DB[d["project_id"]]["name"]
     return d_copy
+
+
+# ── Milestone 5: Workflows & Execution Logs CRUD ─────────────────────────────
+def can_access_workflow(wf: Dict[str, Any], user: Dict[str, Any]) -> bool:
+    if wf.get("org_id") != user.get("organization_id"):
+        return False
+    if user.get("role") == "owner":
+        return True
+    proj_id = wf.get("project_id")
+    if proj_id and proj_id in PROJECTS_DB:
+        return can_access_project(PROJECTS_DB[proj_id], user)
+    return True
+
+
+def create_workflow(data: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
+    wf_id = data.get("id") or str(uuid.uuid4())
+    org_id = user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    
+    wf = {
+        "id": wf_id,
+        "org_id": org_id,
+        "project_id": data.get("project_id"),
+        "user_request": data["user_request"],
+        "status": data.get("status", "planning"),
+        "compiled_deliverable_id": None,
+        "created_at": now,
+        "completed_at": None,
+    }
+    WORKFLOWS_DB[wf_id] = wf
+    
+    # Log workflow initialization
+    log_execution(
+        workflow_id=wf_id,
+        step_id=None,
+        event_type="workflow_created",
+        message="Workflow initialized by Om Samah CEO Orchestrator",
+        metadata={"user_request": wf["user_request"]}
+    )
+    
+    wf_copy = dict(wf)
+    if wf.get("project_id") and wf["project_id"] in PROJECTS_DB:
+        wf_copy["project_name"] = PROJECTS_DB[wf["project_id"]]["name"]
+    wf_copy["steps"] = []
+    return wf_copy
+
+
+def get_workflow(workflow_id: str, user: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    wf = WORKFLOWS_DB.get(workflow_id)
+    if not wf:
+        return None
+    if user and not can_access_workflow(wf, user):
+        return None
+        
+    wf_copy = dict(wf)
+    if wf.get("project_id") and wf["project_id"] in PROJECTS_DB:
+        wf_copy["project_name"] = PROJECTS_DB[wf["project_id"]]["name"]
+    wf_copy["steps"] = get_workflow_steps(workflow_id)
+    return wf_copy
+
+
+def list_workflows(user: Dict[str, Any], project_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    results = []
+    for wf in WORKFLOWS_DB.values():
+        if can_access_workflow(wf, user):
+            if project_id and wf.get("project_id") != project_id:
+                continue
+            wf_copy = dict(wf)
+            if wf.get("project_id") and wf["project_id"] in PROJECTS_DB:
+                wf_copy["project_name"] = PROJECTS_DB[wf["project_id"]]["name"]
+            wf_copy["steps"] = get_workflow_steps(wf["id"])
+            results.append(wf_copy)
+    results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return results
+
+
+def update_workflow(workflow_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    wf = WORKFLOWS_DB.get(workflow_id)
+    if not wf:
+        return None
+    for k, v in updates.items():
+        if k in ["status", "compiled_deliverable_id", "completed_at"]:
+            wf[k] = v
+    wf_copy = dict(wf)
+    if wf.get("project_id") and wf["project_id"] in PROJECTS_DB:
+        wf_copy["project_name"] = PROJECTS_DB[wf["project_id"]]["name"]
+    wf_copy["steps"] = get_workflow_steps(workflow_id)
+    return wf_copy
+
+
+def create_workflow_step(data: Dict[str, Any]) -> Dict[str, Any]:
+    step_id = data.get("id") or str(uuid.uuid4())
+    step = {
+        "id": step_id,
+        "workflow_id": data["workflow_id"],
+        "step_order": data.get("step_order", 0),
+        "task_id": data.get("task_id"),
+        "assigned_agent_id": data["assigned_agent_id"],
+        "assigned_agent_name": data["assigned_agent_name"],
+        "title": data["title"],
+        "status": data.get("status", "pending"),
+        "depends_on": data.get("depends_on", []),
+        "input": data.get("input", {}),
+        "output": data.get("output", {}),
+        "quality_score": data.get("quality_score", 95),
+        "requires_approval": data.get("requires_approval", False),
+        "approval_status": data.get("approval_status", "none"),
+        "approval_notes": data.get("approval_notes"),
+        "retry_count": data.get("retry_count", 0),
+        "deliverable_id": data.get("deliverable_id"),
+        "started_at": data.get("started_at"),
+        "completed_at": data.get("completed_at"),
+    }
+    WORKFLOW_STEPS_DB[step_id] = step
+    return dict(step)
+
+
+def get_workflow_steps(workflow_id: str) -> List[Dict[str, Any]]:
+    steps = [dict(s) for s in WORKFLOW_STEPS_DB.values() if s.get("workflow_id") == workflow_id]
+    steps.sort(key=lambda x: x.get("step_order", 0))
+    return steps
+
+
+def get_workflow_step(step_id: str) -> Optional[Dict[str, Any]]:
+    s = WORKFLOW_STEPS_DB.get(step_id)
+    return dict(s) if s else None
+
+
+def update_workflow_step(step_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    step = WORKFLOW_STEPS_DB.get(step_id)
+    if not step:
+        return None
+    for k, v in updates.items():
+        if k in [
+            "status", "output", "input", "quality_score", "approval_status",
+            "approval_notes", "retry_count", "deliverable_id", "started_at", "completed_at"
+        ]:
+            step[k] = v
+    return dict(step)
+
+
+def log_execution(
+    workflow_id: str,
+    step_id: Optional[str],
+    event_type: str,
+    message: str,
+    metadata: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    log_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    entry = {
+        "id": log_id,
+        "workflow_id": workflow_id,
+        "step_id": step_id,
+        "event_type": event_type,
+        "message": message,
+        "metadata": metadata or {},
+        "timestamp": now,
+    }
+    EXECUTION_LOGS_DB.append(entry)
+    return entry
+
+
+def get_execution_logs(workflow_id: str) -> List[Dict[str, Any]]:
+    logs = [dict(l) for l in EXECUTION_LOGS_DB if l.get("workflow_id") == workflow_id]
+    logs.sort(key=lambda x: x.get("timestamp", ""))
+    return logs
+
+
 

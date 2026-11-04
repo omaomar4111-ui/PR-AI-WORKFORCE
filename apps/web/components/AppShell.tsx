@@ -48,7 +48,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "agents", labelKey: "nav.agents", href: "/agents", icon: Bot, enabled: true },
   { id: "departments", labelKey: "nav.departments", href: "/departments", icon: Network, enabled: false },
   { id: "tasks", labelKey: "nav.tasks", href: "/tasks", icon: CheckSquare, enabled: true },
-  { id: "workflows", labelKey: "nav.workflows", href: "/workflows", icon: Workflow, enabled: false },
+  { id: "workflows", labelKey: "nav.workflows", href: "/workflows", icon: Workflow, enabled: true },
   { id: "projects", labelKey: "nav.projects", href: "/projects", icon: FolderGit2, enabled: true },
   { id: "clients", labelKey: "nav.clients", href: "/clients", icon: Users, enabled: true },
   { id: "memory", labelKey: "nav.memory", href: "/memory", icon: Brain, enabled: false },

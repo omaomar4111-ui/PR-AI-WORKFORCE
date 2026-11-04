@@ -31,9 +31,22 @@ from database import (
     list_deliverables,
     get_deliverable,
     update_deliverable,
+    create_workflow,
+    get_workflow,
+    list_workflows,
+    update_workflow,
+    get_workflow_steps,
+    get_execution_logs,
 )
 from auth import create_jwt_token, get_current_user
 from agents.registry import get_agent, list_agents, get_all_agents_dict
+from orchestrator import (
+    start_workflow_in_background,
+    approve_workflow_step,
+    cancel_workflow,
+    set_ws_broadcast_fn,
+    OmSamahOrchestrator,
+)
 
 app = FastAPI(
     title="PR AI WORKFORCE API",
@@ -73,6 +86,7 @@ class ConnectionManager:
 
 
 ws_manager = ConnectionManager()
+set_ws_broadcast_fn(ws_manager.broadcast)
 
 
 @app.websocket("/ws/tasks")
@@ -80,10 +94,21 @@ async def websocket_tasks_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)
     try:
         while True:
-            # Keep connection alive & receive client messages
             data = await websocket.receive_text()
-            # Echo heartbeat or client ping
             await websocket.send_text(json.dumps({"type": "pong", "payload": data}))
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)
+
+
+@app.websocket("/ws/workflows/{workflow_id}")
+async def websocket_workflow_endpoint(websocket: WebSocket, workflow_id: str):
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await websocket.send_text(json.dumps({"type": "workflow_pong", "workflow_id": workflow_id, "payload": data}))
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
     except Exception:
@@ -178,6 +203,17 @@ class AgentExecuteRequest(BaseModel):
     project_id: Optional[str] = None
     task_id: Optional[str] = None
     title: Optional[str] = None
+
+
+class WorkflowCreateRequest(BaseModel):
+    user_request: str = Field(..., min_length=3)
+    project_id: Optional[str] = None
+
+
+class StepApprovalRequest(BaseModel):
+    step_id: str
+    approved: bool = True
+    notes: Optional[str] = None
 
 
 # ── Health Endpoint ──────────────────────────────────────────────────────────
@@ -544,6 +580,121 @@ def serve_deliverable_file(filename: str):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Deliverable file not found on disk")
     return FileResponse(file_path, media_type="application/json", filename=filename)
+
+
+# ── Milestone 5: Workflows API (Om Samah Orchestrator) ────────────────────────
+@app.post("/api/workflows", status_code=201)
+async def create_workflow_endpoint(
+    payload: WorkflowCreateRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Initiates an Om Samah autonomous workflow from a user brief."""
+    wf = create_workflow({
+        "user_request": payload.user_request.strip(),
+        "project_id": payload.project_id,
+        "status": "planning",
+    }, user=current_user)
+
+    orchestrator = OmSamahOrchestrator(wf["id"], current_user)
+    steps = await orchestrator.initialize_steps(payload.project_id)
+    wf["steps"] = steps
+
+    # Start execution in background task (non-blocking)
+    start_workflow_in_background(wf["id"], current_user, payload.project_id)
+
+    # Broadcast creation event
+    await ws_manager.broadcast({
+        "type": "workflow_created",
+        "workflow": wf,
+    })
+
+    return {"workflow": wf}
+
+
+@app.get("/api/workflows")
+def list_workflows_endpoint(
+    project_id: Optional[str] = Query(None),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Lists all workflows for the organization."""
+    workflows = list_workflows(user=current_user, project_id=project_id)
+    return {"workflows": workflows, "count": len(workflows)}
+
+
+@app.get("/api/workflows/{workflow_id}")
+def get_workflow_endpoint(
+    workflow_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Retrieves full workflow details, steps, and status."""
+    wf = get_workflow(workflow_id, user=current_user)
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found or access denied")
+    return {"workflow": wf}
+
+
+@app.get("/api/workflows/{workflow_id}/logs")
+def get_workflow_logs_endpoint(
+    workflow_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Returns execution event logs for the workflow."""
+    wf = get_workflow(workflow_id, user=current_user)
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found or access denied")
+    logs = get_execution_logs(workflow_id)
+    return {"logs": logs, "count": len(logs)}
+
+
+@app.post("/api/workflows/{workflow_id}/approve")
+async def approve_workflow_step_endpoint(
+    workflow_id: str,
+    payload: StepApprovalRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Approves or rejects a paused workflow step to resume execution."""
+    wf = get_workflow(workflow_id, user=current_user)
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found or access denied")
+
+    try:
+        updated_step = approve_workflow_step(
+            workflow_id=workflow_id,
+            step_id=payload.step_id,
+            approved=payload.approved,
+            notes=payload.notes
+        )
+
+        # Broadcast approval and resumption
+        await ws_manager.broadcast({
+            "type": "workflow_step_approved",
+            "workflow_id": workflow_id,
+            "step": updated_step,
+            "approved": payload.approved,
+        })
+
+        return {"success": True, "step": updated_step}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/workflows/{workflow_id}/cancel")
+async def cancel_workflow_endpoint(
+    workflow_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Cancels a running workflow."""
+    wf = get_workflow(workflow_id, user=current_user)
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found or access denied")
+
+    success = cancel_workflow(workflow_id)
+    await ws_manager.broadcast({
+        "type": "workflow_cancelled",
+        "workflow_id": workflow_id,
+    })
+    return {"success": success, "message": "Workflow cancelled"}
+
 
 
 if __name__ == "__main__":
