@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi import FastAPI, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 import datetime
-from typing import Dict, Any, Optional, List
+import json
+from typing import Dict, Any, Optional, List, Set
 
 from config import settings
 from database import (
@@ -20,6 +21,12 @@ from database import (
     update_project,
     delete_project,
     get_dashboard_stats,
+    create_task,
+    list_tasks,
+    get_task,
+    update_task,
+    delete_task,
+    get_project_progress,
 )
 from auth import create_jwt_token, get_current_user
 
@@ -37,6 +44,45 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── WebSocket Connection Manager ─────────────────────────────────────────────
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: Dict[str, Any]):
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_text(json.dumps(message))
+            except Exception:
+                self.disconnect(connection)
+
+
+ws_manager = ConnectionManager()
+
+
+@app.websocket("/ws/tasks")
+async def websocket_tasks_endpoint(websocket: WebSocket):
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive & receive client messages
+            data = await websocket.receive_text()
+            # Echo heartbeat or client ping
+            await websocket.send_text(json.dumps({"type": "pong", "payload": data}))
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
@@ -99,6 +145,27 @@ class ProjectUpdate(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     assigned_to: Optional[str] = None
+
+
+class TaskCreate(BaseModel):
+    project_id: str
+    title: str = Field(..., min_length=1)
+    description: Optional[str] = ""
+    status: Optional[str] = "pending"
+    priority: Optional[str] = "medium"
+    assigned_to: Optional[str] = None
+    due_date: Optional[str] = None
+    dependencies: Optional[List[str]] = []
+
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    assigned_to: Optional[str] = None
+    due_date: Optional[str] = None
+    dependencies: Optional[List[str]] = None
 
 
 # ── Health Endpoint ──────────────────────────────────────────────────────────
@@ -176,11 +243,10 @@ def get_me(current_user: Dict[str, Any] = Depends(get_current_user)):
 
 @app.get("/api/users")
 def list_org_users(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """List members in the organization to assign to clients/projects."""
     return {"users": get_all_users()}
 
 
-# ── Clients Endpoints (CRUD + RLS) ───────────────────────────────────────────
+# ── Clients Endpoints ────────────────────────────────────────────────────────
 @app.get("/api/clients")
 def get_clients(
     search: Optional[str] = None,
@@ -233,7 +299,7 @@ def remove_client(
     return {"success": True, "message": "Client deleted successfully"}
 
 
-# ── Projects Endpoints (CRUD + RLS) ──────────────────────────────────────────
+# ── Projects Endpoints ───────────────────────────────────────────────────────
 @app.get("/api/projects")
 def get_projects(
     client_id: Optional[str] = None,
@@ -267,6 +333,15 @@ def get_project_by_id(
     return {"project": project}
 
 
+@app.get("/api/projects/{project_id}/progress")
+def project_progress_endpoint(
+    project_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    progress = get_project_progress(project_id, user=current_user)
+    return {"progress": progress}
+
+
 @app.put("/api/projects/{project_id}")
 def update_project_by_id(
     project_id: str,
@@ -290,7 +365,77 @@ def remove_project(
     return {"success": True, "message": "Project deleted successfully"}
 
 
-# ── Dashboard Stats (Real Data from DB) ──────────────────────────────────────
+# ── Tasks Endpoints (CRUD + PATCH status + Events + WebSocket Broadcast) ─────
+@app.get("/api/tasks")
+def get_tasks(
+    project_id: Optional[str] = None,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    tasks = list_tasks(
+        user=current_user,
+        project_id=project_id,
+        status=status,
+        priority=priority,
+        assigned_to=assigned_to
+    )
+    return {"tasks": tasks, "count": len(tasks)}
+
+
+@app.post("/api/tasks", status_code=201)
+async def add_task(
+    payload: TaskCreate,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        task = create_task(payload.model_dump(), user=current_user)
+        # Broadcast real-time event to all connected UI clients
+        await ws_manager.broadcast({"type": "task_created", "task": task})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"task": task}
+
+
+@app.get("/api/tasks/{task_id}")
+def get_task_by_id(
+    task_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    task = get_task(task_id, user=current_user)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found or access denied")
+    return {"task": task}
+
+
+@app.patch("/api/tasks/{task_id}")
+async def patch_task(
+    task_id: str,
+    payload: TaskUpdate,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    updated = update_task(task_id, payload.model_dump(exclude_unset=True), user=current_user)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Task not found or access denied")
+    # Broadcast real-time status/task update
+    await ws_manager.broadcast({"type": "task_updated", "task": updated})
+    return {"task": updated}
+
+
+@app.delete("/api/tasks/{task_id}")
+async def remove_task(
+    task_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    success = delete_task(task_id, user=current_user)
+    if not success:
+        raise HTTPException(status_code=404, detail="Task not found or access denied")
+    await ws_manager.broadcast({"type": "task_deleted", "task_id": task_id})
+    return {"success": True, "message": "Task deleted successfully"}
+
+
+# ── Dashboard Stats ──────────────────────────────────────────────────────────
 @app.get("/api/dashboard/stats")
 def dashboard_stats(current_user: Dict[str, Any] = Depends(get_current_user)):
     stats = get_dashboard_stats(user=current_user)

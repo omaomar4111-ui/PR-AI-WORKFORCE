@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Set
 import datetime
 import uuid
 
@@ -44,11 +44,40 @@ CLIENTS_DB: Dict[str, Dict[str, Any]] = {}
 # Key: project_id -> project dict
 PROJECTS_DB: Dict[str, Dict[str, Any]] = {}
 
+# Key: task_id -> task dict
+TASKS_DB: Dict[str, Dict[str, Any]] = {}
+
+# Key: task_id -> list of depends_on_task_id
+TASK_DEPENDENCIES_DB: Dict[str, List[str]] = {}
+
+# List of audit log event dicts
+TASK_EVENTS_DB: List[Dict[str, Any]] = []
+
+# List of approval requests
+TASK_APPROVALS_DB: List[Dict[str, Any]] = []
+
+# Status to Progress mapping per Milestone 3 requirements
+STATUS_PROGRESS: Dict[str, int] = {
+    "pending": 0,
+    "planning": 10,
+    "assigned": 20,
+    "in_progress": 50,
+    "review": 80,
+    "needs_approval": 90,
+    "completed": 100,
+    "failed": 0,
+    "cancelled": 0,
+}
+
 
 def reset_db_for_tests():
     """Helper for clean unit tests."""
     CLIENTS_DB.clear()
     PROJECTS_DB.clear()
+    TASKS_DB.clear()
+    TASK_DEPENDENCIES_DB.clear()
+    TASK_EVENTS_DB.clear()
+    TASK_APPROVALS_DB.clear()
 
 
 # ── User Helpers ─────────────────────────────────────────────────────────────
@@ -104,7 +133,6 @@ def create_user(
 
 # ── Clients CRUD with RLS ────────────────────────────────────────────────────
 def can_access_client(client: Dict[str, Any], user: Dict[str, Any]) -> bool:
-    """RLS check: Owner sees all in their org. Member sees only assigned clients."""
     if client.get("organization_id") != user.get("organization_id"):
         return False
     if user.get("role") == "owner":
@@ -118,7 +146,6 @@ def create_client(data: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
     
     assigned_to = data.get("assigned_to")
     if user.get("role") == "member" and not assigned_to:
-        # Default self-assignment for members
         assigned_to = user.get("id")
 
     client = {
@@ -150,14 +177,12 @@ def list_clients(user: Dict[str, Any], search: Optional[str] = None) -> List[Dic
                 contact_match = client.get("contact_name") and term in client["contact_name"].lower()
                 if not (name_match or ind_match or contact_match):
                     continue
-            # Attach assigned user info for UI
             c_copy = dict(client)
             if c_copy.get("assigned_to"):
                 assigned_user = get_user_by_id(c_copy["assigned_to"])
                 c_copy["assigned_user_name"] = assigned_user["full_name"] if assigned_user else "Assigned Member"
             results.append(c_copy)
     
-    # Sort by created_at desc
     results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return results
 
@@ -172,7 +197,6 @@ def get_client(client_id: str, user: Dict[str, Any]) -> Optional[Dict[str, Any]]
         assigned_user = get_user_by_id(c_copy["assigned_to"])
         c_copy["assigned_user_name"] = assigned_user["full_name"] if assigned_user else "Assigned Member"
     
-    # Fetch linked projects
     linked_projects = [
         p for p in PROJECTS_DB.values()
         if p.get("client_id") == client_id and can_access_project(p, user)
@@ -186,7 +210,6 @@ def update_client(client_id: str, data: Dict[str, Any], user: Dict[str, Any]) ->
     if not client or not can_access_client(client, user):
         return None
     
-    # Allowed update fields
     for field in ["name", "industry", "brand_color", "logo_url", "contact_name", "contact_email", "contact_phone", "assigned_to"]:
         if field in data and data[field] is not None:
             client[field] = data[field]
@@ -200,9 +223,14 @@ def delete_client(client_id: str, user: Dict[str, Any]) -> bool:
     if not client or not can_access_client(client, user):
         return False
     
-    # Delete cascaded projects
+    # Cascade projects & their tasks
     projects_to_delete = [pid for pid, p in PROJECTS_DB.items() if p.get("client_id") == client_id]
     for pid in projects_to_delete:
+        tasks_to_delete = [tid for tid, t in TASKS_DB.items() if t.get("project_id") == pid]
+        for tid in tasks_to_delete:
+            del TASKS_DB[tid]
+            if tid in TASK_DEPENDENCIES_DB:
+                del TASK_DEPENDENCIES_DB[tid]
         del PROJECTS_DB[pid]
         
     del CLIENTS_DB[client_id]
@@ -211,17 +239,14 @@ def delete_client(client_id: str, user: Dict[str, Any]) -> bool:
 
 # ── Projects CRUD with RLS ───────────────────────────────────────────────────
 def can_access_project(project: Dict[str, Any], user: Dict[str, Any]) -> bool:
-    """RLS check: Owner sees all projects in org. Member sees assigned project or project for assigned client."""
     if project.get("organization_id") != user.get("organization_id"):
         return False
     if user.get("role") == "owner":
         return True
     
-    # Direct project assignment
     if project.get("assigned_to") == user.get("id"):
         return True
         
-    # Or client assignment
     client = CLIENTS_DB.get(project.get("client_id"))
     if client and client.get("assigned_to") == user.get("id"):
         return True
@@ -274,11 +299,15 @@ def list_projects(
             if status and project.get("status") != status:
                 continue
             p_copy = dict(project)
-            # Ensure fresh client_name
             client = CLIENTS_DB.get(p_copy.get("client_id"))
             if client:
                 p_copy["client_name"] = client["name"]
                 p_copy["client_brand_color"] = client.get("brand_color", "#8b5cf6")
+            
+            # Attach progress calculation
+            progress_info = get_project_progress(p_copy["id"], user)
+            p_copy["progress_percentage"] = progress_info["progress_percentage"]
+            p_copy["task_count"] = progress_info["total_tasks"]
             results.append(p_copy)
             
     results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
@@ -296,6 +325,10 @@ def get_project(project_id: str, user: Dict[str, Any]) -> Optional[Dict[str, Any
         p_copy["client_name"] = client["name"]
         p_copy["client_brand_color"] = client.get("brand_color", "#8b5cf6")
         p_copy["client_industry"] = client.get("industry")
+        
+    progress_info = get_project_progress(project_id, user)
+    p_copy["progress_percentage"] = progress_info["progress_percentage"]
+    p_copy["task_count"] = progress_info["total_tasks"]
     return p_copy
 
 
@@ -320,34 +353,296 @@ def delete_project(project_id: str, user: Dict[str, Any]) -> bool:
     if not project or not can_access_project(project, user):
         return False
         
+    tasks_to_delete = [tid for tid, t in TASKS_DB.items() if t.get("project_id") == project_id]
+    for tid in tasks_to_delete:
+        del TASKS_DB[tid]
+        if tid in TASK_DEPENDENCIES_DB:
+            del TASK_DEPENDENCIES_DB[tid]
+            
     del PROJECTS_DB[project_id]
     return True
 
 
+# ── Tasks CRUD, Dependencies, Events, and Progress ───────────────────────────
+def can_access_task(task: Dict[str, Any], user: Dict[str, Any]) -> bool:
+    """RLS check: Owner sees all tasks in org. Member sees tasks assigned to them or their assigned projects."""
+    if task.get("org_id") != user.get("organization_id"):
+        return False
+    if user.get("role") == "owner":
+        return True
+    if task.get("assigned_to") == user.get("id"):
+        return True
+    project = PROJECTS_DB.get(task.get("project_id"))
+    if project and can_access_project(project, user):
+        return True
+    return False
+
+
+def log_task_event(
+    task_id: str,
+    event_type: str,
+    actor_id: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    event = {
+        "id": str(uuid.uuid4()),
+        "task_id": task_id,
+        "event_type": event_type,
+        "actor_id": actor_id,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "metadata": metadata or {}
+    }
+    TASK_EVENTS_DB.append(event)
+    return event
+
+
+def create_task(data: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
+    project_id = data["project_id"]
+    project = PROJECTS_DB.get(project_id)
+    if not project or not can_access_project(project, user):
+        raise ValueError("Project not found or inaccessible")
+
+    task_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    status = data.get("status", "pending")
+    priority = data.get("priority", "medium")
+
+    assigned_to = data.get("assigned_to")
+    if user.get("role") == "member" and not assigned_to:
+        assigned_to = user.get("id")
+
+    task = {
+        "id": task_id,
+        "org_id": user.get("organization_id", "00000000-0000-0000-0000-000000000001"),
+        "project_id": project_id,
+        "project_name": project["name"],
+        "title": data["title"],
+        "description": data.get("description", ""),
+        "status": status,
+        "priority": priority,
+        "assigned_to": assigned_to,
+        "due_date": data.get("due_date"),
+        "progress_percentage": STATUS_PROGRESS.get(status, 0),
+        "created_at": now,
+        "updated_at": now,
+    }
+    TASKS_DB[task_id] = task
+
+    # Save dependencies
+    dependencies = data.get("dependencies", [])
+    if dependencies:
+        TASK_DEPENDENCIES_DB[task_id] = list(dependencies)
+    else:
+        TASK_DEPENDENCIES_DB[task_id] = []
+
+    # Log task creation event
+    log_task_event(
+        task_id=task_id,
+        event_type="task_created",
+        actor_id=user.get("id"),
+        metadata={"title": task["title"], "status": status, "priority": priority}
+    )
+
+    t_copy = dict(task)
+    t_copy["dependencies"] = TASK_DEPENDENCIES_DB[task_id]
+    if assigned_to:
+        u = get_user_by_id(assigned_to)
+        t_copy["assigned_user_name"] = u["full_name"] if u else "Assigned Member"
+    return t_copy
+
+
+def list_tasks(
+    user: Dict[str, Any],
+    project_id: Optional[str] = None,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    assigned_to: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    results = []
+    for task in TASKS_DB.values():
+        if can_access_task(task, user):
+            if project_id and task.get("project_id") != project_id:
+                continue
+            if status and task.get("status") != status:
+                continue
+            if priority and task.get("priority") != priority:
+                continue
+            if assigned_to and task.get("assigned_to") != assigned_to:
+                continue
+                
+            t_copy = dict(task)
+            t_copy["progress_percentage"] = STATUS_PROGRESS.get(t_copy.get("status", "pending"), 0)
+            t_copy["dependencies"] = TASK_DEPENDENCIES_DB.get(t_copy["id"], [])
+            
+            # Project name
+            p = PROJECTS_DB.get(t_copy.get("project_id"))
+            if p:
+                t_copy["project_name"] = p["name"]
+                
+            # Assigned user name
+            if t_copy.get("assigned_to"):
+                u = get_user_by_id(t_copy["assigned_to"])
+                t_copy["assigned_user_name"] = u["full_name"] if u else "Assigned Member"
+                
+            results.append(t_copy)
+            
+    # Sort by created_at desc
+    results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return results
+
+
+def get_task(task_id: str, user: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    task = TASKS_DB.get(task_id)
+    if not task or not can_access_task(task, user):
+        return None
+
+    t_copy = dict(task)
+    t_copy["progress_percentage"] = STATUS_PROGRESS.get(t_copy.get("status", "pending"), 0)
+    t_copy["dependencies"] = TASK_DEPENDENCIES_DB.get(task_id, [])
+
+    p = PROJECTS_DB.get(t_copy.get("project_id"))
+    if p:
+        t_copy["project_name"] = p["name"]
+
+    if t_copy.get("assigned_to"):
+        u = get_user_by_id(t_copy["assigned_to"])
+        t_copy["assigned_user_name"] = u["full_name"] if u else "Assigned Member"
+
+    # Fetch event history
+    events = [e for e in TASK_EVENTS_DB if e.get("task_id") == task_id]
+    events.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    t_copy["events"] = events
+
+    # Fetch approvals
+    approvals = [a for a in TASK_APPROVALS_DB if a.get("task_id") == task_id]
+    t_copy["approvals"] = approvals
+
+    return t_copy
+
+
+def update_task(task_id: str, data: Dict[str, Any], user: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    task = TASKS_DB.get(task_id)
+    if not task or not can_access_task(task, user):
+        return None
+
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    old_status = task.get("status")
+
+    # Status change
+    if "status" in data and data["status"] and data["status"] != old_status:
+        new_status = data["status"]
+        task["status"] = new_status
+        task["progress_percentage"] = STATUS_PROGRESS.get(new_status, 0)
+        log_task_event(
+            task_id=task_id,
+            event_type="status_change",
+            actor_id=user.get("id"),
+            metadata={
+                "old_status": old_status,
+                "new_status": new_status,
+                "progress_percentage": task["progress_percentage"]
+            }
+        )
+
+    # Priority change
+    if "priority" in data and data["priority"] and data["priority"] != task.get("priority"):
+        log_task_event(
+            task_id=task_id,
+            event_type="priority_change",
+            actor_id=user.get("id"),
+            metadata={"old_priority": task.get("priority"), "new_priority": data["priority"]}
+        )
+        task["priority"] = data["priority"]
+
+    # Assignee change
+    if "assigned_to" in data and data["assigned_to"] != task.get("assigned_to"):
+        log_task_event(
+            task_id=task_id,
+            event_type="assignment_change",
+            actor_id=user.get("id"),
+            metadata={"assigned_to": data["assigned_to"]}
+        )
+        task["assigned_to"] = data["assigned_to"]
+
+    # Other updatable fields
+    for field in ["title", "description", "due_date"]:
+        if field in data and data[field] is not None:
+            task[field] = data[field]
+
+    # Dependencies update
+    if "dependencies" in data and data["dependencies"] is not None:
+        TASK_DEPENDENCIES_DB[task_id] = list(data["dependencies"])
+        log_task_event(
+            task_id=task_id,
+            event_type="dependencies_updated",
+            actor_id=user.get("id"),
+            metadata={"dependencies": list(data["dependencies"])}
+        )
+
+    task["updated_at"] = now
+    return get_task(task_id, user)
+
+
+def delete_task(task_id: str, user: Dict[str, Any]) -> bool:
+    task = TASKS_DB.get(task_id)
+    if not task or not can_access_task(task, user):
+        return False
+
+    if task_id in TASK_DEPENDENCIES_DB:
+        del TASK_DEPENDENCIES_DB[task_id]
+
+    del TASKS_DB[task_id]
+    return True
+
+
+def get_project_progress(project_id: str, user: Dict[str, Any]) -> Dict[str, Any]:
+    """Calculate weighted project progress based on constituent tasks."""
+    project = PROJECTS_DB.get(project_id)
+    if not project or not can_access_project(project, user):
+        return {"project_id": project_id, "total_tasks": 0, "completed_tasks": 0, "progress_percentage": 0.0}
+
+    tasks = [t for t in TASKS_DB.values() if t.get("project_id") == project_id and can_access_task(t, user)]
+    total_tasks = len(tasks)
+    if total_tasks == 0:
+        return {"project_id": project_id, "total_tasks": 0, "completed_tasks": 0, "progress_percentage": 0.0}
+
+    completed_tasks = sum(1 for t in tasks if t.get("status") == "completed")
+    total_score = sum(STATUS_PROGRESS.get(t.get("status", "pending"), 0) for t in tasks)
+    progress_percentage = round(total_score / total_tasks, 1)
+
+    return {
+        "project_id": project_id,
+        "total_tasks": total_tasks,
+        "completed_tasks": completed_tasks,
+        "progress_percentage": progress_percentage
+    }
+
+
 # ── Dashboard Stats ──────────────────────────────────────────────────────────
 def get_dashboard_stats(user: Dict[str, Any]) -> Dict[str, Any]:
-    """Calculate real stats from database based on user's organization and RLS."""
     accessible_clients = [c for c in CLIENTS_DB.values() if can_access_client(c, user)]
     accessible_projects = [p for p in PROJECTS_DB.values() if can_access_project(p, user)]
+    accessible_tasks = [t for t in TASKS_DB.values() if can_access_task(t, user)]
     
     active_projects = [p for p in accessible_projects if p.get("status") == "active"]
     total_retainer = sum(float(p.get("retainer_amount", 0.0)) for p in active_projects)
     
-    # Recent clients (latest 5)
     recent_clients = sorted(accessible_clients, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
     
-    # Recent projects (latest 5)
     recent_projects = sorted(accessible_projects, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
     for p in recent_projects:
         cl = CLIENTS_DB.get(p.get("client_id"))
         p["client_name"] = cl["name"] if cl else "Unknown Client"
         p["client_brand_color"] = cl.get("brand_color", "#8b5cf6") if cl else "#8b5cf6"
+        prog = get_project_progress(p["id"], user)
+        p["progress_percentage"] = prog["progress_percentage"]
 
     return {
         "total_clients": len(accessible_clients),
         "active_projects": len(active_projects),
         "total_projects": len(accessible_projects),
         "total_retainer": total_retainer,
+        "total_tasks": len(accessible_tasks),
         "recent_clients": recent_clients,
         "recent_projects": recent_projects
     }

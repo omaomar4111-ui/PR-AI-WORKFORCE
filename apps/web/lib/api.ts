@@ -1,4 +1,24 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const getApiBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname === "localhost" ? "127.0.0.1" : window.location.hostname;
+    return `${window.location.protocol}//${host}:8000`;
+  }
+  return "http://127.0.0.1:8000";
+};
+
+export const getWsBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname === "localhost" ? "127.0.0.1" : window.location.hostname;
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${proto}//${host}:8000`;
+  }
+  return "ws://127.0.0.1:8000";
+};
+
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8000";
 
 export interface User {
   id: string;
@@ -47,6 +67,58 @@ export interface Project {
   start_date?: string | null;
   end_date?: string | null;
   assigned_to?: string | null;
+  progress_percentage?: number;
+  task_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type TaskStatus =
+  | "pending"
+  | "planning"
+  | "assigned"
+  | "in_progress"
+  | "review"
+  | "needs_approval"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+
+export interface TaskEvent {
+  id: string;
+  task_id: string;
+  event_type: string;
+  actor_id?: string | null;
+  timestamp: string;
+  metadata: Record<string, any>;
+}
+
+export interface TaskApproval {
+  id: string;
+  task_id: string;
+  status: "pending" | "approved" | "rejected";
+  notes?: string;
+  created_at: string;
+}
+
+export interface Task {
+  id: string;
+  org_id: string;
+  project_id: string;
+  project_name?: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assigned_to?: string | null;
+  assigned_user_name?: string;
+  due_date?: string | null;
+  progress_percentage: number;
+  dependencies?: string[];
+  events?: TaskEvent[];
+  approvals?: TaskApproval[];
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +128,7 @@ export interface DashboardStats {
   active_projects: number;
   total_projects: number;
   total_retainer: number;
+  total_tasks: number;
   recent_clients: Client[];
   recent_projects: Project[];
 }
@@ -197,7 +270,7 @@ export async function deleteClient(clientId: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) {
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || "Failed to delete client");
   }
 }
@@ -228,6 +301,20 @@ export async function fetchProject(projectId: string): Promise<Project> {
   return data.project;
 }
 
+export async function fetchProjectProgress(projectId: string): Promise<{
+  project_id: string;
+  total_tasks: number;
+  completed_tasks: number;
+  progress_percentage: number;
+}> {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch project progress");
+  const data = await res.json();
+  return data.progress;
+}
+
 export async function createProject(payload: Partial<Project>): Promise<Project> {
   const res = await fetch(`${API_BASE_URL}/api/projects`, {
     method: "POST",
@@ -256,8 +343,74 @@ export async function deleteProject(projectId: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) {
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || "Failed to delete project");
+  }
+}
+
+// ── Tasks API ───────────────────────────────────────────────────────────────
+export async function fetchTasks(params?: {
+  project_id?: string;
+  status?: string;
+  priority?: string;
+  assigned_to?: string;
+}): Promise<Task[]> {
+  const url = new URL(`${API_BASE_URL}/api/tasks`);
+  if (params?.project_id) url.searchParams.set("project_id", params.project_id);
+  if (params?.status) url.searchParams.set("status", params.status);
+  if (params?.priority) url.searchParams.set("priority", params.priority);
+  if (params?.assigned_to) url.searchParams.set("assigned_to", params.assigned_to);
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load tasks");
+  const data = await res.json();
+  return data.tasks;
+}
+
+export async function fetchTask(taskId: string): Promise<Task> {
+  const res = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Task not found or access denied");
+  }
+  const data = await res.json();
+  return data.task;
+}
+
+export async function createTask(payload: Partial<Task>): Promise<Task> {
+  const res = await fetch(`${API_BASE_URL}/api/tasks`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to create task");
+  return data.task;
+}
+
+export async function updateTask(taskId: string, payload: Partial<Task>): Promise<Task> {
+  const res = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to update task");
+  return data.task;
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Failed to delete task");
   }
 }
 
