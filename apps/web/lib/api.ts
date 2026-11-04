@@ -123,6 +123,56 @@ export interface Task {
   updated_at: string;
 }
 
+// ── Milestone 4: Agents & Deliverables Interfaces ───────────────────────────
+export interface Agent {
+  id: string;
+  name: string;
+  name_ar?: string;
+  department: string;
+  department_ar?: string;
+  role: string;
+  role_ar?: string;
+  avatar?: string;
+  system_prompt: string;
+  tools: string[];
+  input_schema: Record<string, any>;
+  output_schema: Record<string, any>;
+  quality_criteria: string[];
+  max_tokens: number;
+  requires_approval_for: string[];
+  sample_input?: Record<string, any>;
+  status?: string;
+}
+
+export interface Deliverable {
+  id: string;
+  organization_id: string;
+  project_id?: string | null;
+  project_name?: string;
+  task_id?: string | null;
+  agent_id: string;
+  agent_name: string;
+  title: string;
+  file_type: string;
+  file_url: string;
+  content_json: Record<string, any>;
+  raw_content?: string;
+  quality_score: number;
+  status: "delivered" | "approved" | "rejected" | "in_review";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentExecuteResult {
+  deliverable: Deliverable;
+  output: Record<string, any>;
+  agent: {
+    id: string;
+    name: string;
+    department: string;
+  };
+}
+
 export interface DashboardStats {
   total_clients: number;
   active_projects: number;
@@ -422,4 +472,70 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   if (!res.ok) throw new Error("Failed to load dashboard stats");
   const data = await res.json();
   return data.stats;
+}
+
+// ── Milestone 4: Agents API ──────────────────────────────────────────────────
+export async function fetchAgents(): Promise<Agent[]> {
+  const res = await fetch(`${API_BASE_URL}/api/agents`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load agents registry");
+  const data = await res.json();
+  return data.agents;
+}
+
+export async function fetchAgent(agentId: string): Promise<Agent> {
+  const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load agent profile");
+  const data = await res.json();
+  return data.agent;
+}
+
+export async function executeAgent(
+  agentId: string,
+  payload: {
+    input: Record<string, any>;
+    project_id?: string;
+    task_id?: string;
+    title?: string;
+  }
+): Promise<AgentExecuteResult> {
+  const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}/execute`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Agent execution failed");
+  return data;
+}
+
+// ── Milestone 4: Deliverables API ───────────────────────────────────────────
+export async function fetchDeliverables(params?: {
+  project_id?: string;
+  agent_id?: string;
+  task_id?: string;
+}): Promise<Deliverable[]> {
+  const url = new URL(`${API_BASE_URL}/api/deliverables`);
+  if (params?.project_id) url.searchParams.set("project_id", params.project_id);
+  if (params?.agent_id) url.searchParams.set("agent_id", params.agent_id);
+  if (params?.task_id) url.searchParams.set("task_id", params.task_id);
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load deliverables");
+  const data = await res.json();
+  return data.deliverables;
+}
+
+export async function fetchDeliverable(deliverableId: string): Promise<Deliverable> {
+  const res = await fetch(`${API_BASE_URL}/api/deliverables/${deliverableId}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load deliverable");
+  const data = await res.json();
+  return data.deliverable;
 }

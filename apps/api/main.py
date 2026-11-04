@@ -27,8 +27,13 @@ from database import (
     update_task,
     delete_task,
     get_project_progress,
+    create_deliverable,
+    list_deliverables,
+    get_deliverable,
+    update_deliverable,
 )
 from auth import create_jwt_token, get_current_user
+from agents.registry import get_agent, list_agents, get_all_agents_dict
 
 app = FastAPI(
     title="PR AI WORKFORCE API",
@@ -166,6 +171,13 @@ class TaskUpdate(BaseModel):
     assigned_to: Optional[str] = None
     due_date: Optional[str] = None
     dependencies: Optional[List[str]] = None
+
+
+class AgentExecuteRequest(BaseModel):
+    input: Dict[str, Any]
+    project_id: Optional[str] = None
+    task_id: Optional[str] = None
+    title: Optional[str] = None
 
 
 # ── Health Endpoint ──────────────────────────────────────────────────────────
@@ -440,6 +452,98 @@ async def remove_task(
 def dashboard_stats(current_user: Dict[str, Any] = Depends(get_current_user)):
     stats = get_dashboard_stats(user=current_user)
     return {"stats": stats}
+
+
+# ── Milestone 4: Agents & Deliverables Endpoints ──────────────────────────────
+@app.get("/api/agents")
+def get_agents(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Returns the registry of specialized AI agents."""
+    agents = get_all_agents_dict()
+    return {"agents": agents, "count": len(agents)}
+
+
+@app.get("/api/agents/{agent_id}")
+def get_agent_detail(agent_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Returns detailed profile, tools, schema, and quality criteria for an agent."""
+    agent = get_agent(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found in registry")
+    return {"agent": agent.to_dict()}
+
+
+@app.post("/api/agents/{agent_id}/execute")
+async def execute_agent_task(
+    agent_id: str,
+    payload: AgentExecuteRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Executes a real task with the specified agent and generates a validated deliverable."""
+    agent = get_agent(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found in registry")
+
+    try:
+        result = await agent.execute(
+            task_input=payload.input,
+            user=current_user,
+            project_id=payload.project_id,
+            task_id=payload.task_id,
+            title=payload.title,
+        )
+
+        # Broadcast real-time execution event via WebSocket
+        await ws_manager.broadcast({
+            "type": "deliverable_produced",
+            "deliverable": result["deliverable"],
+            "agent_id": agent_id,
+        })
+
+        return result
+    except ValueError as val_err:
+        raise HTTPException(status_code=422, detail=str(val_err))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(exc)}")
+
+
+@app.get("/api/deliverables")
+def list_deliverables_endpoint(
+    project_id: Optional[str] = Query(None),
+    agent_id: Optional[str] = Query(None),
+    task_id: Optional[str] = Query(None),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Lists deliverables accessible to the current user."""
+    deliverables = list_deliverables(
+        user=current_user,
+        project_id=project_id,
+        agent_id=agent_id,
+        task_id=task_id
+    )
+    return {"deliverables": deliverables, "count": len(deliverables)}
+
+
+@app.get("/api/deliverables/{deliverable_id}")
+def get_deliverable_endpoint(
+    deliverable_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Returns a specific deliverable record."""
+    deliv = get_deliverable(deliverable_id, user=current_user)
+    if not deliv:
+        raise HTTPException(status_code=404, detail="Deliverable not found or access denied")
+    return {"deliverable": deliv}
+
+
+@app.get("/storage/deliverables/{filename}")
+def serve_deliverable_file(filename: str):
+    """Serves the generated deliverable JSON file from local storage."""
+    from fastapi.responses import FileResponse
+    import os
+    storage_dir = os.path.join(os.path.dirname(__file__), "storage", "deliverables")
+    file_path = os.path.join(storage_dir, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Deliverable file not found on disk")
+    return FileResponse(file_path, media_type="application/json", filename=filename)
 
 
 if __name__ == "__main__":

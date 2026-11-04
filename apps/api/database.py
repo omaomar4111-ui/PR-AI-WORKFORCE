@@ -56,6 +56,9 @@ TASK_EVENTS_DB: List[Dict[str, Any]] = []
 # List of approval requests
 TASK_APPROVALS_DB: List[Dict[str, Any]] = []
 
+# Key: deliverable_id -> deliverable dict (Milestone 4)
+DELIVERABLES_DB: Dict[str, Dict[str, Any]] = {}
+
 # Status to Progress mapping per Milestone 3 requirements
 STATUS_PROGRESS: Dict[str, int] = {
     "pending": 0,
@@ -78,6 +81,7 @@ def reset_db_for_tests():
     TASK_DEPENDENCIES_DB.clear()
     TASK_EVENTS_DB.clear()
     TASK_APPROVALS_DB.clear()
+    DELIVERABLES_DB.clear()
 
 
 # ── User Helpers ─────────────────────────────────────────────────────────────
@@ -646,3 +650,111 @@ def get_dashboard_stats(user: Dict[str, Any]) -> Dict[str, Any]:
         "recent_clients": recent_clients,
         "recent_projects": recent_projects
     }
+
+
+# ── Milestone 4: Deliverables CRUD ───────────────────────────────────────────
+def can_access_deliverable(deliverable: Dict[str, Any], user: Dict[str, Any]) -> bool:
+    if deliverable.get("organization_id") != user.get("organization_id"):
+        return False
+    if user.get("role") == "owner":
+        return True
+    proj_id = deliverable.get("project_id")
+    if proj_id and proj_id in PROJECTS_DB:
+        return can_access_project(PROJECTS_DB[proj_id], user)
+    return True
+
+
+def create_deliverable(data: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
+    org_id = user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    deliv_id = data.get("id") or str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    
+    deliverable = {
+        "id": deliv_id,
+        "organization_id": org_id,
+        "project_id": data.get("project_id"),
+        "task_id": data.get("task_id"),
+        "agent_id": data["agent_id"],
+        "agent_name": data["agent_name"],
+        "title": data["title"],
+        "file_type": data.get("file_type", "json"),
+        "file_url": data.get("file_url", f"/storage/deliverables/{deliv_id}.json"),
+        "content_json": data.get("content_json", {}),
+        "raw_content": data.get("raw_content", ""),
+        "quality_score": data.get("quality_score", 95),
+        "status": data.get("status", "delivered"),
+        "created_at": data.get("created_at") or now,
+        "updated_at": now,
+    }
+    DELIVERABLES_DB[deliv_id] = deliverable
+    
+    # Also log to task_events if linked to a task
+    if deliverable.get("task_id") and deliverable["task_id"] in TASKS_DB:
+        log_task_event(
+            task_id=deliverable["task_id"],
+            event_type="deliverable_produced",
+            actor_id=user.get("id"),
+            metadata={
+                "deliverable_id": deliv_id,
+                "agent_id": deliverable["agent_id"],
+                "title": deliverable["title"],
+                "quality_score": deliverable["quality_score"],
+            }
+        )
+        
+    return dict(deliverable)
+
+
+def list_deliverables(
+    user: Dict[str, Any],
+    project_id: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    task_id: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    results = []
+    for d in DELIVERABLES_DB.values():
+        if can_access_deliverable(d, user):
+            if project_id and d.get("project_id") != project_id:
+                continue
+            if agent_id and d.get("agent_id") != agent_id:
+                continue
+            if task_id and d.get("task_id") != task_id:
+                continue
+            d_copy = dict(d)
+            if d.get("project_id") and d["project_id"] in PROJECTS_DB:
+                d_copy["project_name"] = PROJECTS_DB[d["project_id"]]["name"]
+            results.append(d_copy)
+    results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return results
+
+
+def get_deliverable(deliverable_id: str, user: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    d = DELIVERABLES_DB.get(deliverable_id)
+    if not d or not can_access_deliverable(d, user):
+        return None
+    d_copy = dict(d)
+    if d.get("project_id") and d["project_id"] in PROJECTS_DB:
+        d_copy["project_name"] = PROJECTS_DB[d["project_id"]]["name"]
+    return d_copy
+
+
+def update_deliverable(
+    deliverable_id: str,
+    updates: Dict[str, Any],
+    user: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    d = DELIVERABLES_DB.get(deliverable_id)
+    if not d or not can_access_deliverable(d, user):
+        return None
+        
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    for k, v in updates.items():
+        if k in ["title", "status", "quality_score", "raw_content", "content_json"]:
+            d[k] = v
+    d["updated_at"] = now
+    
+    d_copy = dict(d)
+    if d.get("project_id") and d["project_id"] in PROJECTS_DB:
+        d_copy["project_name"] = PROJECTS_DB[d["project_id"]]["name"]
+    return d_copy
+

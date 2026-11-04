@@ -1,0 +1,733 @@
+{
+  "version": "1.0.0",
+  "total_agents": 8,
+  "agents": [
+    {
+      "id": "dr-ibrahim",
+      "name": "Dr. Ibrahim",
+      "name_ar": "د. إبراهيم",
+      "department": "research",
+      "department_ar": "البحث والاستخبارات",
+      "role": "Head of Market & Intelligence Research",
+      "role_ar": "رئيس أبحاث السوق واستخبارات المنافسين",
+      "avatar": "brain",
+      "system_prompt": "You are Dr. Ibrahim, the Principal Intelligence & Market Researcher for PR Agency. Your mission is to provide rigorous, data-driven, and highly actionable market research, competitor landscape audits, audience segmentation, and media consumption intelligence. You never make unsubstantiated claims; every insight must be actionable and grounded in market dynamics. Output strictly in the specified JSON schema.",
+      "tools": [
+        "web_search",
+        "competitor_analysis",
+        "audience_intelligence",
+        "sentiment_analyzer"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "client_name": { "type": "string" },
+          "industry": { "type": "string" },
+          "competitors": { "type": "array", "items": { "type": "string" } },
+          "research_objectives": { "type": "array", "items": { "type": "string" } },
+          "target_region": { "type": "string" }
+        },
+        "required": ["client_name", "industry", "research_objectives"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "summary": { "type": "string" },
+          "market_overview": { "type": "string" },
+          "competitor_landscape": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "strengths": { "type": "string" },
+                "weaknesses": { "type": "string" },
+                "share_of_voice": { "type": "string" }
+              },
+              "required": ["name", "strengths", "weaknesses"]
+            }
+          },
+          "audience_segments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "segment": { "type": "string" },
+                "pain_points": { "type": "string" },
+                "media_channels": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["segment", "pain_points"]
+            }
+          },
+          "strategic_opportunities": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "quality_score": { "type": "integer" }
+        },
+        "required": [
+          "summary",
+          "market_overview",
+          "competitor_landscape",
+          "audience_segments",
+          "strategic_opportunities",
+          "quality_score"
+        ]
+      },
+      "quality_criteria": [
+        "Must identify at least 3 concrete market differentiators",
+        "Must provide actionable media consumption habits per segment",
+        "Zero unsubstantiated market assertions"
+      ],
+      "max_tokens": 4000,
+      "requires_approval_for": ["executive_distribution", "external_briefing"],
+      "sample_input": {
+        "client_name": "Nile Media Corp",
+        "industry": "Broadcasting & Digital Media",
+        "competitors": ["Alpha Streaming", "Rotana Network", "Shahid"],
+        "research_objectives": [
+          "Identify digital streaming penetration in MENA",
+          "Analyze competitor subscription pricing tiers",
+          "Discover high-retention content genres for 18-35 age bracket"
+        ],
+        "target_region": "MENA (Egypt, Saudi Arabia, UAE)"
+      }
+    },
+    {
+      "id": "ragaa",
+      "name": "Ragaa",
+      "name_ar": "رجاء",
+      "department": "marketing",
+      "department_ar": "الاستراتيجية والتسويق",
+      "role": "Marketing Strategist & Brand Architect",
+      "role_ar": "كبيرة مسؤولي استراتيجيات العلامة التجارية",
+      "avatar": "target",
+      "system_prompt": "You are Ragaa, the Senior Brand & Marketing Strategist for PR Agency. You transform raw intelligence into brilliant campaign strategies, positioning architectures, and phased multi-channel launch roadmaps. You utilize the Geoffrey Moore positioning framework and ensure messaging pillars have verifiable proof points. Output strictly in the specified JSON schema.",
+      "tools": [
+        "positioning_matrix",
+        "channel_planner",
+        "messaging_framework_builder"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "client_name": { "type": "string" },
+          "campaign_goal": { "type": "string" },
+          "target_audience": { "type": "string" },
+          "budget_tier": { "type": "string" },
+          "key_differentiators": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["client_name", "campaign_goal", "target_audience"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "campaign_name": { "type": "string" },
+          "core_positioning_statement": { "type": "string" },
+          "key_messaging_pillars": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pillar": { "type": "string" },
+                "headline": { "type": "string" },
+                "proof_points": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["pillar", "headline", "proof_points"]
+            }
+          },
+          "channel_strategy": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "channel": { "type": "string" },
+                "objective": { "type": "string" },
+                "kpi": { "type": "string" }
+              },
+              "required": ["channel", "objective", "kpi"]
+            }
+          },
+          "phased_roadmap": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phase": { "type": "string" },
+                "timeframe": { "type": "string" },
+                "key_actions": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["phase", "timeframe", "key_actions"]
+            }
+          },
+          "quality_score": { "type": "integer" }
+        },
+        "required": [
+          "campaign_name",
+          "core_positioning_statement",
+          "key_messaging_pillars",
+          "channel_strategy",
+          "phased_roadmap",
+          "quality_score"
+        ]
+      },
+      "quality_criteria": [
+        "Core positioning statement must follow standard strategic architecture",
+        "Each pillar must feature at least 2 measurable proof points",
+        "Phased roadmap must have quantifiable KPIs"
+      ],
+      "max_tokens": 4000,
+      "requires_approval_for": ["budget_exceeds_threshold", "crisis_repositioning"],
+      "sample_input": {
+        "client_name": "Nile Media Corp",
+        "campaign_goal": "Launch Next-Gen Arabic AI Content Platform",
+        "target_audience": "Digital creators, journalists, and media executives across GCC and Egypt",
+        "budget_tier": "enterprise",
+        "key_differentiators": [
+          "Proprietary Arabic dialect NLP engine",
+          "Real-time press monitoring integration",
+          "Instant copyright verification"
+        ]
+      }
+    },
+    {
+      "id": "fawzyia",
+      "name": "Fawzyia",
+      "name_ar": "فوزية",
+      "department": "design",
+      "department_ar": "التصميم والهوية البصرية",
+      "role": "Design Director & Creative Lead",
+      "role_ar": "المديرة الإبداعية للهوية البصرية والجماليات",
+      "avatar": "palette",
+      "system_prompt": "You are Fawzyia, Design Director at PR Agency. You command the agency visual aesthetic: color palettes, typography hierarchy, aspect ratios, digital and print asset dimensions, and brand guidelines. Your directives are precise down to the hex code and pixel constraint. Output strictly in the specified JSON schema.",
+      "tools": [
+        "palette_generator",
+        "layout_specifier",
+        "asset_guideline_builder"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "brand_name": { "type": "string" },
+          "visual_mood": { "type": "string" },
+          "deliverable_types": { "type": "array", "items": { "type": "string" } },
+          "brand_colors": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["brand_name", "visual_mood", "deliverable_types"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "art_direction_concept": { "type": "string" },
+          "color_system": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "hex": { "type": "string" },
+                "usage": { "type": "string" }
+              },
+              "required": ["name", "hex", "usage"]
+            }
+          },
+          "typography_hierarchy": {
+            "type": "object",
+            "properties": {
+              "primary_font": { "type": "string" },
+              "secondary_font": { "type": "string" },
+              "sizing_scale": { "type": "string" }
+            },
+            "required": ["primary_font", "secondary_font", "sizing_scale"]
+          },
+          "asset_specifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "asset_type": { "type": "string" },
+                "dimensions": { "type": "string" },
+                "aspect_ratio": { "type": "string" },
+                "safe_zones": { "type": "string" }
+              },
+              "required": ["asset_type", "dimensions", "aspect_ratio"]
+            }
+          },
+          "design_rules": { "type": "array", "items": { "type": "string" } },
+          "quality_score": { "type": "integer" }
+        },
+        "required": [
+          "art_direction_concept",
+          "color_system",
+          "typography_hierarchy",
+          "asset_specifications",
+          "design_rules",
+          "quality_score"
+        ]
+      },
+      "quality_criteria": [
+        "WCAG AA contrast compliance verified",
+        "Complete pixel and aspect ratio specifications for all outputs",
+        "Clear primary and secondary Arabic + Latin typography pairings"
+      ],
+      "max_tokens": 3500,
+      "requires_approval_for": ["brand_guideline_lock", "print_production_signoff"],
+      "sample_input": {
+        "brand_name": "Nile Media Corp",
+        "visual_mood": "Luxury Cyber-Editorial with Royal Egyptian accents",
+        "deliverable_types": [
+          "Billboard (16:9)",
+          "Instagram Reel (9:16)",
+          "Executive PR Whitepaper (A4 PDF)"
+        ],
+        "brand_colors": ["#8b5cf6", "#0d0e12", "#f59e0b"]
+      }
+    },
+    {
+      "id": "copywriter",
+      "name": "Copywriter",
+      "name_ar": "كاتب المحتوى",
+      "department": "content",
+      "department_ar": "صناعة المحتوى والتحرير",
+      "role": "Senior Content & PR Copywriter",
+      "role_ar": "كبير محرري البيانات الصحفية والمحتوى الفيروسي",
+      "avatar": "pen-tool",
+      "system_prompt": "You are the Senior Copywriter at PR Agency. You write viral hooks, magnetic press releases, high-conversion ad headlines, and evocative executive thought-leadership articles. Your copy is rhythmic, persuasive, punchy, and culturally adapted in pristine Arabic (Fusha) and crisp English. Output strictly in the specified JSON schema.",
+      "tools": [
+        "hook_generator",
+        "readability_checker",
+        "arabic_english_translator",
+        "headline_scorer"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "topic": { "type": "string" },
+          "format": { "type": "string" },
+          "tone": { "type": "string" },
+          "target_language": { "type": "string" },
+          "key_takeaways": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["topic", "format", "tone", "key_takeaways"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "headline": { "type": "string" },
+          "subheadline": { "type": "string" },
+          "hook": { "type": "string" },
+          "body_copy": { "type": "string" },
+          "call_to_action": { "type": "string" },
+          "hashtags": { "type": "array", "items": { "type": "string" } },
+          "word_count": { "type": "integer" },
+          "quality_score": { "type": "integer" }
+        },
+        "required": [
+          "headline",
+          "subheadline",
+          "hook",
+          "body_copy",
+          "call_to_action",
+          "hashtags",
+          "word_count",
+          "quality_score"
+        ]
+      },
+      "quality_criteria": [
+        "Zero passive voice in primary headline",
+        "Pristine grammatical accuracy in Arabic and English",
+        "Direct conversion-focused Call to Action"
+      ],
+      "max_tokens": 4000,
+      "requires_approval_for": ["legal_disclaimer", "press_release_wire_submission"],
+      "sample_input": {
+        "topic": "Announcing Egypt's First Fully Autonomous Media Operations Suite",
+        "format": "press_release",
+        "tone": "authoritative and visionary",
+        "target_language": "bilingual",
+        "key_takeaways": [
+          "Cuts media production cycle from weeks to minutes",
+          "Empowers over 50 regional media institutions",
+          "Backed by Cairo and Dubai technology funds"
+        ]
+      }
+    },
+    {
+      "id": "media-buyer",
+      "name": "Media Buyer",
+      "name_ar": "مسؤول الإعلانات",
+      "department": "performance",
+      "department_ar": "التسويق الأدائي وشراء المساحات",
+      "role": "Performance Marketer & Media Buyer",
+      "role_ar": "مدير الحملات الإعلانية المدفوعة والميزانيات",
+      "avatar": "trending-up",
+      "system_prompt": "You are the Media Buyer at PR Agency. You command media planning, paid advertising budgets, algorithmic bid distribution across Meta, TikTok, Google, and LinkedIn, and data-backed A/B test setups. You ensure 100% mathematical integrity and maximized ROAS. Output strictly in the specified JSON schema.",
+      "tools": [
+        "budget_optimizer",
+        "cpm_estimator",
+        "audience_overlap_calculator"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "campaign_budget": { "type": "number" },
+          "target_platforms": { "type": "array", "items": { "type": "string" } },
+          "primary_goal": { "type": "string" },
+          "flight_dates": { "type": "string" }
+        },
+        "required": ["campaign_budget", "target_platforms", "primary_goal", "flight_dates"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "budget_distribution": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "platform": { "type": "string" },
+                "budget_amount": { "type": "number" },
+                "percentage": { "type": "number" },
+                "expected_cpm": { "type": "string" },
+                "expected_roas": { "type": "string" }
+              },
+              "required": ["platform", "budget_amount", "percentage"]
+            }
+          },
+          "targeting_matrix": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "platform": { "type": "string" },
+                "audience_interests": { "type": "array", "items": { "type": "string" } },
+                "exclusions": { "type": "array", "items": { "type": "string" } },
+                "lookalike_percent": { "type": "string" }
+              },
+              "required": ["platform", "audience_interests"]
+            }
+          },
+          "ab_test_framework": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "test_name": { "type": "string" },
+                "variant_a": { "type": "string" },
+                "variant_b": { "type": "string" },
+                "success_metric": { "type": "string" }
+              },
+              "required": ["test_name", "variant_a", "variant_b", "success_metric"]
+            }
+          },
+          "projected_results": {
+            "type": "object",
+            "properties": {
+              "impressions": { "type": "integer" },
+              "clicks": { "type": "integer" },
+              "conversions": { "type": "integer" },
+              "blended_cac": { "type": "string" }
+            },
+            "required": ["impressions", "clicks", "conversions", "blended_cac"]
+          },
+          "quality_score": { "type": "integer" }
+        },
+        "required": [
+          "budget_distribution",
+          "targeting_matrix",
+          "ab_test_framework",
+          "projected_results",
+          "quality_score"
+        ]
+      },
+      "quality_criteria": [
+        "100% budget allocation without mathematical leakage",
+        "Every campaign defines a holdout split test",
+        "Realistic CPM and conversion projections"
+      ],
+      "max_tokens": 3500,
+      "requires_approval_for": ["budget_spend_live", "credit_card_charge"],
+      "sample_input": {
+        "campaign_budget": 25000,
+        "target_platforms": ["Meta Ads", "TikTok Ads", "Google Search", "LinkedIn Ads"],
+        "primary_goal": "Lead generation for Enterprise Media Retainers",
+        "flight_dates": "Nov 15 - Dec 15, 2026"
+      }
+    },
+    {
+      "id": "sales-manager",
+      "name": "Sales Manager",
+      "name_ar": "مدير المبيعات",
+      "department": "sales",
+      "department_ar": "تطوير الأعمال والمبيعات",
+      "role": "B2B Sales Strategist & Deal Closer",
+      "role_ar": "مسؤول إغلاق الصفقات وعلاقات كبار العملاء",
+      "avatar": "briefcase",
+      "system_prompt": "You are the Sales Manager at PR Agency. You engineer high-touch executive outreach sequences, lead scoring models (BANT and MEDDIC), proposal structures, and bulletproof objection-handling rebuttals for B2B contracts. Output strictly in the specified JSON schema.",
+      "tools": [
+        "lead_scorer",
+        "email_cadence_builder",
+        "objection_handling_matrix"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prospect_company": { "type": "string" },
+          "prospect_role": { "type": "string" },
+          "deal_size_tier": { "type": "string" },
+          "pain_points": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["prospect_company", "prospect_role", "deal_size_tier", "pain_points"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "qualification_score": {
+            "type": "object",
+            "properties": {
+              "budget": { "type": "string" },
+              "authority": { "type": "string" },
+              "need": { "type": "string" },
+              "timeline": { "type": "string" },
+              "total_score": { "type": "integer" }
+            },
+            "required": ["budget", "authority", "need", "timeline", "total_score"]
+          },
+          "outreach_cadence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "day": { "type": "integer" },
+                "touchpoint_channel": { "type": "string" },
+                "subject": { "type": "string" },
+                "email_body": { "type": "string" }
+              },
+              "required": ["day", "touchpoint_channel", "subject", "email_body"]
+            }
+          },
+          "objection_rebuttals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "common_objection": { "type": "string" },
+                "empathetic_acknowledgment": { "type": "string" },
+                "pivot_rebuttal": { "type": "string" }
+              },
+              "required": ["common_objection", "empathetic_acknowledgment", "pivot_rebuttal"]
+            }
+          },
+          "close_strategy": { "type": "string" },
+          "quality_score": { "type": "integer" }
+        },
+        "required": [
+          "qualification_score",
+          "outreach_cadence",
+          "objection_rebuttals",
+          "close_strategy",
+          "quality_score"
+        ]
+      },
+      "quality_criteria": [
+        "Executive emails strictly follow 3-sentence brevity rule",
+        "Every objection rebuttal provides a concrete social proof metric",
+        "Actionable timeline for B2B contract closing"
+      ],
+      "max_tokens": 3500,
+      "requires_approval_for": ["contract_pricing_discount", "custom_sla_terms"],
+      "sample_input": {
+        "prospect_company": "Apex Financial Group",
+        "prospect_role": "Chief Communications Officer",
+        "deal_size_tier": "$15,000/mo Retainer",
+        "pain_points": [
+          "Slow crisis response time in traditional agencies",
+          "Lack of real-time social listening",
+          "High overhead costs for multi-market distribution"
+        ]
+      }
+    },
+    {
+      "id": "mahmoud",
+      "name": "Mahmoud",
+      "name_ar": "محمود",
+      "department": "engineering",
+      "department_ar": "الهندسة والتقنية",
+      "role": "Principal Engineering & Tech Lead",
+      "role_ar": "كبير مهندسي النظم والبنية البرمجية",
+      "avatar": "code",
+      "system_prompt": "You are Mahmoud, the Principal Engineer at PR Agency. You evaluate technical feasibility, architect web applications, define analytics event tracking schemas, specify performance budgets, and build rock-solid landing page architectures. Output strictly in the specified JSON schema.",
+      "tools": [
+        "stack_evaluator",
+        "lighthouse_auditor",
+        "tracking_schema_builder"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_name": { "type": "string" },
+          "requirements": { "type": "array", "items": { "type": "string" } },
+          "traffic_estimate": { "type": "string" },
+          "tech_preferences": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["project_name", "requirements", "traffic_estimate"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "architecture_overview": { "type": "string" },
+          "tech_stack": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "component": { "type": "string" },
+                "technology": { "type": "string" },
+                "rationale": { "type": "string" }
+              },
+              "required": ["component", "technology", "rationale"]
+            }
+          },
+          "data_model_specs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "entity": { "type": "string" },
+                "fields": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["entity", "fields"]
+            }
+          },
+          "analytics_event_taxonomy": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "event_name": { "type": "string" },
+                "trigger": { "type": "string" },
+                "payload_properties": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["event_name", "trigger", "payload_properties"]
+            }
+          },
+          "performance_budget": {
+            "type": "object",
+            "properties": {
+              "fcp_ms": { "type": "integer" },
+              "lcp_ms": { "type": "integer" },
+              "cls": { "type": "number" },
+              "max_bundle_kb": { "type": "integer" }
+            },
+            "required": ["fcp_ms", "lcp_ms", "cls", "max_bundle_kb"]
+          },
+          "quality_score": { "type": "integer" }
+        },
+        "required": [
+          "architecture_overview",
+          "tech_stack",
+          "data_model_specs",
+          "analytics_event_taxonomy",
+          "performance_budget",
+          "quality_score"
+        ]
+      },
+      "quality_criteria": [
+        "Sub-1.2s mobile LCP requirement strictly budgeted",
+        "Complete analytics taxonomy with snake_case naming",
+        "Zero-trust API security architecture"
+      ],
+      "max_tokens": 4000,
+      "requires_approval_for": ["production_deployment", "database_migration"],
+      "sample_input": {
+        "project_name": "PR Workforce Client Portal",
+        "requirements": [
+          "Real-time deliverable approvals with WebSocket sync",
+          "Client dashboard with role-based access control",
+          "Secure file downloads and asset previewing"
+        ],
+        "traffic_estimate": "50,000 monthly active users",
+        "tech_preferences": ["Next.js 14", "FastAPI", "PostgreSQL", "Tailwind CSS"]
+      }
+    },
+    {
+      "id": "qa-lead",
+      "name": "QA Lead",
+      "name_ar": "مسؤول الجودة",
+      "department": "quality",
+      "department_ar": "ضمان الجودة والامتثال",
+      "role": "Quality Assurance Lead & Compliance Officer",
+      "role_ar": "مدير ضبط الجودة والتحقق من المعايير",
+      "avatar": "shield-check",
+      "system_prompt": "You are the QA Lead at PR Agency. You conduct unrelenting, forensic quality evaluations on every agent deliverable before client delivery. You score deliverables against the original brief, verify brand compliance, check factual integrity, and audit schema completeness. Deliverables scoring under 80 are rejected with constructive remediation items. Output strictly in the specified JSON schema.",
+      "tools": [
+        "schema_validator",
+        "brand_compliance_checker",
+        "hallucination_detector"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "deliverable_title": { "type": "string" },
+          "agent_tested": { "type": "string" },
+          "original_brief": { "type": "string" },
+          "agent_output": { "type": "object" },
+          "quality_criteria": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["deliverable_title", "agent_tested", "original_brief", "agent_output", "quality_criteria"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "overall_score": { "type": "integer" },
+          "verdict": { "type": "string", "enum": ["APPROVED", "NEEDS_REVISION", "REJECTED"] },
+          "checklist_results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "criterion": { "type": "string" },
+                "passed": { "type": "boolean" },
+                "notes": { "type": "string" }
+              },
+              "required": ["criterion", "passed", "notes"]
+            }
+          },
+          "identified_flaws": { "type": "array", "items": { "type": "string" } },
+          "actionable_recommendations": { "type": "array", "items": { "type": "string" } },
+          "quality_score": { "type": "integer" }
+        },
+        "required": [
+          "overall_score",
+          "verdict",
+          "checklist_results",
+          "identified_flaws",
+          "actionable_recommendations",
+          "quality_score"
+        ]
+      },
+      "quality_criteria": [
+        "Must evaluate every provided quality criterion item",
+        "Overall score below 80 must yield REJECTED or NEEDS_REVISION",
+        "Zero subjective hand-waving; give actionable remediation points"
+      ],
+      "max_tokens": 3500,
+      "requires_approval_for": ["override_rejection", "client_delivery_signoff"],
+      "sample_input": {
+        "deliverable_title": "Market Positioning Brief for Nile Media Corp",
+        "agent_tested": "ragaa",
+        "original_brief": "Create an enterprise brand positioning strategy for an AI-first media intelligence suite.",
+        "agent_output": {
+          "campaign_name": "Nile Intelligence 2027",
+          "core_positioning_statement": "For media executives who need instant verification, Nile AI is the only enterprise suite that guarantees real-time dialect accuracy.",
+          "quality_score": 96
+        },
+        "quality_criteria": [
+          "Core positioning statement must follow standard strategic architecture",
+          "Must provide quantifiable proof points",
+          "WCAG and brand tone compliance"
+        ]
+      }
+    }
+  ]
+}
