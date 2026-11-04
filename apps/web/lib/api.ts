@@ -792,3 +792,140 @@ export async function deleteMemory(memoryId: string): Promise<void> {
     throw new Error(data.detail || "Failed to delete memory");
   }
 }
+
+// ============================================================================
+// Milestone 7: Approvals & Integrations
+// ============================================================================
+
+export interface ApprovalRequest {
+  id: string;
+  workflow_id: string;
+  step_id?: string | null;
+  task_id?: string | null;
+  requested_by_agent_id: string;
+  action_type: string;
+  payload: Record<string, any>;
+  status: "pending" | "approved" | "rejected" | "edited";
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Integration {
+  id?: string;
+  org_id?: string;
+  provider: string;
+  name: string;
+  name_ar?: string;
+  description?: string;
+  category: "storage" | "docs" | "email" | "sheets" | "marketing" | "social" | "media";
+  required_scopes?: string[];
+  scopes?: string[];
+  status: "connected" | "disconnected" | "error" | "requires_api_access";
+  connected_at?: string | null;
+  connected_by?: string | null;
+  last_tested_at?: string | null;
+  config_summary?: Record<string, any>;
+}
+
+export async function fetchApprovals(status?: string): Promise<ApprovalRequest[]> {
+  const url = new URL(`${API_BASE_URL}/api/approvals`);
+  if (status && status !== "all") url.searchParams.set("status", status);
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load approval requests");
+  const data = await res.json();
+  return data.approvals;
+}
+
+export async function fetchPendingApprovalsCount(): Promise<number> {
+  const res = await fetch(`${API_BASE_URL}/api/approvals/count`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return 0;
+  const data = await res.json();
+  return data.count || 0;
+}
+
+export async function approveRequest(id: string, notes?: string): Promise<ApprovalRequest> {
+  const res = await fetch(`${API_BASE_URL}/api/approvals/${id}/approve`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ notes }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to approve request");
+  return data.approval;
+}
+
+export async function rejectRequest(id: string, notes?: string): Promise<ApprovalRequest> {
+  const res = await fetch(`${API_BASE_URL}/api/approvals/${id}/reject`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ notes }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to reject request");
+  return data.approval;
+}
+
+export async function editAndApproveRequest(
+  id: string,
+  editedPayload: Record<string, any>,
+  notes?: string
+): Promise<ApprovalRequest> {
+  const res = await fetch(`${API_BASE_URL}/api/approvals/${id}/edit`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ edited_payload: editedPayload, notes }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to edit & approve request");
+  return data.approval;
+}
+
+export async function fetchIntegrations(): Promise<Integration[]> {
+  const res = await fetch(`${API_BASE_URL}/api/integrations`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load integrations");
+  const data = await res.json();
+  return data.integrations;
+}
+
+export async function connectIntegration(
+  provider: string,
+  config: Record<string, any>
+): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/integrations/${provider}/connect`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ config }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to connect integration");
+  return data;
+}
+
+export async function disconnectIntegration(provider: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/integrations/${provider}/disconnect`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to disconnect integration");
+  return data;
+}
+
+export async function testIntegration(provider: string): Promise<{ success: boolean; message: string; data?: any }> {
+  const res = await fetch(`${API_BASE_URL}/api/integrations/${provider}/test`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  return data;
+}

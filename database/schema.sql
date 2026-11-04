@@ -401,3 +401,56 @@ CREATE INDEX IF NOT EXISTS idx_deliverables_version ON public.deliverables(versi
 ALTER TABLE public.memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memory_embeddings ENABLE ROW LEVEL SECURITY;
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- MILESTONE 7: HUMAN APPROVALS & INTEGRATION HUB
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- 17. Approval Requests Table
+CREATE TABLE IF NOT EXISTS public.approval_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_id UUID REFERENCES public.workflows(id) ON DELETE CASCADE,
+    step_id UUID REFERENCES public.workflow_steps(id) ON DELETE SET NULL,
+    task_id UUID REFERENCES public.tasks(id) ON DELETE SET NULL,
+    requested_by_agent_id VARCHAR(50) NOT NULL,
+    action_type VARCHAR(100) NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (
+        status IN ('pending', 'approved', 'rejected', 'edited')
+    ),
+    reviewed_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMPTZ,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 18. Integrations Table
+CREATE TABLE IF NOT EXISTS public.integrations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    provider VARCHAR(50) NOT NULL CHECK (
+        provider IN (
+            'google_drive', 'google_docs', 'gmail', 'google_sheets',
+            'meta_ads', 'google_ads', 'instagram', 'image_gen', 'video_gen'
+        )
+    ),
+    status VARCHAR(50) NOT NULL DEFAULT 'disconnected' CHECK (
+        status IN ('connected', 'disconnected', 'error', 'requires_api_access')
+    ),
+    config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    connected_at TIMESTAMPTZ,
+    connected_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_org_provider UNIQUE (org_id, provider)
+);
+
+CREATE INDEX IF NOT EXISTS idx_approval_requests_status ON public.approval_requests(status);
+CREATE INDEX IF NOT EXISTS idx_approval_requests_wf ON public.approval_requests(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_approval_requests_agent ON public.approval_requests(requested_by_agent_id);
+CREATE INDEX IF NOT EXISTS idx_integrations_org_provider ON public.integrations(org_id, provider);
+CREATE INDEX IF NOT EXISTS idx_integrations_status ON public.integrations(status);
+
+ALTER TABLE public.approval_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.integrations ENABLE ROW LEVEL SECURITY;
+
+

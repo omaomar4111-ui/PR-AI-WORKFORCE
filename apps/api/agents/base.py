@@ -91,6 +91,15 @@ class BaseAgent:
         # Step 1: Input Validation
         self.validate_input(task_input)
 
+        # Sensitive action human approval enforcement (Milestone 7)
+        action_type = task_input.get("action_type")
+        from approvals.service import SENSITIVE_ACTIONS, RequiresApproval
+        if action_type in SENSITIVE_ACTIONS and not task_input.get("approved"):
+            raise RequiresApproval(
+                action_type=action_type,
+                message=f"Agent '{self.name}' cannot execute sensitive action '{action_type}' without human approval."
+            )
+
         # Step 2: Inject retrieved memories if provided
         active_system_prompt = self.system_prompt
         memories = context_memories or task_input.get("retrieved_context")

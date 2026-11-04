@@ -56,6 +56,19 @@ from orchestrator import (
     set_ws_broadcast_fn,
     OmSamahOrchestrator,
 )
+from approvals import (
+    approve as approve_request,
+    reject as reject_request,
+    edit_and_approve as edit_approve_request,
+    list_approval_requests,
+    get_approval_request,
+    get_pending_approvals_count,
+    set_approval_ws_broadcast_fn,
+)
+from integrations.registry import (
+    get_integration_adapter,
+    list_supported_providers,
+)
 
 app = FastAPI(
     title="PR AI WORKFORCE API",
@@ -96,6 +109,7 @@ class ConnectionManager:
 
 ws_manager = ConnectionManager()
 set_ws_broadcast_fn(ws_manager.broadcast)
+set_approval_ws_broadcast_fn(ws_manager.broadcast)
 
 
 @app.websocket("/ws/tasks")
@@ -118,6 +132,19 @@ async def websocket_workflow_endpoint(websocket: WebSocket, workflow_id: str):
         while True:
             data = await websocket.receive_text()
             await websocket.send_text(json.dumps({"type": "workflow_pong", "workflow_id": workflow_id, "payload": data}))
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)
+
+
+@app.websocket("/ws/approvals")
+async def websocket_approvals_endpoint(websocket: WebSocket):
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await websocket.send_text(json.dumps({"type": "approvals_pong", "payload": data}))
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
     except Exception:
@@ -238,6 +265,19 @@ class DeliverableVersionRequest(BaseModel):
     content_json: Optional[Dict[str, Any]] = None
     quality_score: Optional[int] = 95
     status: Optional[str] = "delivered"
+
+
+class ApprovalDecisionRequest(BaseModel):
+    notes: Optional[str] = None
+
+
+class ApprovalEditRequest(BaseModel):
+    payload: Dict[str, Any]
+    notes: Optional[str] = None
+
+
+class IntegrationConnectRequest(BaseModel):
+    config: Dict[str, Any]
 
 
 # ── Health Endpoint ──────────────────────────────────────────────────────────
@@ -825,6 +865,146 @@ def delete_memory_endpoint(
     if not success:
         raise HTTPException(status_code=404, detail="Memory item not found or access denied")
     return {"success": True, "message": "Memory deleted successfully"}
+
+
+# ── Milestone 7: Human Approvals Endpoints ────────────────────────────────────
+@app.get("/api/approvals")
+def list_approvals_endpoint(
+    status: Optional[str] = Query(None),
+    workflow_id: Optional[str] = Query(None),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Lists approval requests with optional status filtering."""
+    requests = list_approval_requests(status=status, workflow_id=workflow_id)
+    return {"approvals": requests, "count": len(requests)}
+
+
+@app.get("/api/approvals/count")
+def get_pending_count_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Returns total pending approvals count for top-bar badge."""
+    return {"pending_count": get_pending_approvals_count()}
+
+
+@app.post("/api/approvals/{request_id}/approve")
+async def approve_request_endpoint(
+    request_id: str,
+    payload: ApprovalDecisionRequest = ApprovalDecisionRequest(),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Approves an action request and resumes workflow."""
+    try:
+        updated = await approve_request(
+            request_id=request_id,
+            user_id=current_user["id"],
+            notes=payload.notes,
+        )
+        return {"success": True, "approval": updated}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.post("/api/approvals/{request_id}/reject")
+async def reject_request_endpoint(
+    request_id: str,
+    payload: ApprovalDecisionRequest = ApprovalDecisionRequest(),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Rejects an action request and halts step."""
+    try:
+        updated = await reject_request(
+            request_id=request_id,
+            user_id=current_user["id"],
+            notes=payload.notes,
+        )
+        return {"success": True, "approval": updated}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.post("/api/approvals/{request_id}/edit")
+async def edit_and_approve_endpoint(
+    request_id: str,
+    payload: ApprovalEditRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Modifies the payload and approves the action."""
+    try:
+        updated = await edit_approve_request(
+            request_id=request_id,
+            user_id=current_user["id"],
+            modified_payload=payload.payload,
+            notes=payload.notes,
+        )
+        return {"success": True, "approval": updated}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ── Milestone 7: Integration Hub Endpoints ────────────────────────────────────
+@app.get("/api/integrations")
+def list_integrations_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Lists all external tool integrations with real live connection status."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    providers = list_supported_providers()
+    items = []
+    for p in providers:
+        adapter = get_integration_adapter(p["provider"], org_id)
+        status_info = adapter.get_status()
+        items.append({
+            **p,
+            "status": status_info["status"],
+            "connected_at": status_info.get("connected_at"),
+            "connected_by": status_info.get("connected_by"),
+            "message": status_info.get("message"),
+        })
+    return {"integrations": items, "count": len(items)}
+
+
+@app.post("/api/integrations/{provider}/connect")
+def connect_integration_endpoint(
+    provider: str,
+    payload: IntegrationConnectRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Connects external integration with provided credentials / OAuth token."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    try:
+        adapter = get_integration_adapter(provider, org_id)
+        result = adapter.connect(payload.config, user_id=current_user["id"])
+        return {"success": True, "integration": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/integrations/{provider}/disconnect")
+def disconnect_integration_endpoint(
+    provider: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Disconnects and revokes stored credentials for an integration provider."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    try:
+        adapter = get_integration_adapter(provider, org_id)
+        success = adapter.disconnect()
+        return {"success": success, "provider": provider, "status": "disconnected"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/integrations/{provider}/test")
+def test_integration_endpoint(
+    provider: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Tests live connection to the provider. NEVER simulates success if credentials missing."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    try:
+        adapter = get_integration_adapter(provider, org_id)
+        test_result = adapter.test_connection()
+        return {"success": test_result.get("status") == "connected", **test_result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 

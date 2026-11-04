@@ -1,0 +1,70 @@
+{
+  "architecture_overview": "High-concurrency micro-service architecture for 'PR Workforce Client Portal', optimized for real-time WebSocket state streaming, sub-second API latencies, and multi-tenant row-level security.",
+  "tech_stack": [
+    {
+      "component": "Frontend Layer",
+      "technology": "Next.js 14 App Router + Tailwind CSS",
+      "rationale": "Server-side rendering, instant page transitions, and responsive mobile-first UI."
+    },
+    {
+      "component": "Backend Engine",
+      "technology": "FastAPI + Starlette WebSockets",
+      "rationale": "Asynchronous Python runtime with native typing and instant event broadcasting."
+    },
+    {
+      "component": "Primary Database",
+      "technology": "PostgreSQL 16 with Supabase RLS",
+      "rationale": "Enterprise relational integrity and multi-tenant isolation at the row level."
+    }
+  ],
+  "data_model_specs": [
+    {
+      "entity": "Deliverable",
+      "fields": [
+        "id",
+        "org_id",
+        "project_id",
+        "agent_id",
+        "file_url",
+        "content_json",
+        "quality_score"
+      ]
+    },
+    {
+      "entity": "AgentEvent",
+      "fields": [
+        "id",
+        "agent_id",
+        "event_type",
+        "payload",
+        "timestamp"
+      ]
+    }
+  ],
+  "analytics_event_taxonomy": [
+    {
+      "event_name": "agent_execution_started",
+      "trigger": "User clicks Run Agent",
+      "payload_properties": [
+        "agent_id",
+        "project_id"
+      ]
+    },
+    {
+      "event_name": "deliverable_generated",
+      "trigger": "Agent returns validated JSON",
+      "payload_properties": [
+        "deliverable_id",
+        "quality_score",
+        "duration_ms"
+      ]
+    }
+  ],
+  "performance_budget": {
+    "fcp_ms": 650,
+    "lcp_ms": 1100,
+    "cls": 0.02,
+    "max_bundle_kb": 180
+  },
+  "quality_score": 97
+}

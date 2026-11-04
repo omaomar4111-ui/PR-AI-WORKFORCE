@@ -68,6 +68,10 @@ EXECUTION_LOGS_DB: List[Dict[str, Any]] = []
 MEMORIES_DB: Dict[str, Dict[str, Any]] = {}
 MEMORY_EMBEDDINGS_DB: Dict[str, List[float]] = {}
 
+# Milestone 7: Human Approval Requests & External Tool Integrations
+APPROVAL_REQUESTS_DB: Dict[str, Dict[str, Any]] = {}
+INTEGRATIONS_DB: Dict[str, Dict[str, Any]] = {}
+
 # Status to Progress mapping per Milestone 3 requirements
 STATUS_PROGRESS: Dict[str, int] = {
     "pending": 0,
@@ -96,6 +100,8 @@ def reset_db_for_tests():
     EXECUTION_LOGS_DB.clear()
     MEMORIES_DB.clear()
     MEMORY_EMBEDDINGS_DB.clear()
+    APPROVAL_REQUESTS_DB.clear()
+    INTEGRATIONS_DB.clear()
 
 
 # ── User Helpers ─────────────────────────────────────────────────────────────
@@ -1098,6 +1104,129 @@ def get_memories_for_search(
         memories.append(dict(m))
         embeddings[mem_id] = MEMORY_EMBEDDINGS_DB.get(mem_id, [])
     return memories, embeddings
+
+
+# ── Milestone 7: Approval Requests Operations ────────────────────────────────
+def create_approval_request(data: Dict[str, Any]) -> Dict[str, Any]:
+    req_id = data.get("id") or str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    record = {
+        "id": req_id,
+        "workflow_id": data.get("workflow_id"),
+        "step_id": data.get("step_id"),
+        "task_id": data.get("task_id"),
+        "requested_by_agent_id": data["requested_by_agent_id"],
+        "action_type": data["action_type"],
+        "payload": data.get("payload", {}),
+        "status": data.get("status", "pending"),
+        "reviewed_by": data.get("reviewed_by"),
+        "reviewed_at": data.get("reviewed_at"),
+        "notes": data.get("notes"),
+        "created_at": now,
+    }
+    APPROVAL_REQUESTS_DB[req_id] = record
+    return dict(record)
+
+
+def get_approval_request(request_id: str) -> Optional[Dict[str, Any]]:
+    r = APPROVAL_REQUESTS_DB.get(request_id)
+    return dict(r) if r else None
+
+
+def list_approval_requests(
+    status: Optional[str] = None,
+    workflow_id: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    results = []
+    for r in APPROVAL_REQUESTS_DB.values():
+        if status and r.get("status") != status:
+            continue
+        if workflow_id and r.get("workflow_id") != workflow_id:
+            continue
+        results.append(dict(r))
+    results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return results
+
+
+def update_approval_request(request_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    req = APPROVAL_REQUESTS_DB.get(request_id)
+    if not req:
+        return None
+    for k, v in updates.items():
+        if k in ["status", "payload", "reviewed_by", "reviewed_at", "notes"]:
+            req[k] = v
+    return dict(req)
+
+
+def get_pending_approvals_count() -> int:
+    return sum(1 for r in APPROVAL_REQUESTS_DB.values() if r.get("status") == "pending")
+
+
+# ── Milestone 7: Integrations Operations ─────────────────────────────────────
+ALL_INTEGRATION_PROVIDERS = [
+    "google_drive", "google_docs", "gmail", "google_sheets",
+    "meta_ads", "google_ads", "instagram", "image_gen", "video_gen"
+]
+
+
+def get_integration(org_id: str, provider: str) -> Optional[Dict[str, Any]]:
+    key = f"{org_id}:{provider}"
+    item = INTEGRATIONS_DB.get(key)
+    return dict(item) if item else None
+
+
+def save_integration(
+    org_id: str,
+    provider: str,
+    status: str,
+    config: Dict[str, Any],
+    connected_by: Optional[str] = None,
+) -> Dict[str, Any]:
+    key = f"{org_id}:{provider}"
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    record = {
+        "id": str(uuid.uuid4()),
+        "org_id": org_id,
+        "provider": provider,
+        "status": status,
+        "config": config,
+        "connected_at": now if status == "connected" else None,
+        "connected_by": connected_by,
+        "created_at": now,
+        "updated_at": now,
+    }
+    INTEGRATIONS_DB[key] = record
+    return dict(record)
+
+
+def delete_integration(org_id: str, provider: str) -> bool:
+    key = f"{org_id}:{provider}"
+    if key in INTEGRATIONS_DB:
+        del INTEGRATIONS_DB[key]
+        return True
+    return False
+
+
+def list_integrations(org_id: str) -> List[Dict[str, Any]]:
+    """Lists status for all supported providers for this organization."""
+    results = []
+    for provider in ALL_INTEGRATION_PROVIDERS:
+        key = f"{org_id}:{provider}"
+        if key in INTEGRATIONS_DB:
+            results.append(dict(INTEGRATIONS_DB[key]))
+        else:
+            # Default disconnected state
+            results.append({
+                "id": None,
+                "org_id": org_id,
+                "provider": provider,
+                "status": "disconnected" if provider not in ["meta_ads", "google_ads"] else "requires_api_access",
+                "config": {},
+                "connected_at": None,
+                "connected_by": None,
+            })
+    return results
+
 
 
 

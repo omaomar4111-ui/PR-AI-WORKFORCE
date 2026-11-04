@@ -1,0 +1,68 @@
+{
+  "budget_distribution": [
+    {
+      "platform": "Meta Ads (Instagram & FB)",
+      "budget_amount": 11250.0,
+      "percentage": 45.0,
+      "expected_cpm": "$4.50",
+      "expected_roas": "3.8x"
+    },
+    {
+      "platform": "LinkedIn Ads",
+      "budget_amount": 8750.0,
+      "percentage": 35.0,
+      "expected_cpm": "$24.00",
+      "expected_roas": "4.2x"
+    },
+    {
+      "platform": "Google Search & Discovery",
+      "budget_amount": 5000.0,
+      "percentage": 20.0,
+      "expected_cpm": "$8.20",
+      "expected_roas": "3.2x"
+    }
+  ],
+  "targeting_matrix": [
+    {
+      "platform": "Meta Ads",
+      "audience_interests": [
+        "Public Relations",
+        "Brand Marketing",
+        "Media Production",
+        "Artificial Intelligence in Business"
+      ],
+      "exclusions": [
+        "Students",
+        "Job Seekers"
+      ],
+      "lookalike_percent": "1% Top Client Lookalike"
+    },
+    {
+      "platform": "LinkedIn Ads",
+      "audience_interests": [
+        "Chief Marketing Officer",
+        "VP Communications",
+        "Head of PR"
+      ],
+      "exclusions": [
+        "Interns"
+      ],
+      "lookalike_percent": "Company size > 50 employees"
+    }
+  ],
+  "ab_test_framework": [
+    {
+      "test_name": "Creative Hook Test: Speed vs Dialect Accuracy",
+      "variant_a": "Headline focusing on 10x faster execution",
+      "variant_b": "Headline focusing on 99.4% Arabic dialect precision",
+      "success_metric": "Click-Through Rate (CTR) and Cost Per Lead (CPL)"
+    }
+  ],
+  "projected_results": {
+    "impressions": 4000000,
+    "clicks": 162500,
+    "conversions": 5500,
+    "blended_cac": "$45.20"
+  },
+  "quality_score": 95
+}

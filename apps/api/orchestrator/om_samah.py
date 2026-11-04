@@ -180,6 +180,21 @@ class OmSamahOrchestrator:
             }
         ]
 
+        # Check if user requested sensitive external action (Milestone 7)
+        req_lower = user_request.lower()
+        if any(w in req_lower for w in ["email", "بريد", "send"]):
+            steps_plan[2]["action_type"] = "send_email"
+            steps_plan[2]["title"] = f"Send Pitch Email to Client: {client_name}"
+            steps_plan[2]["input"]["action_type"] = "send_email"
+        elif any(w in req_lower for w in ["publish", "post", "نشر"]):
+            steps_plan[2]["action_type"] = "publish_post"
+            steps_plan[2]["title"] = f"Publish Social Post for {client_name}"
+            steps_plan[2]["input"]["action_type"] = "publish_post"
+        elif any(w in req_lower for w in ["ad campaign", "launch ad", "إعلان"]):
+            steps_plan[2]["action_type"] = "start_ad_campaign"
+            steps_plan[2]["title"] = f"Start Ad Campaign for {client_name}"
+            steps_plan[2]["input"]["action_type"] = "start_ad_campaign"
+
         return {
             "client_name": client_name,
             "complexity": "Enterprise (5-Step Coordinated DAG)",
@@ -281,6 +296,54 @@ class OmSamahOrchestrator:
                 message=f"Om Samah injected {len(retrieved_memories)} multi-level memories into {agent.name}",
                 metadata={"memory_count": len(retrieved_memories)}
             )
+
+        # Milestone 7: Sensitive Action Check & Human Approval Gate
+        action_type = step.get("action_type") or step["input"].get("action_type")
+        if not action_type:
+            t_lower = step["title"].lower()
+            if "send email" in t_lower or "إرسال بريد" in t_lower or "send_email" in t_lower:
+                action_type = "send_email"
+            elif "publish post" in t_lower or "نشر" in t_lower or "publish_post" in t_lower:
+                action_type = "publish_post"
+            elif "start ad" in t_lower or "إطلاق حملة" in t_lower or "start_ad_campaign" in t_lower:
+                action_type = "start_ad_campaign"
+
+        from approvals.service import SENSITIVE_ACTIONS, request_approval
+        if action_type in SENSITIVE_ACTIONS:
+            existing_approvals = database.list_approval_requests(workflow_id=self.workflow_id)
+            approved_req = next(
+                (r for r in existing_approvals if r.get("step_id") == step_id and r.get("status") in ("approved", "edited")),
+                None
+            )
+            if not approved_req:
+                req = request_approval(
+                    workflow_id=self.workflow_id,
+                    step_id=step_id,
+                    agent_id=agent_id,
+                    action_type=action_type,
+                    payload=step["input"],
+                )
+                database.update_workflow_step(step_id, {
+                    "status": "waiting_approval",
+                    "requires_approval": True,
+                    "approval_status": "pending",
+                })
+                database.update_workflow(self.workflow_id, {"status": "waiting_approval"})
+                await notify_workflow_update(self.workflow_id, {
+                    "step_id": step_id,
+                    "status": "waiting_approval",
+                    "request_id": req["id"],
+                })
+
+                event = _WORKFLOW_PAUSE_EVENTS.get(self.workflow_id)
+                if not event:
+                    event = asyncio.Event()
+                    _WORKFLOW_PAUSE_EVENTS[self.workflow_id] = event
+                await event.wait()
+                event.clear()
+
+            # Mark step input as approved for sensitive execution
+            step["input"]["approved"] = True
 
         max_retries = 2
         attempt = 0

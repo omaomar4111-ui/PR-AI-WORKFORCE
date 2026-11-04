@@ -10,6 +10,7 @@ import {
   Network,
   CheckSquare,
   Workflow,
+  ShieldAlert,
   FolderGit2,
   Users,
   Brain,
@@ -24,13 +25,16 @@ import {
   ChevronRight,
   Shield,
   User as UserIcon,
+  Bell,
 } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n";
 import {
   clearStoredSession,
   fetchMe,
+  fetchPendingApprovalsCount,
   getStoredToken,
+  getWsBaseUrl,
   User,
 } from "@/lib/api";
 
@@ -49,12 +53,13 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "departments", labelKey: "nav.departments", href: "/departments", icon: Network, enabled: false },
   { id: "tasks", labelKey: "nav.tasks", href: "/tasks", icon: CheckSquare, enabled: true },
   { id: "workflows", labelKey: "nav.workflows", href: "/workflows", icon: Workflow, enabled: true },
+  { id: "approvals", labelKey: "nav.approvals", href: "/approvals", icon: ShieldAlert, enabled: true },
   { id: "projects", labelKey: "nav.projects", href: "/projects", icon: FolderGit2, enabled: true },
   { id: "clients", labelKey: "nav.clients", href: "/clients", icon: Users, enabled: true },
   { id: "memory", labelKey: "nav.memory", href: "/memory", icon: Brain, enabled: true },
   { id: "deliverables", labelKey: "nav.deliverables", href: "/deliverables", icon: Sparkles, enabled: true },
   { id: "analytics", labelKey: "nav.analytics", href: "/analytics", icon: BarChart3, enabled: false },
-  { id: "integrations", labelKey: "nav.integrations", href: "/integrations", icon: Cable, enabled: false },
+  { id: "integrations", labelKey: "nav.integrations", href: "/integrations", icon: Cable, enabled: true },
   { id: "settings", labelKey: "nav.settings", href: "/settings", icon: Settings, enabled: false },
 ];
 
@@ -66,6 +71,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -81,6 +87,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         router.replace("/login");
       })
       .finally(() => setLoading(false));
+
+    fetchPendingApprovalsCount()
+      .then((count) => setPendingApprovalsCount(count))
+      .catch(() => {});
+
+    // Live Approvals WebSocket sync
+    let ws: WebSocket | null = null;
+    try {
+      const wsUrl = `${getWsBaseUrl()}/ws/approvals`;
+      ws = new WebSocket(wsUrl);
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.event === "approval_created" || msg.event === "approval_updated") {
+            fetchPendingApprovalsCount()
+              .then((count) => setPendingApprovalsCount(count))
+              .catch(() => {});
+          }
+        } catch (e) {}
+      };
+    } catch (e) {}
+
+    return () => {
+      if (ws) ws.close();
+    };
   }, [router]);
 
   const handleLogout = () => {
@@ -158,7 +189,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-gray-400"}`} />
                   <span>{t(item.labelKey)}</span>
                 </div>
-                {isActive && <ChevronRight className={`h-3 w-3 ${isAr ? "rotate-180" : ""}`} />}
+                <div className="flex items-center gap-1.5">
+                  {item.id === "approvals" && pendingApprovalsCount > 0 && (
+                    <span className="rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 text-[10px] font-bold animate-pulse">
+                      {pendingApprovalsCount}
+                    </span>
+                  )}
+                  {isActive && <ChevronRight className={`h-3 w-3 ${isAr ? "rotate-180" : ""}`} />}
+                </div>
               </a>
             );
           })}
@@ -206,8 +244,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          {/* Top Bar Right: Language Toggle, User Avatar & Logout */}
+          {/* Top Bar Right: Notifications, Language Toggle, User Avatar & Logout */}
           <div className="flex items-center gap-3">
+            {/* Approvals Notification Bell */}
+            <a
+              href="/approvals"
+              className="relative flex items-center justify-center rounded-lg border border-gray-800 bg-[#171923] p-2 text-gray-300 transition hover:border-[#8b5cf6] hover:text-white"
+              title={t("nav.approvals")}
+            >
+              <Bell className="h-4 w-4" />
+              {pendingApprovalsCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black shadow-sm shadow-amber-500/50">
+                  {pendingApprovalsCount > 9 ? "9+" : pendingApprovalsCount}
+                </span>
+              )}
+            </a>
+
             {/* Language Switcher */}
             <button
               onClick={toggleLang}
