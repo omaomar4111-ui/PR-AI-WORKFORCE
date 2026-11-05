@@ -72,6 +72,11 @@ MEMORY_EMBEDDINGS_DB: Dict[str, List[float]] = {}
 APPROVAL_REQUESTS_DB: Dict[str, Dict[str, Any]] = {}
 INTEGRATIONS_DB: Dict[str, Dict[str, Any]] = {}
 
+# Milestone 10: Analytics, AI Usage Logs, Quality Scores & System Metrics
+AI_USAGE_LOGS_DB: Dict[str, Dict[str, Any]] = {}
+QUALITY_SCORES_DB: Dict[str, Dict[str, Any]] = {}
+SYSTEM_METRICS_DB: Dict[str, Dict[str, Any]] = {}
+
 # Status to Progress mapping per Milestone 3 requirements
 STATUS_PROGRESS: Dict[str, int] = {
     "pending": 0,
@@ -102,6 +107,9 @@ def reset_db_for_tests():
     MEMORY_EMBEDDINGS_DB.clear()
     APPROVAL_REQUESTS_DB.clear()
     INTEGRATIONS_DB.clear()
+    AI_USAGE_LOGS_DB.clear()
+    QUALITY_SCORES_DB.clear()
+    SYSTEM_METRICS_DB.clear()
 
 
 # ── User Helpers ─────────────────────────────────────────────────────────────
@@ -1226,6 +1234,101 @@ def list_integrations(org_id: str) -> List[Dict[str, Any]]:
                 "connected_by": None,
             })
     return results
+
+
+# ── Milestone 10: Analytics & Usage Logging Helpers ──────────────────────────
+def create_ai_usage_log(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Persists an AI usage token/cost record."""
+    log_id = str(uuid.uuid4())
+    record = {
+        "id": log_id,
+        "org_id": data.get("org_id", "00000000-0000-0000-0000-000000000001"),
+        "agent_id": data["agent_id"],
+        "project_id": data.get("project_id"),
+        "workflow_id": data.get("workflow_id"),
+        "model": data.get("model", "gemini-1.5-pro"),
+        "prompt_tokens": int(data.get("prompt_tokens", 0)),
+        "completion_tokens": int(data.get("completion_tokens", 0)),
+        "total_tokens": int(data.get("total_tokens", 0)),
+        "estimated_cost_usd": float(data.get("estimated_cost_usd", 0.0)),
+        "latency_ms": int(data.get("latency_ms", 0)),
+        "created_at": data.get("created_at") or datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    AI_USAGE_LOGS_DB[log_id] = record
+    return record
+
+
+def list_ai_usage_logs(
+    org_id: str,
+    agent_id: Optional[str] = None,
+    project_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Returns AI usage records matching query filters."""
+    results = []
+    for log in AI_USAGE_LOGS_DB.values():
+        if log["org_id"] != org_id:
+            continue
+        if agent_id and log["agent_id"] != agent_id:
+            continue
+        if project_id and log.get("project_id") != project_id:
+            continue
+        if start_date and log["created_at"] < start_date:
+            continue
+        if end_date and log["created_at"] > end_date:
+            continue
+        results.append(dict(log))
+
+    # Sort descending by creation time
+    results.sort(key=lambda x: x["created_at"], reverse=True)
+    return results
+
+
+def create_quality_score(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Persists a quality audit evaluation record."""
+    qid = str(uuid.uuid4())
+    record = {
+        "id": qid,
+        "deliverable_id": data.get("deliverable_id"),
+        "agent_id": data["agent_id"],
+        "overall_score": int(data.get("overall_score", 95)),
+        "breakdown_json": data.get("breakdown_json", {}),
+        "reviewed_at": data.get("reviewed_at") or datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    QUALITY_SCORES_DB[qid] = record
+    return record
+
+
+def list_quality_scores(
+    agent_id: Optional[str] = None,
+    days: int = 30
+) -> List[Dict[str, Any]]:
+    """Returns quality scores within the specified day window."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cutoff = (now - datetime.timedelta(days=days)).isoformat()
+    results = []
+    for qs in QUALITY_SCORES_DB.values():
+        if agent_id and qs["agent_id"] != agent_id:
+            continue
+        if qs["reviewed_at"] >= cutoff:
+            results.append(dict(qs))
+    results.sort(key=lambda x: x["reviewed_at"], reverse=True)
+    return results
+
+
+def create_system_metric(metric_name: str, metric_value: float) -> Dict[str, Any]:
+    """Records a system metric time-series data point."""
+    mid = str(uuid.uuid4())
+    record = {
+        "id": mid,
+        "metric_name": metric_name,
+        "metric_value": float(metric_value),
+        "recorded_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    SYSTEM_METRICS_DB[mid] = record
+    return record
+
 
 
 

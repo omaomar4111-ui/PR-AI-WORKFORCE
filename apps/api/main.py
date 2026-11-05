@@ -6,6 +6,7 @@ import json
 from typing import Dict, Any, Optional, List, Set
 
 from config import settings
+import database
 from database import (
     get_user_by_email,
     create_user,
@@ -74,6 +75,13 @@ from virtual_office import (
     get_agent_status,
     update_agent_status,
     set_status_ws_broadcast_fn,
+)
+from analytics.service import (
+    get_cost_per_agent,
+    get_cost_per_project,
+    get_quality_trend,
+    get_token_usage_summary,
+    log_ai_usage,
 )
 
 app = FastAPI(
@@ -1078,6 +1086,66 @@ def test_integration_endpoint(
 
 
 
+
+
+# ── Milestone 10: Analytics & Cost Tracking Endpoints ─────────────────────────
+@app.get("/api/analytics/summary")
+def get_analytics_summary_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Returns top-level KPI metrics, token consumption, total cost, and model distribution."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    summary = get_token_usage_summary(org_id)
+    return {"summary": summary}
+
+
+@app.get("/api/analytics/usage")
+def get_analytics_usage_endpoint(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    agent_id: Optional[str] = Query(None),
+    project_id: Optional[str] = Query(None),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Returns filtered AI execution usage logs."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    logs = database.list_ai_usage_logs(
+        org_id=org_id,
+        agent_id=agent_id,
+        project_id=project_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    return {"logs": logs, "count": len(logs)}
+
+
+@app.get("/api/analytics/costs/agents")
+def get_costs_by_agent_endpoint(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Returns cost and token consumption aggregated by AI agent."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    costs = get_cost_per_agent(org_id, start_date=start_date, end_date=end_date)
+    return {"costs_by_agent": costs, "count": len(costs)}
+
+
+@app.get("/api/analytics/costs/projects")
+def get_costs_by_project_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Returns cost and token consumption aggregated by project."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    costs = get_cost_per_project(org_id)
+    return {"costs_by_project": costs, "count": len(costs)}
+
+
+@app.get("/api/analytics/quality/trend")
+def get_quality_trend_endpoint(
+    days: int = Query(30, ge=1, le=365),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Returns historical daily quality score trends."""
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    trend = get_quality_trend(org_id, days=days)
+    return {"quality_trend": trend}
 
 
 if __name__ == "__main__":

@@ -58,7 +58,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "clients", labelKey: "nav.clients", href: "/clients", icon: Users, enabled: true },
   { id: "memory", labelKey: "nav.memory", href: "/memory", icon: Brain, enabled: true },
   { id: "deliverables", labelKey: "nav.deliverables", href: "/deliverables", icon: Sparkles, enabled: true },
-  { id: "analytics", labelKey: "nav.analytics", href: "/analytics", icon: BarChart3, enabled: false },
+  { id: "analytics", labelKey: "nav.analytics", href: "/analytics", icon: BarChart3, enabled: true },
   { id: "integrations", labelKey: "nav.integrations", href: "/integrations", icon: Cable, enabled: true },
   { id: "settings", labelKey: "nav.settings", href: "/settings", icon: Settings, enabled: false },
 ];

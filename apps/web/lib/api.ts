@@ -968,3 +968,132 @@ export async function testIntegration(provider: string): Promise<{ success: bool
   const data = await res.json();
   return data;
 }
+
+// ── Milestone 10: Analytics & Cost Tracking ─────────────────────────────────
+export interface AnalyticsSummary {
+  total_tokens: number;
+  total_prompt_tokens?: number;
+  total_completion_tokens?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_cost_usd: number;
+  total_executions: number;
+  avg_latency_ms: number;
+  avg_quality_score: number;
+  cost_by_model?: Record<string, number>;
+  model_breakdown?: Array<{
+    model: string;
+    tokens: number;
+    cost_usd: number;
+    count: number;
+  }>;
+  daily_costs?: Array<{
+    date: string;
+    cost_usd: number;
+    total_tokens: number;
+  }>;
+}
+
+export interface AiUsageLog {
+  id: string;
+  org_id: string;
+  agent_id: string;
+  project_id?: string | null;
+  workflow_id?: string | null;
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  estimated_cost_usd: number;
+  latency_ms: number;
+  created_at: string;
+}
+
+export interface CostPerAgent {
+  agent_id: string;
+  agent_name: string;
+  department: string;
+  total_cost_usd: number;
+  total_tokens: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  execution_count: number;
+  avg_latency_ms: number;
+}
+
+export interface CostPerProject {
+  project_id: string;
+  project_name: string;
+  total_cost_usd: number;
+  total_tokens: number;
+  execution_count: number;
+}
+
+export interface QualityTrendPoint {
+  date: string;
+  avg_quality_score: number;
+  evaluations_count: number;
+}
+
+export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
+  const res = await fetch(`${API_BASE_URL}/api/analytics/summary`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load analytics summary");
+  const data = await res.json();
+  return data.summary;
+}
+
+export async function fetchAnalyticsUsage(params?: {
+  start_date?: string;
+  end_date?: string;
+  agent_id?: string;
+  project_id?: string;
+}): Promise<AiUsageLog[]> {
+  const url = new URL(`${API_BASE_URL}/api/analytics/usage`);
+  if (params?.start_date) url.searchParams.set("start_date", params.start_date);
+  if (params?.end_date) url.searchParams.set("end_date", params.end_date);
+  if (params?.agent_id) url.searchParams.set("agent_id", params.agent_id);
+  if (params?.project_id) url.searchParams.set("project_id", params.project_id);
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load AI usage logs");
+  const data = await res.json();
+  return data.logs;
+}
+
+export async function fetchCostPerAgent(params?: {
+  start_date?: string;
+  end_date?: string;
+}): Promise<CostPerAgent[]> {
+  const url = new URL(`${API_BASE_URL}/api/analytics/costs/agents`);
+  if (params?.start_date) url.searchParams.set("start_date", params.start_date);
+  if (params?.end_date) url.searchParams.set("end_date", params.end_date);
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load agent cost breakdown");
+  const data = await res.json();
+  return data.costs_by_agent;
+}
+
+export async function fetchCostPerProject(): Promise<CostPerProject[]> {
+  const res = await fetch(`${API_BASE_URL}/api/analytics/costs/projects`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load project cost breakdown");
+  const data = await res.json();
+  return data.costs_by_project;
+}
+
+export async function fetchQualityTrend(days: number = 30): Promise<QualityTrendPoint[]> {
+  const res = await fetch(`${API_BASE_URL}/api/analytics/quality/trend?days=${days}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load quality score trends");
+  const data = await res.json();
+  return data.quality_trend;
+}
