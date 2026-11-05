@@ -1,0 +1,240 @@
+# 🚀 PR AI WORKFORCE — Production Deployment & Operations Guide
+
+This guide provides end-to-end instructions for deploying, scaling, and maintaining the **PR AI WORKFORCE** platform in production.
+
+---
+
+## 🏗️ 1. Architecture Overview
+
+```mermaid
+flowchart TD
+    subgraph ClientLayer [Client & Edge Layer]
+        Users["Client Browsers / Admins"]
+        CDN["Vercel Global CDN (Edge Network)"]
+        NextJS["Next.js 14 Web Application\n(Vercel / Port 3000)"]
+    end
+
+    subgraph APILayer [API & Orchestration Layer]
+        LB["Railway / Cloud Load Balancer (HTTPS)"]
+        FastAPI["FastAPI Production Cluster\n(Uvicorn Workers / Port 8000)"]
+        SecurityMW["Security & RBAC Middleware\n(Rate Limiting & CSP)"]
+        OmSamah["Om Samah CEO Orchestrator\n(DAG Engine & Execution Bus)"]
+        Workforce["38 AI Specialized Agents\n(8 Department Roster)"]
+    end
+
+    subgraph DataLayer [Persistent Data & Cache Layer]
+        Postgres["Supabase PostgreSQL 16\n(pgvector + 20 Tables + RLS)"]
+        PgBouncer["PgBouncer Pooler\n(Transaction Mode / Port 6543)"]
+        Redis["Upstash Redis 7\n(Rate Limiting & PubSub Cache)"]
+    end
+
+    subgraph ExternalServices [Third-Party Integrations]
+        LLMs["AI Model Providers\n(OpenAI / Gemini / Anthropic)"]
+        GoogleWorkspace["Google Drive / Docs / Sheets / Gmail"]
+        MetaAds["Meta Ads & Instagram API"]
+    end
+
+    Users -->|HTTPS / WSS| CDN
+    CDN --> NextJS
+    NextJS -->|REST API & WebSockets| LB
+    LB --> SecurityMW
+    SecurityMW --> FastAPI
+    FastAPI --> OmSamah
+    OmSamah --> Workforce
+    Workforce --> LLMs
+    FastAPI --> PgBouncer
+    PgBouncer --> Postgres
+    FastAPI --> Redis
+    Workforce --> GoogleWorkspace
+    Workforce --> MetaAds
+```
+
+---
+
+## 📋 2. Environment Variables Matrix
+
+| Variable Name | Target Service | Required | Default Value | Description / Security |
+| :--- | :--- | :--- | :--- | :--- |
+| `DATABASE_URL` | API / Migrations | **Yes** | — | PostgreSQL connection string with `pgvector` enabled (use PgBouncer pooled URL in production). |
+| `REDIS_URL` | API | **Yes** | `redis://localhost:6379/0` | Upstash / Redis connection string for sliding-window rate limiting. |
+| `APP_SECRET` | API | **Yes** | — | 32+ character high-entropy key for JWT signature & token validation. |
+| `OPENAI_API_KEY` | API | Optional | — | API key for OpenAI GPT-4o / text-embedding-3-small. |
+| `GEMINI_API_KEY` | API | Optional | — | API key for Google Gemini 1.5 Pro / Flash. |
+| `ANTHROPIC_API_KEY`| API | Optional | — | API key for Claude 3.5 Sonnet. |
+| `ALLOWED_ORIGINS` | API | **Yes** | `https://your-domain.com` | Comma-separated list of permitted CORS frontend domains. |
+| `RATE_LIMIT_ENABLED`| API | Optional | `true` | Set to `false` only during development. |
+| `LOG_LEVEL` | API | Optional | `INFO` | Structured logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
+| `NEXT_PUBLIC_API_URL`| Web (Frontend)| **Yes** | `http://localhost:8000` | Public URL of the FastAPI gateway (e.g. `https://api.yourdomain.com`). |
+| `PORT` | API / Web | Optional | `8000` (API) / `3000` (Web) | Listening port in container or PaaS runner. |
+
+---
+
+## 🛠️ 3. Step-by-Step Deployment Instructions
+
+### Phase A: Database Provisioning (Supabase PostgreSQL + pgvector)
+
+1. **Create Supabase Project:**
+   - Log in to [Supabase Console](https://supabase.com).
+   - Create a new project in your target region (e.g., `eu-west-1` or `us-east-1`).
+   - Copy the **Connection String (Transaction Pooler - port 6543)** and the direct connection string.
+
+2. **Run All 10 SQL Migrations:**
+   From your workstation or CI/CD runner:
+   ```bash
+   export DATABASE_URL="postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres"
+   python scripts/run_migrations.py
+   ```
+   *The migration runner will automatically:*
+   - Verify connectivity.
+   - Initialize `schema_migrations` tracking table.
+   - Execute migrations `001_initial_schema.sql` through `010_analytics.sql` transactionally.
+   - Enforce and verify Row-Level Security (RLS) on all 20 tables.
+
+3. **Verify pgvector Extension:**
+   ```sql
+   SELECT * FROM pg_extension WHERE extname = 'vector';
+   ```
+
+---
+
+### Phase B: Distributed Cache Provisioning (Upstash Redis)
+
+1. Log in to [Upstash Console](https://upstash.com).
+2. Create a new serverless Redis database in the same cloud region as your database.
+3. Copy the `rediss://default:[PASSWORD]@[HOST]:[PORT]` connection string.
+4. Set this as `REDIS_URL` in your backend configuration.
+
+---
+
+### Phase C: Backend API Deployment (Railway / Cloud Run)
+
+#### Option 1: Railway Deployment (Automated via GitHub)
+1. In Railway, click **New Project** > **Deploy from GitHub repo**.
+2. Select repository `PR-AI-WORKFORCE`.
+3. Set **Root Directory** to `/`.
+4. Railway will automatically detect `railway.json` and build via `apps/api/Dockerfile`.
+5. In **Variables**, enter all backend environment variables (`DATABASE_URL`, `REDIS_URL`, `APP_SECRET`, etc.).
+6. Healthcheck endpoint is preconfigured to:
+   ```
+   GET /health
+   ```
+7. Generate domain (e.g. `https://api-production.up.railway.app`).
+
+#### Option 2: Docker Compose (Self-Hosted Linux VM / VPS)
+1. Clone the repository on your Ubuntu 22.04 LTS host.
+2. Create `.env` file in the project root:
+   ```env
+   DATABASE_URL=postgresql://workforce_user:securepassword@postgres:5432/workforce_db
+   REDIS_URL=redis://redis:6379/0
+   APP_SECRET=a_very_secret_key_minimum_32_characters_long
+   NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+   ALLOWED_ORIGINS=https://app.yourdomain.com
+   ```
+3. Run with Docker Compose:
+   ```bash
+   docker compose up -d --build
+   ```
+4. Verify all 4 containers are healthy:
+   ```bash
+   docker compose ps
+   ```
+
+---
+
+### Phase D: Frontend Deployment (Vercel)
+
+1. Log in to [Vercel](https://vercel.com) and click **Add New Project**.
+2. Import the `PR-AI-WORKFORCE` repository.
+3. Configure the project settings:
+   - **Framework Preset:** Next.js
+   - **Root Directory:** `apps/web`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `.next`
+4. In **Environment Variables**, set:
+   ```
+   NEXT_PUBLIC_API_URL = https://api-production.up.railway.app
+   ```
+5. Click **Deploy**. Vercel will build the SSR bundle and distribute it across edge points of presence.
+
+---
+
+## 🔒 4. Security Hardening & Zero-Trust Checklist
+
+- [x] **Strict Transport Security (HSTS):** Pre-configured via `RateLimitMiddleware` headers (`max-age=63072000; includeSubDomains; preload`).
+- [x] **Content-Security-Policy (CSP):** Configured to block unauthorized iframe embeds (`frame-ancestors 'none'`) and script injections.
+- [x] **Anti-MIME Sniffing:** `X-Content-Type-Options: nosniff` active on all endpoints.
+- [x] **Rate Limiting:**
+  - `/api/auth/*`: 5 req/min (brute-force defense).
+  - `/api/agents/*/execute`: 10 req/min (compute & token quota defense).
+  - General `/api/*`: 60 req/min.
+- [x] **Row Level Security (RLS):** Enabled across all 20 tables with multi-tenant isolation (`org_id` context).
+- [x] **RBAC Gateways:** Sensitive mutations (`DELETE client`, `POST approve`, `POST integrations`) restricted strictly to `owner` and `admin` roles.
+
+---
+
+## 📈 5. Scaling & Performance Runbook
+
+### Horizontal Worker Scaling
+In `apps/api/Dockerfile`, the default startup command uses:
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+For high-throughput deployments (>1,000 requests/second):
+1. **Rule of Thumb:** `workers = (2 x CPU cores) + 1`.
+2. Set Railway/Cloud Run instances to autoscaling between 2 and 10 replicas based on CPU threshold (>70%).
+3. Always connect through **PgBouncer** (Supabase port 6543) to prevent PostgreSQL connection exhaustion.
+
+### Database Indexing
+The following indexes are already created in migrations for optimal query performance:
+- `idx_tasks_status` on `tasks(status)`
+- `idx_tasks_assigned` on `tasks(assigned_agent_id)`
+- `idx_workflow_steps_agent` on `workflow_steps(assigned_agent_id)`
+- `idx_ai_usage_org` on `ai_usage_logs(org_id, created_at)`
+- `idx_ai_usage_agent` on `ai_usage_logs(agent_id)`
+- HNSW index on `memory_embeddings` using cosine similarity (`vector_cosine_ops`)
+
+---
+
+## 🛡️ 6. Disaster Recovery & Rollback Procedure
+
+### Database Backup
+- **Automated Daily Backups:** Enabled by default on Supabase (7-day retention on Pro plan).
+- **Manual Snapshot:**
+  ```bash
+  pg_dump --clean --if-exists --no-owner -h <db-host> -U postgres -d postgres > backup_$(date +%Y%m%d_%H%M%S).sql
+  ```
+
+### Rollback Strategy
+1. **Frontend Rollback:**
+   - On Vercel dashboard: navigate to **Deployments** > click on previous stable build > **Promote to Production** (takes < 10 seconds).
+2. **Backend Rollback:**
+   - In Railway or Docker: revert container tag to previous image hash or Git commit.
+3. **Database Migration Rollback:**
+   - Use targeted down migrations or restore snapshot to point-in-time prior to deployment.
+
+---
+
+## 🩺 7. Post-Deployment Verification Commands
+
+Run these smoke tests immediately after deployment:
+
+```bash
+# 1. Verify API Healthcheck
+curl -f https://api.yourdomain.com/health
+
+# 2. Verify Security Headers
+curl -I https://api.yourdomain.com/api/agents | grep -E "x-frame-options|x-content-type-options"
+
+# 3. Verify Public 38 Agents Roster
+curl -s https://api.yourdomain.com/api/agents | jq '.count'
+# Expected output: 38
+
+# 4. Verify Rate Limiting Enforcement
+for i in {1..8}; do curl -s -o /dev/null -w "%{http_code}\n" https://api.yourdomain.com/api/auth/login; done
+# Expected: First 5 requests return 200/401, 6th-8th return 429 Too Many Requests
+
+# 5. Verify Frontend Accessibility
+curl -f https://app.yourdomain.com/login
+```
+
+*Production readiness certified by Om Samah CEO Orchestrator & PR AI Workforce Engineering Team.*
