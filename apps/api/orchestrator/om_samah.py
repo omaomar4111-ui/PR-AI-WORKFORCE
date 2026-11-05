@@ -55,133 +55,450 @@ class OmSamahOrchestrator:
     def analyze_request(self, user_request: str) -> Dict[str, Any]:
         """
         Step 1: Analyzes user request and plans DAG subtasks with dependencies.
-        Returns nodes (steps) and edges (dependencies).
+        Dynamically selects specialized agents from the 38-agent roster based on intent.
+        Raises ValueError if user_request is empty or invalid.
         """
-        req_lower = user_request.lower()
+        if not user_request or not isinstance(user_request, str) or not user_request.strip():
+            raise ValueError("User request cannot be empty.")
+
+        clean_request = user_request.strip()
+        if len(clean_request) < 4:
+            raise ValueError("User request is too short to construct an AI workforce workflow.")
+
+        req_lower = clean_request.lower()
 
         # Extract client or brand name if present
         client_name = "Agency Client"
-        for kw in ["for ", "client ", "brand "]:
+        for kw in ["for ", "client ", "brand ", "لـ ", "لعميل "]:
             if kw in req_lower:
                 parts = req_lower.split(kw, 1)[1].split()
                 if parts:
                     client_name = parts[0].capitalize()
 
-        # Build DAG steps:
-        # Step 1: Research (Dr. Ibrahim) -> depends on: none
-        # Step 2: Strategy (Ragaa) -> depends on: [Step 1]
-        # Step 3: Content (Copywriter) -> depends on: [Step 2] (Parallel with Step 4)
-        # Step 4: Design (Fawzyia) -> depends on: [Step 2] (Parallel with Step 3)
-        # Step 5: Quality Assurance & Review (QA Lead) -> depends on: [Step 3, Step 4] (Requires Approval)
+        # 1. Video Production Intent
+        video_keywords = ["video", "فيديو", "commercial", "reels", "tiktok", "storyboard", "filming", "sound", "script", "مونتاج"]
+        # 2. Engineering & Tech Intent
+        tech_keywords = ["code", "landing page", "website", "software", "api", "backend", "frontend", "devops", "security", "موقع", "تطوير", "برمجة", "تطبيق"]
+        # 3. SEO & Content Marketing Intent
+        seo_keywords = ["seo", "search engine", "keywords", "ranking", "organic", "content strategy", "سيو", "محتوى", "مقال", "مقالات"]
+        # 4. Sales & CRM / B2B Outreach Intent
+        sales_keywords = ["sales", "leads", "crm", "pipeline", "outreach", "b2b", "prospects", "عملاء", "مبيعات", "صفقة"]
 
-        steps_plan = [
-            {
-                "step_key": "step_1",
-                "step_order": 1,
-                "assigned_agent_id": "dr-ibrahim",
-                "assigned_agent_name": "Dr. Ibrahim",
-                "title": f"Market & Intelligence Research: {client_name}",
-                "depends_on": [],
-                "requires_approval": False,
-                "input": {
-                    "client_name": client_name,
-                    "industry": "PR & Communications",
-                    "competitors": ["Regional Competitor A", "Competitor B"],
-                    "research_objectives": [
-                        f"Evaluate market positioning for: {user_request}",
-                        "Identify target audience pain points & media channels",
-                        "Audit competitive share of voice"
-                    ],
-                    "target_region": "MENA (Egypt & GCC)"
+        if any(w in req_lower for w in video_keywords):
+            complexity = "Video Production Pipeline (5-Step Audio/Visual DAG)"
+            steps_plan = [
+                {
+                    "step_key": "step_1",
+                    "step_order": 1,
+                    "assigned_agent_id": "scriptwriter",
+                    "assigned_agent_name": "Scriptwriter",
+                    "title": f"Story Concept & Commercial Script: {client_name}",
+                    "depends_on": [],
+                    "requires_approval": False,
+                    "input": {
+                        "script_title": f"Commercial Script for {client_name}",
+                        "target_platform": "YouTube & Social Video",
+                        "runtime_seconds": 60
+                    }
+                },
+                {
+                    "step_key": "step_2",
+                    "step_order": 2,
+                    "assigned_agent_id": "storyboard-artist",
+                    "assigned_agent_name": "Storyboard Artist",
+                    "title": f"Visual Storyboard & Shot Composition: {client_name}",
+                    "depends_on": ["step_1"],
+                    "requires_approval": False,
+                    "input": {
+                        "project_name": f"Visual Storyboard: {client_name}",
+                        "script_scenes": [
+                            f"Scene 1: Hook and opening narrative for {clean_request}",
+                            "Scene 2: Core value showcase and dynamic product framing",
+                            "Scene 3: Climax and call-to-action outro"
+                        ]
+                    }
+                },
+                {
+                    "step_key": "step_3",
+                    "step_order": 3,
+                    "assigned_agent_id": "video-editor",
+                    "assigned_agent_name": "Video Editor",
+                    "title": f"Dynamic Video Assembly & Motion Cut: {client_name}",
+                    "depends_on": ["step_2"],
+                    "requires_approval": False,
+                    "input": {
+                        "cut_name": f"Dynamic Assembly: {client_name}",
+                        "source_clips": ["B-Roll 4K", "Product Macro Shots", "Talking Head Narrative"],
+                        "target_format": "16:9 4K UHD"
+                    }
+                },
+                {
+                    "step_key": "step_4",
+                    "step_order": 4,
+                    "assigned_agent_id": "sound-designer",
+                    "assigned_agent_name": "Sound Designer",
+                    "title": f"Cinematic Sound Design & Spatial Audio: {client_name}",
+                    "depends_on": ["step_2"],
+                    "requires_approval": False,
+                    "input": {
+                        "soundtrack_title": f"Cinematic Soundscape: {client_name}",
+                        "scene_mood": "High-energy modern cinematic",
+                        "target_lufs": -14.0
+                    }
+                },
+                {
+                    "step_key": "step_5",
+                    "step_order": 5,
+                    "assigned_agent_id": "video-director",
+                    "assigned_agent_name": "Video Director",
+                    "title": f"Executive Director Cut & Final Mastering: {client_name}",
+                    "depends_on": ["step_3", "step_4"],
+                    "requires_approval": True,
+                    "input": {
+                        "commercial_title": f"Master Cut: {client_name}",
+                        "target_duration_sec": 60,
+                        "emotional_tone": "Authoritative & Inspiring"
+                    }
                 }
-            },
-            {
-                "step_key": "step_2",
-                "step_order": 2,
-                "assigned_agent_id": "ragaa",
-                "assigned_agent_name": "Ragaa",
-                "title": f"Brand Strategy & Positioning: {client_name}",
-                "depends_on": ["step_1"],
-                "requires_approval": False,
-                "input": {
-                    "client_name": client_name,
-                    "campaign_goal": user_request,
-                    "target_audience": "Enterprise decision makers, business executives, and digital creators",
-                    "budget_tier": "enterprise",
-                    "key_differentiators": [
-                        "Autonomous multi-agent speed",
-                        "Bilingual dialect accuracy",
-                        "Human-governed PR execution"
-                    ]
+            ]
+        elif any(w in req_lower for w in tech_keywords):
+            complexity = "Engineering & Systems Architecture (5-Step Tech DAG)"
+            steps_plan = [
+                {
+                    "step_key": "step_1",
+                    "step_order": 1,
+                    "assigned_agent_id": "mahmoud",
+                    "assigned_agent_name": "Mahmoud (Lead Architect)",
+                    "title": f"System Architecture & Feasibility: {client_name}",
+                    "depends_on": [],
+                    "requires_approval": False,
+                    "input": {
+                        "project_name": f"Technical Platform for {client_name}",
+                        "deliverable_type": "full_stack_architecture",
+                        "tech_stack": ["Next.js", "FastAPI", "PostgreSQL"],
+                        "requirements": [clean_request]
+                    }
+                },
+                {
+                    "step_key": "step_2",
+                    "step_order": 2,
+                    "assigned_agent_id": "frontend-dev",
+                    "assigned_agent_name": "Frontend Developer",
+                    "title": f"UI/UX Implementation & Web Components: {client_name}",
+                    "depends_on": ["step_1"],
+                    "requires_approval": False,
+                    "input": {
+                        "component_name": f"{client_name} Interactive Web Portal",
+                        "framework": "Next.js 14 App Router + Tailwind",
+                        "features": ["Client dashboard", "Real-time task monitoring", "RTL Arabic support"]
+                    }
+                },
+                {
+                    "step_key": "step_3",
+                    "step_order": 3,
+                    "assigned_agent_id": "backend-dev",
+                    "assigned_agent_name": "Backend Developer",
+                    "title": f"REST API & Database Layer: {client_name}",
+                    "depends_on": ["step_1"],
+                    "requires_approval": False,
+                    "input": {
+                        "service_name": f"{client_name} Core Microservice",
+                        "endpoints_needed": ["GET /api/v1/data", "POST /api/v1/tasks"],
+                        "database_tables": ["records", "audit_logs"]
+                    }
+                },
+                {
+                    "step_key": "step_4",
+                    "step_order": 4,
+                    "assigned_agent_id": "security-engineer",
+                    "assigned_agent_name": "Security Engineer",
+                    "title": f"Security Audit & Threat Modeling: {client_name}",
+                    "depends_on": ["step_2", "step_3"],
+                    "requires_approval": False,
+                    "input": {
+                        "system_component": f"{client_name} API Gateway",
+                        "attack_surfaces": ["JWT verification", "IDOR vulnerability", "Rate limiting"]
+                    }
+                },
+                {
+                    "step_key": "step_5",
+                    "step_order": 5,
+                    "assigned_agent_id": "qa-automation-engineer",
+                    "assigned_agent_name": "QA Automation Engineer",
+                    "title": f"Automated E2E Testing & Release Gate: {client_name}",
+                    "depends_on": ["step_4"],
+                    "requires_approval": True,
+                    "input": {
+                        "test_suite_title": f"Release Gate E2E Suite: {client_name}",
+                        "target_routes": ["/dashboard", "/api/v1/data"],
+                        "assertions_required": ["Auth check passes", "Data integrity confirmed"]
+                    }
                 }
-            },
-            {
-                "step_key": "step_3",
-                "step_order": 3,
-                "assigned_agent_id": "copywriter",
-                "assigned_agent_name": "Copywriter",
-                "title": f"PR Copywriting & Viral Scripts: {client_name}",
-                "depends_on": ["step_2"],
-                "requires_approval": False,
-                "input": {
-                    "topic": user_request,
-                    "format": "press_release",
-                    "tone": "authoritative and inspiring",
-                    "target_language": "bilingual",
-                    "key_takeaways": [
-                        "Instant narrative deployment",
-                        "Uncompromised editorial quality",
-                        "Strategic executive thought leadership"
-                    ]
+            ]
+        elif any(w in req_lower for w in seo_keywords):
+            complexity = "SEO & Organic Growth Campaign (5-Step Inbound DAG)"
+            steps_plan = [
+                {
+                    "step_key": "step_1",
+                    "step_order": 1,
+                    "assigned_agent_id": "seo-specialist",
+                    "assigned_agent_name": "SEO Specialist",
+                    "title": f"Search Architecture & Keyword Mapping: {client_name}",
+                    "depends_on": [],
+                    "requires_approval": False,
+                    "input": {
+                        "client_domain": f"{client_name.lower().replace(' ', '')}.com",
+                        "target_keywords": ["PR agency automation", "AI workforce MENA", "strategic corporate communications"],
+                        "target_geography": "MENA (GCC & Egypt)"
+                    }
+                },
+                {
+                    "step_key": "step_2",
+                    "step_order": 2,
+                    "assigned_agent_id": "content-strategist",
+                    "assigned_agent_name": "Content Strategist",
+                    "title": f"Content Pillar & Editorial Funnel: {client_name}",
+                    "depends_on": ["step_1"],
+                    "requires_approval": False,
+                    "input": {
+                        "client_name": client_name,
+                        "target_persona": "Enterprise Chief Marketing Officers & Founders",
+                        "core_objective": clean_request
+                    }
+                },
+                {
+                    "step_key": "step_3",
+                    "step_order": 3,
+                    "assigned_agent_id": "copywriter",
+                    "assigned_agent_name": "Copywriter",
+                    "title": f"High-Converting SEO Articles & Thought Leadership: {client_name}",
+                    "depends_on": ["step_2"],
+                    "requires_approval": False,
+                    "input": {
+                        "topic": clean_request,
+                        "format": "long_form_article",
+                        "tone": "thought_leadership",
+                        "target_language": "bilingual",
+                        "key_takeaways": [
+                            "AI-driven PR agility",
+                            "Enterprise authority",
+                            "Cost optimization"
+                        ]
+                    }
+                },
+                {
+                    "step_key": "step_4",
+                    "step_order": 4,
+                    "assigned_agent_id": "growth-hacker",
+                    "assigned_agent_name": "Growth Hacker",
+                    "title": f"Distribution Channels & Backlink Acquisition: {client_name}",
+                    "depends_on": ["step_2"],
+                    "requires_approval": False,
+                    "input": {
+                        "product_name": f"{client_name} Organic Inbound Engine",
+                        "north_star_metric": "Organic Search Traffic & Lead Conversion",
+                        "experiment_budget": 3000
+                    }
+                },
+                {
+                    "step_key": "step_5",
+                    "step_order": 5,
+                    "assigned_agent_id": "compliance-officer",
+                    "assigned_agent_name": "Compliance Officer",
+                    "title": f"Regulatory Compliance & Content Verification: {client_name}",
+                    "depends_on": ["step_3", "step_4"],
+                    "requires_approval": True,
+                    "input": {
+                        "campaign_name": f"SEO & Inbound Campaign: {client_name}",
+                        "target_jurisdictions": ["Egypt", "UAE", "Saudi Arabia"],
+                        "campaign_claims": ["Highest customer retention in sector", "Full data privacy compliance"]
+                    }
                 }
-            },
-            {
-                "step_key": "step_4",
-                "step_order": 4,
-                "assigned_agent_id": "fawzyia",
-                "assigned_agent_name": "Fawzyia",
-                "title": f"Creative Direction & Visual Identity: {client_name}",
-                "depends_on": ["step_2"],
-                "requires_approval": False,
-                "input": {
-                    "brand_name": client_name,
-                    "visual_mood": "Luxury Cyber-Editorial with Royal Obsidian and Ultraviolet tones",
-                    "deliverable_types": [
-                        "Main Campaign Key Visual (16:9)",
-                        "Social Carousel Templates (4:5)",
-                        "Executive Briefing One-Pager (A4)"
-                    ],
-                    "brand_colors": ["#8b5cf6", "#0d0e12", "#f59e0b"]
+            ]
+        elif any(w in req_lower for w in sales_keywords):
+            complexity = "B2B Sales Pipeline & Outreach (5-Step Commercial DAG)"
+            steps_plan = [
+                {
+                    "step_key": "step_1",
+                    "step_order": 1,
+                    "assigned_agent_id": "market-researcher",
+                    "assigned_agent_name": "Market Researcher",
+                    "title": f"TAM & Prospect Segment Research: {client_name}",
+                    "depends_on": [],
+                    "requires_approval": False,
+                    "input": {
+                        "sector": "Enterprise Tech & Professional Services",
+                        "target_country": "Saudi Arabia & UAE"
+                    }
+                },
+                {
+                    "step_key": "step_2",
+                    "step_order": 2,
+                    "assigned_agent_id": "lead-qualifier",
+                    "assigned_agent_name": "Lead Qualifier",
+                    "title": f"ICP Scoring & Prospect Qualification: {client_name}",
+                    "depends_on": ["step_1"],
+                    "requires_approval": False,
+                    "input": {
+                        "prospect_name": f"Prospective Enterprise for {client_name}",
+                        "company_size": "250-1000 employees",
+                        "stated_need": clean_request
+                    }
+                },
+                {
+                    "step_key": "step_3",
+                    "step_order": 3,
+                    "assigned_agent_id": "account-executive",
+                    "assigned_agent_name": "Account Executive",
+                    "title": f"Enterprise Pitch Deck & Deal Packaging: {client_name}",
+                    "depends_on": ["step_2"],
+                    "requires_approval": False,
+                    "input": {
+                        "client_name": client_name,
+                        "service_package": "Enterprise AI Workforce Retainer",
+                        "monthly_retainer": 15000
+                    }
+                },
+                {
+                    "step_key": "step_4",
+                    "step_order": 4,
+                    "assigned_agent_id": "crm-specialist",
+                    "assigned_agent_name": "CRM Specialist",
+                    "title": f"CRM Pipeline Automation & Deal Stage Setup: {client_name}",
+                    "depends_on": ["step_2"],
+                    "requires_approval": False,
+                    "input": {
+                        "deal_id": f"DEAL-{client_name.upper()[:4]}",
+                        "current_stage": "proposal_delivered",
+                        "days_in_stage": 2
+                    }
+                },
+                {
+                    "step_key": "step_5",
+                    "step_order": 5,
+                    "assigned_agent_id": "sales-manager",
+                    "assigned_agent_name": "Sales Manager",
+                    "title": f"Executive Commercial Review & Deal Governance: {client_name}",
+                    "depends_on": ["step_3", "step_4"],
+                    "requires_approval": True,
+                    "input": {
+                        "prospect_company": f"{client_name} Target Corp",
+                        "prospect_role": "VP Marketing",
+                        "deal_size_tier": "tier_1_enterprise",
+                        "pain_points": [clean_request]
+                    }
                 }
-            },
-            {
-                "step_key": "step_5",
-                "step_order": 5,
-                "assigned_agent_id": "qa-lead",
-                "assigned_agent_name": "QA Lead",
-                "title": f"Quality Audit & Executive Sign-off: {client_name}",
-                "depends_on": ["step_3", "step_4"],
-                "requires_approval": True,  # Escalates to Human Approval before final compilation!
-                "input": {
-                    "deliverable_title": f"Final PR Campaign Package for {client_name}",
-                    "agent_tested": "All Specialized Agents",
-                    "original_brief": user_request,
-                    "agent_output": {
-                        "scope": "Multi-agent coordinated rollout",
-                        "verified_components": ["Research", "Strategy", "Copywriting", "Art Direction"]
-                    },
-                    "quality_criteria": [
-                        "Full alignment with client brief",
-                        "Zero mathematical or factual leakage",
-                        "WCAG accessibility and brand guideline compliance",
-                        "Bilingual grammatical precision"
-                    ]
+            ]
+        else:
+            # General PR & Brand Campaign Default Plan
+            complexity = "Enterprise (5-Step Coordinated DAG)"
+            steps_plan = [
+                {
+                    "step_key": "step_1",
+                    "step_order": 1,
+                    "assigned_agent_id": "dr-ibrahim",
+                    "assigned_agent_name": "Dr. Ibrahim",
+                    "title": f"Market & Intelligence Research: {client_name}",
+                    "depends_on": [],
+                    "requires_approval": False,
+                    "input": {
+                        "client_name": client_name,
+                        "industry": "PR & Communications",
+                        "competitors": ["Regional Competitor A", "Competitor B"],
+                        "research_objectives": [
+                            f"Evaluate market positioning for: {clean_request}",
+                            "Identify target audience pain points & media channels",
+                            "Audit competitive share of voice"
+                        ],
+                        "target_region": "MENA (Egypt & GCC)"
+                    }
+                },
+                {
+                    "step_key": "step_2",
+                    "step_order": 2,
+                    "assigned_agent_id": "ragaa",
+                    "assigned_agent_name": "Ragaa",
+                    "title": f"Brand Strategy & Positioning: {client_name}",
+                    "depends_on": ["step_1"],
+                    "requires_approval": False,
+                    "input": {
+                        "client_name": client_name,
+                        "campaign_goal": clean_request,
+                        "target_audience": "Enterprise decision makers, business executives, and digital creators",
+                        "budget_tier": "enterprise",
+                        "key_differentiators": [
+                            "Autonomous multi-agent speed",
+                            "Bilingual dialect accuracy",
+                            "Human-governed PR execution"
+                        ]
+                    }
+                },
+                {
+                    "step_key": "step_3",
+                    "step_order": 3,
+                    "assigned_agent_id": "copywriter",
+                    "assigned_agent_name": "Copywriter",
+                    "title": f"PR Copywriting & Viral Scripts: {client_name}",
+                    "depends_on": ["step_2"],
+                    "requires_approval": False,
+                    "input": {
+                        "topic": clean_request,
+                        "format": "press_release",
+                        "tone": "authoritative and inspiring",
+                        "target_language": "bilingual",
+                        "key_takeaways": [
+                            "Instant narrative deployment",
+                            "Uncompromised editorial quality",
+                            "Strategic executive thought leadership"
+                        ]
+                    }
+                },
+                {
+                    "step_key": "step_4",
+                    "step_order": 4,
+                    "assigned_agent_id": "fawzyia",
+                    "assigned_agent_name": "Fawzyia",
+                    "title": f"Creative Direction & Visual Identity: {client_name}",
+                    "depends_on": ["step_2"],
+                    "requires_approval": False,
+                    "input": {
+                        "brand_name": client_name,
+                        "visual_mood": "Luxury Cyber-Editorial with Royal Obsidian and Ultraviolet tones",
+                        "deliverable_types": [
+                            "Main Campaign Key Visual (16:9)",
+                            "Social Carousel Templates (4:5)",
+                            "Executive Briefing One-Pager (A4)"
+                        ],
+                        "brand_colors": ["#8b5cf6", "#0d0e12", "#f59e0b"]
+                    }
+                },
+                {
+                    "step_key": "step_5",
+                    "step_order": 5,
+                    "assigned_agent_id": "qa-lead",
+                    "assigned_agent_name": "QA Lead",
+                    "title": f"Quality Audit & Executive Sign-off: {client_name}",
+                    "depends_on": ["step_3", "step_4"],
+                    "requires_approval": True,
+                    "input": {
+                        "deliverable_title": f"Final PR Campaign Package for {client_name}",
+                        "agent_tested": "All Specialized Agents",
+                        "original_brief": clean_request,
+                        "agent_output": {
+                            "scope": "Multi-agent coordinated rollout",
+                            "verified_components": ["Research", "Strategy", "Copywriting", "Art Direction"]
+                        },
+                        "quality_criteria": [
+                            "Full alignment with client brief",
+                            "Zero mathematical or factual leakage",
+                            "WCAG accessibility and brand guideline compliance",
+                            "Bilingual grammatical precision"
+                        ]
+                    }
                 }
-            }
-        ]
+            ]
 
         # Check if user requested sensitive external action (Milestone 7)
-        req_lower = user_request.lower()
         if any(w in req_lower for w in ["email", "بريد", "send"]):
             steps_plan[2]["action_type"] = "send_email"
             steps_plan[2]["title"] = f"Send Pitch Email to Client: {client_name}"
@@ -197,7 +514,7 @@ class OmSamahOrchestrator:
 
         return {
             "client_name": client_name,
-            "complexity": "Enterprise (5-Step Coordinated DAG)",
+            "complexity": complexity,
             "steps": steps_plan
         }
 

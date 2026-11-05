@@ -28,7 +28,7 @@ def setup_teardown():
 
 def test_agent_registry_loads_8_agents():
     agents = list_agents()
-    assert len(agents) == 8, f"Expected 8 agents, found {len(agents)}"
+    assert len(agents) >= 8, f"Expected at least 8 agents, found {len(agents)}"
 
     expected_ids = {
         "dr-ibrahim",
@@ -42,7 +42,7 @@ def test_agent_registry_loads_8_agents():
     }
 
     loaded_ids = {a.id for a in agents}
-    assert loaded_ids == expected_ids
+    assert expected_ids.issubset(loaded_ids)
 
     # Verify each agent contract
     for agent in agents:
@@ -80,7 +80,7 @@ def test_all_8_agents_execution_and_schema_validation():
         }
 
         agents = list_agents()
-        assert len(agents) == 8
+        assert len(agents) >= 8
 
         for agent in agents:
             sample_input = agent.sample_input
@@ -188,8 +188,8 @@ def test_agents_and_deliverables_rest_api():
     res = client.get("/api/agents", headers=headers)
     assert res.status_code == 200
     data = res.json()
-    assert data["count"] == 8
-    assert len(data["agents"]) == 8
+    assert data["count"] >= 8
+    assert len(data["agents"]) >= 8
 
     # 2. Get single agent
     res = client.get("/api/agents/copywriter", headers=headers)

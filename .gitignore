@@ -40,3 +40,7 @@ coverage/
 .coverage
 htmlcov/
 test-results/
+
+# Local Storage Deliverables
+apps/api/storage/deliverables/*.json
+!apps/api/storage/deliverables/.gitkeep

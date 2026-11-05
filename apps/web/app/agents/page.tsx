@@ -25,6 +25,20 @@ import {
   ChevronRight,
   RefreshCw,
   Sliders,
+  Search,
+  Video,
+  Film,
+  Terminal,
+  Database,
+  Server,
+  Compass,
+  BarChart3,
+  UserCheck,
+  Clock,
+  Settings,
+  Radio,
+  FileText,
+  Lock,
 } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
@@ -39,26 +53,93 @@ import {
 } from "@/lib/api";
 
 const AGENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  // Research & Strategy
   "dr-ibrahim": Brain,
+  "data-analyst": BarChart3,
+  "ux-researcher": Compass,
+  "market-researcher": Search,
+  "competitor-analyst": Target,
+
+  // Marketing & Strategy
   ragaa: Target,
+  "media-buyer": TrendingUp,
+  "seo-specialist": Search,
+  "social-media-manager": Radio,
+  "content-strategist": FileText,
+  "growth-hacker": Sparkles,
+
+  // Creative & Design
   fawzyia: Palette,
   copywriter: PenTool,
-  "media-buyer": TrendingUp,
-  "sales-manager": Briefcase,
+  "ui-ux-designer": Layers,
+  "brand-identity-designer": Sparkles,
+  "motion-designer": Video,
+  illustrator: Palette,
+
+  // Video Production
+  "video-director": Video,
+  scriptwriter: FileCode,
+  "storyboard-artist": Layers,
+  "video-editor": Film,
+  "sound-designer": Radio,
+
+  // Engineering & Tech
   mahmoud: Code,
+  "frontend-dev": Terminal,
+  "backend-dev": Database,
+  "devops-engineer": Server,
+  "qa-automation-engineer": CheckCircle2,
+  "security-engineer": Lock,
+
+  // Sales & CRM
+  "sales-manager": Briefcase,
+  "lead-qualifier": UserCheck,
+  "account-executive": Briefcase,
+  "crm-specialist": Database,
+
+  // Operations
+  "operations-lead": Settings,
+  "project-manager": Clock,
+  "resource-planner": Layers,
+
+  // Quality Assurance
   "qa-lead": ShieldCheck,
+  "qa-reviewer": CheckCircle2,
+  "compliance-officer": ShieldCheck,
 };
 
 const DEPARTMENT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  research: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/30" },
   marketing: { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/30" },
-  design: { bg: "bg-pink-500/10", text: "text-pink-400", border: "border-pink-500/30" },
-  content: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30" },
-  performance: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30" },
-  sales: { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/30" },
+  creative: { bg: "bg-pink-500/10", text: "text-pink-400", border: "border-pink-500/30" },
+  video: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30" },
   engineering: { bg: "bg-indigo-500/10", text: "text-indigo-400", border: "border-indigo-500/30" },
-  quality: { bg: "bg-rose-500/10", text: "text-rose-400", border: "border-rose-500/30" },
+  research: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/30" },
+  sales: { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/30" },
+  operations: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30" },
+  quality: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30" },
 };
+
+const DEPARTMENT_NAMES: Record<string, { en: string; ar: string }> = {
+  marketing: { en: "Marketing & Strategy", ar: "التسويق والاستراتيجية" },
+  creative: { en: "Creative & Design", ar: "الإبداع والتصميم" },
+  video: { en: "Video Production", ar: "الإنتاج المرئي" },
+  engineering: { en: "Engineering & Tech", ar: "الهندسة والبرمجيات" },
+  research: { en: "Research & Strategy", ar: "الأبحاث والاستراتيجية" },
+  sales: { en: "Sales & CRM", ar: "المبيعات وإدارة العلاقات" },
+  operations: { en: "Operations & PM", ar: "العمليات وإدارة المشاريع" },
+  quality: { en: "Quality Assurance", ar: "ضمان الجودة والامتثال" },
+};
+
+const ORDERED_DEPARTMENTS = [
+  "marketing",
+  "creative",
+  "video",
+  "engineering",
+  "research",
+  "sales",
+  "operations",
+  "quality",
+];
 
 export default function AgentsPage() {
   const { t, isAr } = useI18n();
@@ -67,6 +148,7 @@ export default function AgentsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDept, setSelectedDept] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Execution Modal state
   const [activeAgent, setActiveAgent] = useState<Agent | null>(null);
@@ -154,12 +236,21 @@ export default function AgentsPage() {
     }
   };
 
-  const departments = Array.from(new Set(agents.map((a) => a.department)));
-
-  const filteredAgents =
-    selectedDept === "all"
-      ? agents
-      : agents.filter((a) => a.department === selectedDept);
+  const filteredAgents = agents.filter((a) => {
+    const matchesDept = selectedDept === "all" || a.department === selectedDept;
+    if (!matchesDept) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      a.name.toLowerCase().includes(q) ||
+      (a.name_ar && a.name_ar.toLowerCase().includes(q)) ||
+      a.role.toLowerCase().includes(q) ||
+      (a.role_ar && a.role_ar.toLowerCase().includes(q)) ||
+      a.department.toLowerCase().includes(q) ||
+      a.id.toLowerCase().includes(q) ||
+      (a.tools && a.tools.some((tool) => tool.toLowerCase().includes(q)))
+    );
+  });
 
   return (
     <AppShell>
@@ -170,8 +261,8 @@ export default function AgentsPage() {
             <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
               {t("agents.title")}
             </h1>
-            <span className="inline-flex items-center rounded-full bg-[#8b5cf6]/15 border border-[#8b5cf6]/30 px-2.5 py-0.5 text-xs font-bold text-[#c4b5fd]">
-              8 Agents Active
+            <span className="inline-flex items-center rounded-full bg-[#8b5cf6]/15 border border-[#8b5cf6]/30 px-3 py-1 text-xs font-bold text-[#c4b5fd]">
+              {agents.length} {t("agents.active_roster")}
             </span>
           </div>
           <p className="mt-1 text-xs text-gray-400">{t("agents.subtitle")}</p>
@@ -187,6 +278,35 @@ export default function AgentsPage() {
         </Link>
       </div>
 
+      {/* Search and Filters Bar */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 rtl:left-auto rtl:right-3.5" />
+          <input
+            type="text"
+            data-testid="agents-search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("agents.search_placeholder")}
+            className="w-full rounded-xl border border-gray-800 bg-[#13151f] py-2.5 pl-10 pr-10 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] rtl:pl-10 rtl:pr-10"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white rtl:right-auto rtl:left-3.5"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="text-xs text-gray-400">
+          {isAr
+            ? `عرض ${filteredAgents.length} من إجمالي ${agents.length} موظف ذكي`
+            : `Showing ${filteredAgents.length} of ${agents.length} AI Agents`}
+        </div>
+      </div>
+
       {/* Department Filter Tabs */}
       <div className="mb-6 flex flex-wrap gap-2 overflow-x-auto pb-1">
         <button
@@ -197,26 +317,23 @@ export default function AgentsPage() {
               : "border border-gray-800 bg-[#13151f] text-gray-400 hover:text-white"
           }`}
         >
-          {t("agents.all_departments")} (8)
+          {t("agents.all_departments")} ({agents.length})
         </button>
-        {departments.map((dept) => {
-          const colors = DEPARTMENT_COLORS[dept] || {
-            bg: "bg-gray-800/30",
-            text: "text-gray-300",
-            border: "border-gray-700",
-          };
+        {ORDERED_DEPARTMENTS.map((dept) => {
           const count = agents.filter((a) => a.department === dept).length;
+          const deptNameObj = DEPARTMENT_NAMES[dept];
+          const label = isAr && deptNameObj ? deptNameObj.ar : deptNameObj ? deptNameObj.en : dept;
           return (
             <button
               key={dept}
               onClick={() => setSelectedDept(dept)}
-              className={`capitalize rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 selectedDept === dept
                   ? "bg-[#8b5cf6] text-white shadow"
                   : "border border-gray-800 bg-[#13151f] text-gray-400 hover:text-white"
               }`}
             >
-              {dept} ({count})
+              {label} ({count})
             </button>
           );
         })}
@@ -226,6 +343,25 @@ export default function AgentsPage() {
       {loading ? (
         <div className="flex h-64 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8b5cf6] border-t-transparent" />
+        </div>
+      ) : filteredAgents.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-800 bg-[#13151f] p-12 text-center">
+          <Bot className="h-12 w-12 text-gray-600 mb-3" />
+          <h3 className="text-sm font-bold text-gray-300">{t("agents.no_results")}</h3>
+          <p className="mt-1 text-xs text-gray-500">
+            {isAr ? "جرّب تغيير عبارة البحث أو اختيار قسم مختلف" : "Try adjusting your search query or department filter"}
+          </p>
+          {(searchQuery || selectedDept !== "all") && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedDept("all");
+              }}
+              className="mt-4 rounded-lg bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 px-3 py-1.5 text-xs font-semibold text-[#c4b5fd] hover:bg-[#8b5cf6] hover:text-white transition"
+            >
+              {isAr ? "إعادة ضبط التصفية" : "Reset Filters"}
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -368,7 +504,7 @@ export default function AgentsPage() {
                       <option value="">-- General Agency Task --</option>
                       {projects.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} ({p.client_name || "Client"})
+                          {p.name}
                         </option>
                       ))}
                     </select>
@@ -377,61 +513,51 @@ export default function AgentsPage() {
                   {/* Task Title */}
                   <div className="mb-3">
                     <label className="block text-xs font-semibold text-gray-300 mb-1">
-                      Task Title
+                      Task Reference Title
                     </label>
                     <input
                       type="text"
                       value={taskTitle}
                       onChange={(e) => setTaskTitle(e.target.value)}
-                      placeholder="e.g. Q4 Competitor PR Audit"
-                      className="w-full rounded-lg border border-gray-800 bg-[#13151f] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
+                      className="w-full rounded-lg border border-gray-800 bg-[#13151f] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                     />
                   </div>
 
-                  {/* Input JSON Editor */}
+                  {/* JSON Input Area */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-gray-300">
+                      <label className="text-xs font-semibold text-gray-300">
                         {t("agents.input_brief")}
                       </label>
                       <button
                         type="button"
                         onClick={handleLoadSample}
-                        className="text-[10px] font-bold text-[#a78bfa] hover:underline flex items-center gap-1"
+                        className="text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] flex items-center gap-1"
                       >
-                        <RefreshCw className="h-2.5 w-2.5" />
+                        <RefreshCw className="h-3 w-3" />
                         {t("agents.load_sample")}
                       </button>
                     </div>
                     <textarea
                       rows={8}
-                      data-testid="agent-input-json"
                       value={inputJsonText}
                       onChange={(e) => setInputJsonText(e.target.value)}
-                      className="w-full rounded-lg border border-gray-800 bg-[#10121a] p-3 text-xs font-mono text-emerald-400 placeholder-gray-600 focus:border-[#8b5cf6] focus:outline-none"
+                      className="w-full font-mono text-xs rounded-lg border border-gray-800 bg-[#0f1118] p-3 text-emerald-400 focus:border-[#8b5cf6] focus:outline-none"
                     />
                   </div>
 
-                  {/* Error banner */}
-                  {execError && (
-                    <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2.5 text-xs text-red-300 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
-                      <span>{execError}</span>
-                    </div>
-                  )}
-
-                  {/* Run Button */}
+                  {/* Execute Button */}
                   <div className="mt-4">
                     <button
                       type="button"
                       data-testid="execute-agent-btn"
-                      onClick={handleRunAgent}
                       disabled={executing}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8b5cf6] to-indigo-600 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#8b5cf6]/25 transition hover:from-[#7c3aed] hover:to-indigo-500 disabled:opacity-50"
+                      onClick={handleRunAgent}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8b5cf6] to-indigo-600 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#8b5cf6]/25 transition hover:brightness-110 disabled:opacity-50"
                     >
                       {executing ? (
                         <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                           <span>{t("agents.running")}</span>
                         </>
                       ) : (
@@ -442,88 +568,120 @@ export default function AgentsPage() {
                       )}
                     </button>
                   </div>
+
+                  {execError && (
+                    <div className="mt-3 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
+                      <span>{execError}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Quality Criteria Card */}
-                <div className="rounded-xl border border-gray-800 bg-[#181a26]/60 p-4">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-[#8b5cf6]" />
-                    <span>{t("agents.criteria_title")}</span>
-                  </h4>
-                  <ul className="space-y-1.5 text-xs text-gray-300">
-                    {activeAgent.quality_criteria.map((qc, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
-                        <span>{qc}</span>
-                      </li>
-                    ))}
-                  </ul>
+                {/* System Prompt & Quality Criteria Accordion/Card */}
+                <div className="rounded-xl border border-gray-800 bg-[#151722] p-4 text-xs text-gray-400 space-y-3">
+                  <div>
+                    <span className="font-semibold text-gray-300 block mb-1">
+                      {t("agents.criteria_title")}
+                    </span>
+                    <ul className="list-disc list-inside space-y-0.5 text-gray-400 text-[11px]">
+                      {activeAgent.quality_criteria.map((c, idx) => (
+                        <li key={idx}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-800">
+                    <span className="font-semibold text-gray-300 block mb-1">
+                      {t("agents.system_prompt")}
+                    </span>
+                    <p className="line-clamp-3 text-[11px] text-gray-500 font-mono">
+                      {activeAgent.system_prompt}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Right Column: Execution Output & Deliverable */}
-              <div>
-                <div className="rounded-xl border border-gray-800 bg-[#181a26] p-4 flex flex-col h-full min-h-[380px]">
-                  <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                      <FileCode className="h-3.5 w-3.5 text-emerald-400" />
+              {/* Right Column: Execution Output */}
+              <div className="flex flex-col justify-between rounded-xl border border-gray-800 bg-[#181a26] p-4">
+                <div>
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-[#8b5cf6]" />
                       <span>{t("agents.output_title")}</span>
                     </h4>
-
                     {execResult && (
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                          Score: {execResult.deliverable.quality_score}/100
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {execResult.deliverable.quality_score}/100 Score
+                      </span>
+                    )}
+                  </div>
+
+                  {execResult ? (
+                    <div className="space-y-4">
+                      {/* Deliverable Meta */}
+                      <div className="rounded-lg border border-gray-800 bg-[#12141e] p-3 text-xs">
+                        <div className="font-bold text-white mb-1">
+                          {execResult.deliverable.title}
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-gray-400">
+                          <span>Status: <strong className="text-emerald-400">{execResult.deliverable.status}</strong></span>
+                          <span>•</span>
+                          <span>Agent: <strong className="text-[#a78bfa]">{activeAgent.name}</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Structured JSON Output Viewer */}
+                      <div>
+                        <span className="text-xs font-semibold text-gray-400 mb-1 block">
+                          Structured JSON Deliverable Output:
                         </span>
+                        <pre
+                          data-testid="deliverable-json-output"
+                          className="max-h-[340px] overflow-auto rounded-lg border border-gray-800 bg-[#0d0e14] p-3 text-[11px] font-mono text-cyan-300"
+                        >
+                          {JSON.stringify(execResult.output, null, 2)}
+                        </pre>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Output Display */}
-                  <div className="flex-1 mt-3">
-                    {execResult ? (
-                      <div className="space-y-3">
-                        <div className="rounded-lg border border-gray-800 bg-[#10121a] p-3 text-xs font-mono text-gray-200 max-h-[340px] overflow-y-auto">
-                          <pre data-testid="agent-output-json" className="whitespace-pre-wrap break-all">
-                            {JSON.stringify(execResult.output, null, 2)}
-                          </pre>
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex items-center justify-between pt-2">
-                          <a
-                            href={execResult.deliverable.file_url}
-                            download
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-800 bg-[#13151f] px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            <span>{t("agents.download_json")}</span>
-                          </a>
-
-                          <Link
-                            href="/deliverables"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 px-3 py-1.5 text-xs font-bold text-[#c4b5fd] hover:bg-[#8b5cf6] hover:text-white transition"
-                          >
-                            <span>{t("agents.view_deliverables")}</span>
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Link>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex h-full min-h-[300px] flex-col items-center justify-center text-center p-6 text-gray-500 border border-dashed border-gray-800 rounded-lg">
-                        <Bot className="h-10 w-10 text-gray-600 mb-2" />
-                        <p className="text-xs font-semibold text-gray-400">
-                          Ready for agent deployment
-                        </p>
-                        <p className="mt-1 text-[11px] text-gray-600 max-w-xs">
-                          Click "{t("agents.execute_now")}" to trigger neural execution. Output will be validated against {activeAgent.name}'s JSON contract and saved as a permanent deliverable.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-64 flex-col items-center justify-center text-center text-gray-500">
+                      <Bot className="h-10 w-10 text-gray-600 mb-2" />
+                      <p className="text-xs">
+                        {isAr ? "قم بتشغيل الوكيل لمعاينة المخرجات المعتمدة هنا" : "Run the agent to inspect the structured deliverable output here"}
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {execResult && (
+                  <div className="mt-4 pt-3 border-t border-gray-800 flex items-center justify-between">
+                    <Link
+                      href="/deliverables"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5cf6] hover:text-[#a78bfa]"
+                    >
+                      <span>{t("agents.view_deliverables")}</span>
+                      <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
+                    </Link>
+
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([JSON.stringify(execResult.output, null, 2)], {
+                          type: "application/json",
+                        });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `${activeAgent.id}-deliverable.json`;
+                        a.click();
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-800/60 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700 transition"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>{t("agents.download_json")}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

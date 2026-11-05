@@ -181,10 +181,13 @@ const translations: Record<Language, Record<string, string>> = {
     "task_modal.cancel": "إلغاء",
     "task_modal.saving": "جارٍ الحفظ...",
 
-    // Agents (Milestone 4)
+    // Agents (Milestone 8 - Full 38 Roster)
     "agents.title": "دليل الموظفين الأذكياء (AI Agents)",
-    "agents.subtitle": "إدارة وتكليف الوكلاء الـ 8 المتخصصين عبر أقسام الوكالة",
+    "agents.subtitle": "إدارة وتكليف الوكلاء الـ 38 المتخصصين عبر الأقسام الـ 8 في الوكالة",
     "agents.all_departments": "جميع الأقسام",
+    "agents.search_placeholder": "ابحث بالاسم، الدور، القسم أو الأدوات...",
+    "agents.no_results": "لا يوجد وكلاء يطابقون معايير البحث",
+    "agents.active_roster": "وكيل نشط وجاهز للعمل",
     "agents.status_ready": "جاهز للتكليف",
     "agents.status_active": "نشط وقيد العمل",
     "agents.run_button": "تشغيل وتكليف الوكيل",
@@ -491,10 +494,13 @@ const translations: Record<Language, Record<string, string>> = {
     "task_modal.cancel": "Cancel",
     "task_modal.saving": "Saving...",
 
-    // Agents (Milestone 4)
+    // Agents (Milestone 8 - Full 38 Roster)
     "agents.title": "AI Workforce Directory",
-    "agents.subtitle": "Orchestrate and assign the first 8 specialized AI employees across agency departments",
+    "agents.subtitle": "Orchestrate and deploy all 38 specialized AI employees across 8 agency departments",
     "agents.all_departments": "All Departments",
+    "agents.search_placeholder": "Search by name, role, department or tools...",
+    "agents.no_results": "No agents matching your search",
+    "agents.active_roster": "Active Agents on Roster",
     "agents.status_ready": "Ready for Briefing",
     "agents.status_active": "Active & Processing",
     "agents.run_button": "Deploy Agent",
