@@ -48,7 +48,7 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { id: "command_center", labelKey: "nav.command_center", href: "/dashboard", icon: LayoutDashboard, enabled: true },
-  { id: "virtual_office", labelKey: "nav.virtual_office", href: "/virtual-office", icon: Building2, enabled: false },
+  { id: "virtual_office", labelKey: "nav.virtual_office", href: "/virtual-office", icon: Building2, enabled: true },
   { id: "agents", labelKey: "nav.agents", href: "/agents", icon: Bot, enabled: true },
   { id: "departments", labelKey: "nav.departments", href: "/departments", icon: Network, enabled: false },
   { id: "tasks", labelKey: "nav.tasks", href: "/tasks", icon: CheckSquare, enabled: true },

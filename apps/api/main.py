@@ -69,6 +69,12 @@ from integrations.registry import (
     get_integration_adapter,
     list_supported_providers,
 )
+from virtual_office import (
+    get_all_statuses,
+    get_agent_status,
+    update_agent_status,
+    set_status_ws_broadcast_fn,
+)
 
 app = FastAPI(
     title="PR AI WORKFORCE API",
@@ -138,17 +144,34 @@ async def websocket_workflow_endpoint(websocket: WebSocket, workflow_id: str):
         ws_manager.disconnect(websocket)
 
 
-@app.websocket("/ws/approvals")
-async def websocket_approvals_endpoint(websocket: WebSocket):
-    await ws_manager.connect(websocket)
+status_ws_manager = ConnectionManager()
+
+
+async def broadcast_agent_status(payload: Dict[str, Any]):
+    await status_ws_manager.broadcast(payload)
+
+
+set_status_ws_broadcast_fn(broadcast_agent_status)
+
+
+@app.websocket("/ws/agents/status")
+async def websocket_agents_status_endpoint(websocket: WebSocket):
+    await status_ws_manager.connect(websocket)
     try:
+        # Send initial snapshot of all 38 agent statuses upon connection
+        init_payload = {
+            "type": "initial_status",
+            "statuses": get_all_statuses(),
+            "count": len(get_all_statuses())
+        }
+        await websocket.send_text(json.dumps(init_payload))
         while True:
             data = await websocket.receive_text()
-            await websocket.send_text(json.dumps({"type": "approvals_pong", "payload": data}))
+            await websocket.send_text(json.dumps({"type": "status_pong", "payload": data}))
     except WebSocketDisconnect:
-        ws_manager.disconnect(websocket)
+        status_ws_manager.disconnect(websocket)
     except Exception:
-        ws_manager.disconnect(websocket)
+        status_ws_manager.disconnect(websocket)
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
@@ -239,6 +262,11 @@ class AgentExecuteRequest(BaseModel):
     project_id: Optional[str] = None
     task_id: Optional[str] = None
     title: Optional[str] = None
+
+
+class AgentStatusUpdateRequest(BaseModel):
+    status: str = Field(..., description="Target status: idle, working, or blocked")
+    current_task: Optional[str] = None
 
 
 class WorkflowCreateRequest(BaseModel):
@@ -554,7 +582,34 @@ def dashboard_stats(current_user: Dict[str, Any] = Depends(get_current_user)):
     return {"stats": stats}
 
 
-# ── Milestone 4: Agents & Deliverables Endpoints ──────────────────────────────
+# ── Milestone 4 & 9: Agents & Virtual Office Status Endpoints ─────────────────
+@app.get("/api/agents/status")
+def get_agents_status_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Returns the current operational status (idle/working/blocked) for all 38 agents."""
+    statuses = get_all_statuses()
+    return {"statuses": statuses, "count": len(statuses)}
+
+
+@app.patch("/api/agents/{agent_id}/status")
+async def update_agent_status_endpoint(
+    agent_id: str,
+    payload: AgentStatusUpdateRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Updates an agent's operational status and broadcasts the change via WebSocket."""
+    try:
+        updated = await update_agent_status(
+            agent_id=agent_id,
+            status=payload.status,
+            current_task=payload.current_task,
+        )
+        return {"agent": updated}
+    except ValueError as val_err:
+        raise HTTPException(status_code=422, detail=str(val_err))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.get("/api/agents")
 def get_agents(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Returns the registry of specialized AI agents."""
@@ -582,6 +637,16 @@ async def execute_agent_task(
     if not agent:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found in registry")
 
+    # Mark status as working in Virtual Office
+    try:
+        await update_agent_status(
+            agent_id,
+            status="working",
+            current_task=payload.title or f"Interactive execution: {agent.name}"
+        )
+    except Exception as st_err:
+        logger.warning(f"Failed to update agent status to working: {st_err}")
+
     try:
         result = await agent.execute(
             task_input=payload.input,
@@ -603,6 +668,12 @@ async def execute_agent_task(
         raise HTTPException(status_code=422, detail=str(val_err))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(exc)}")
+    finally:
+        # Reset status back to idle
+        try:
+            await update_agent_status(agent_id, status="idle")
+        except Exception:
+            pass
 
 
 @app.get("/api/deliverables")

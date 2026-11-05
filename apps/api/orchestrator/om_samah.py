@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional, Set
 from agents.registry import get_agent
 import database
 from memory.service import search_memory
+from virtual_office import update_agent_status
 
 logger = logging.getLogger("om_samah")
 
@@ -576,6 +577,10 @@ class OmSamahOrchestrator:
             message=f"Agent {agent.name} started execution: {step['title']}"
         )
         await notify_workflow_update(self.workflow_id, {"step_id": step_id, "status": "running"})
+        try:
+            await update_agent_status(agent_id, status="working", current_task=step["title"], workflow_id=self.workflow_id)
+        except Exception as st_err:
+            logger.warning(f"Failed to update agent status to working: {st_err}")
 
         # Multi-level memory retrieval (Task 4)
         org_id = self.user.get("organization_id", "00000000-0000-0000-0000-000000000001")
@@ -651,6 +656,10 @@ class OmSamahOrchestrator:
                     "status": "waiting_approval",
                     "request_id": req["id"],
                 })
+                try:
+                    await update_agent_status(agent_id, status="blocked", current_task=step["title"], workflow_id=self.workflow_id)
+                except Exception as st_err:
+                    logger.warning(f"Failed to update agent status to blocked: {st_err}")
 
                 event = _WORKFLOW_PAUSE_EVENTS.get(self.workflow_id)
                 if not event:
@@ -658,6 +667,10 @@ class OmSamahOrchestrator:
                     _WORKFLOW_PAUSE_EVENTS[self.workflow_id] = event
                 await event.wait()
                 event.clear()
+                try:
+                    await update_agent_status(agent_id, status="working", current_task=step["title"], workflow_id=self.workflow_id)
+                except Exception as st_err:
+                    logger.warning(f"Failed to update agent status to working: {st_err}")
 
             # Mark step input as approved for sensitive execution
             step["input"]["approved"] = True
@@ -736,6 +749,10 @@ class OmSamahOrchestrator:
                 "status": "waiting_approval",
                 "workflow_status": "waiting_approval"
             })
+            try:
+                await update_agent_status(agent_id, status="blocked", current_task=step["title"], workflow_id=self.workflow_id)
+            except Exception as st_err:
+                logger.warning(f"Failed to update agent status to blocked: {st_err}")
 
             # Wait on pause event for human sign-off
             pause_event = asyncio.Event()
@@ -749,6 +766,10 @@ class OmSamahOrchestrator:
                 database.update_workflow_step(step_id, {"status": "failed", "completed_at": completed_now})
                 database.update_workflow(self.workflow_id, {"status": "failed"})
                 await notify_workflow_update(self.workflow_id, {"step_id": step_id, "status": "failed"})
+                try:
+                    await update_agent_status(agent_id, status="idle")
+                except Exception:
+                    pass
                 raise RuntimeError(f"Step '{step['title']}' was rejected by human operator.")
 
         # Mark completed
@@ -767,6 +788,10 @@ class OmSamahOrchestrator:
             metadata={"deliverable_id": deliverable["id"], "quality_score": deliverable.get("quality_score", 95)}
         )
         await notify_workflow_update(self.workflow_id, {"step_id": step_id, "status": "completed"})
+        try:
+            await update_agent_status(agent_id, status="idle")
+        except Exception as st_err:
+            logger.warning(f"Failed to reset agent status to idle: {st_err}")
 
         return database.get_workflow_step(step_id)
 

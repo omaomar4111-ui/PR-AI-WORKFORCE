@@ -144,6 +144,21 @@ export interface Agent {
   status?: string;
 }
 
+export interface AgentStatus {
+  agent_id: string;
+  name: string;
+  name_ar?: string;
+  role: string;
+  role_ar?: string;
+  department: string;
+  department_ar?: string;
+  avatar?: string;
+  status: "idle" | "working" | "blocked";
+  current_task?: string | null;
+  workflow_id?: string | null;
+  updated_at: string;
+}
+
 export interface Deliverable {
   id: string;
   organization_id: string;
@@ -592,6 +607,30 @@ export async function executeAgent(
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Agent execution failed");
   return data;
+}
+
+// ── Milestone 9: Virtual Office Status API ──────────────────────────────────
+export async function fetchAgentStatuses(): Promise<AgentStatus[]> {
+  const res = await fetch(`${API_BASE_URL}/api/agents/status`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load agent statuses");
+  const data = await res.json();
+  return data.statuses;
+}
+
+export async function updateAgentStatus(
+  agentId: string,
+  payload: { status: "idle" | "working" | "blocked"; current_task?: string }
+): Promise<AgentStatus> {
+  const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}/status`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to update agent status");
+  return data.agent;
 }
 
 // ── Milestone 4 & 6: Deliverables API ────────────────────────────────────────

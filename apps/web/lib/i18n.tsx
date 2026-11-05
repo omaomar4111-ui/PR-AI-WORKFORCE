@@ -206,6 +206,24 @@ const translations: Record<Language, Record<string, string>> = {
     "agents.criteria_title": "معايير الجودة الصارمة (Quality Criteria)",
     "agents.system_prompt": "التعليمات التأسيسية (System Prompt)",
 
+    // Virtual Office (Milestone 9)
+    "virtual_office.title": "المكتب الافتراضي التفاعلي (Virtual Office)",
+    "virtual_office.subtitle": "متابعة حية لجميع الموظفين الأذكياء الـ 38 موزعين على أقسام الوكالة الـ 8 مع تحديثات لحظية للحالة",
+    "virtual_office.status_all": "جميع الحالات",
+    "virtual_office.status_idle": "متاح / خامل",
+    "virtual_office.status_working": "قيد التنفيذ ⚡",
+    "virtual_office.status_blocked": "يتطلب موافقة ⚠️",
+    "virtual_office.live_sync": "مزامنة لحظية مباشرة (Live WebSocket)",
+    "virtual_office.drawer_title": "ملف الوكيل ومحطة التحكم",
+    "virtual_office.execute_cta": "تشغيل وتكليف الوكيل ⚡",
+    "virtual_office.view_tasks": "عرض المهام في لوحة المهام",
+    "virtual_office.simulate_status": "محاكاة وتغيير الحالة:",
+    "virtual_office.current_task": "المهمة الجارية حالياً:",
+    "virtual_office.recent_deliverables": "أحدث المخرجات المعتمدة",
+    "virtual_office.no_deliverables": "لا توجد مخرجات مسجلة لهذا الوكيل حتى الآن",
+    "virtual_office.search_placeholder": "ابحث بالاسم، الدور، أو القسم في المكتب الافتراضي...",
+    "virtual_office.department_zones": "غرف وأقسام الوكالة",
+
     // Deliverables (Milestone 4)
     "deliverables.title": "المخرجات والملفات المعتمدة (Deliverables)",
     "deliverables.subtitle": "سجل المخرجات الموثقة الناتجة عن الوكلاء الـ 8 مع تقييم الجودة",
@@ -518,6 +536,24 @@ const translations: Record<Language, Record<string, string>> = {
     "agents.tools_count": "Connected Tools",
     "agents.criteria_title": "Quality & Compliance Criteria",
     "agents.system_prompt": "System Prompt & Directives",
+
+    // Virtual Office (Milestone 9)
+    "virtual_office.title": "Virtual Office (Interactive Simulation)",
+    "virtual_office.subtitle": "Live visual command center of all 38 AI employees across 8 agency department rooms with real-time WebSocket sync",
+    "virtual_office.status_all": "All Statuses",
+    "virtual_office.status_idle": "Idle & Ready",
+    "virtual_office.status_working": "Working ⚡",
+    "virtual_office.status_blocked": "Blocked ⚠️",
+    "virtual_office.live_sync": "Live WebSocket Active",
+    "virtual_office.drawer_title": "Agent Profile & Command Console",
+    "virtual_office.execute_cta": "Chat & Deploy Agent ⚡",
+    "virtual_office.view_tasks": "View Tasks in Task Manager",
+    "virtual_office.simulate_status": "Simulate Status:",
+    "virtual_office.current_task": "Current Active Task:",
+    "virtual_office.recent_deliverables": "Recent Verified Deliverables",
+    "virtual_office.no_deliverables": "No deliverables produced by this agent yet",
+    "virtual_office.search_placeholder": "Search by name, role, or department in Virtual Office...",
+    "virtual_office.department_zones": "Department Studios & Zones",
 
     // Deliverables (Milestone 4)
     "deliverables.title": "Verified Deliverables",
