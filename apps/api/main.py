@@ -41,7 +41,8 @@ from database import (
     get_workflow_steps,
     get_execution_logs,
 )
-from auth import create_jwt_token, get_current_user
+from auth import create_jwt_token, get_current_user, require_role, require_org_member
+from middleware import RateLimitMiddleware
 from agents.registry import get_agent, list_agents, get_all_agents_dict
 from memory.service import (
     save_memory,
@@ -98,6 +99,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Production Rate Limiting Middleware
+app.add_middleware(RateLimitMiddleware)
+
+
+# Production Security Headers Middleware
+@app.middleware("http")
+async def security_headers_middleware(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+    return response
 
 
 # ── WebSocket Connection Manager ─────────────────────────────────────────────
@@ -439,7 +455,7 @@ def update_client_by_id(
 @app.delete("/api/clients/{client_id}")
 def remove_client(
     client_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     success = delete_client(client_id, user=current_user)
     if not success:
@@ -505,7 +521,7 @@ def update_project_by_id(
 @app.delete("/api/projects/{project_id}")
 def remove_project(
     project_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     success = delete_project(project_id, user=current_user)
     if not success:
@@ -619,14 +635,14 @@ async def update_agent_status_endpoint(
 
 
 @app.get("/api/agents")
-def get_agents(current_user: Dict[str, Any] = Depends(get_current_user)):
+def get_agents(current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))):
     """Returns the registry of specialized AI agents."""
     agents = get_all_agents_dict()
     return {"agents": agents, "count": len(agents)}
 
 
 @app.get("/api/agents/{agent_id}")
-def get_agent_detail(agent_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+def get_agent_detail(agent_id: str, current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))):
     """Returns detailed profile, tools, schema, and quality criteria for an agent."""
     agent = get_agent(agent_id)
     if not agent:
@@ -968,7 +984,7 @@ def get_pending_count_endpoint(current_user: Dict[str, Any] = Depends(get_curren
 async def approve_request_endpoint(
     request_id: str,
     payload: ApprovalDecisionRequest = ApprovalDecisionRequest(),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     """Approves an action request and resumes workflow."""
     try:
@@ -986,7 +1002,7 @@ async def approve_request_endpoint(
 async def reject_request_endpoint(
     request_id: str,
     payload: ApprovalDecisionRequest = ApprovalDecisionRequest(),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     """Rejects an action request and halts step."""
     try:
@@ -1004,7 +1020,7 @@ async def reject_request_endpoint(
 async def edit_and_approve_endpoint(
     request_id: str,
     payload: ApprovalEditRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     """Modifies the payload and approves the action."""
     try:
@@ -1043,7 +1059,7 @@ def list_integrations_endpoint(current_user: Dict[str, Any] = Depends(get_curren
 def connect_integration_endpoint(
     provider: str,
     payload: IntegrationConnectRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     """Connects external integration with provided credentials / OAuth token."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
@@ -1058,7 +1074,7 @@ def connect_integration_endpoint(
 @app.post("/api/integrations/{provider}/disconnect")
 def disconnect_integration_endpoint(
     provider: str,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     """Disconnects and revokes stored credentials for an integration provider."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
@@ -1090,7 +1106,7 @@ def test_integration_endpoint(
 
 # ── Milestone 10: Analytics & Cost Tracking Endpoints ─────────────────────────
 @app.get("/api/analytics/summary")
-def get_analytics_summary_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+def get_analytics_summary_endpoint(current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))):
     """Returns top-level KPI metrics, token consumption, total cost, and model distribution."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
     summary = get_token_usage_summary(org_id)
@@ -1103,7 +1119,7 @@ def get_analytics_usage_endpoint(
     end_date: Optional[str] = Query(None),
     agent_id: Optional[str] = Query(None),
     project_id: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))
 ):
     """Returns filtered AI execution usage logs."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
@@ -1121,7 +1137,7 @@ def get_analytics_usage_endpoint(
 def get_costs_by_agent_endpoint(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))
 ):
     """Returns cost and token consumption aggregated by AI agent."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
@@ -1130,7 +1146,7 @@ def get_costs_by_agent_endpoint(
 
 
 @app.get("/api/analytics/costs/projects")
-def get_costs_by_project_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+def get_costs_by_project_endpoint(current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))):
     """Returns cost and token consumption aggregated by project."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
     costs = get_cost_per_project(org_id)
@@ -1140,7 +1156,7 @@ def get_costs_by_project_endpoint(current_user: Dict[str, Any] = Depends(get_cur
 @app.get("/api/analytics/quality/trend")
 def get_quality_trend_endpoint(
     days: int = Query(30, ge=1, le=365),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))
 ):
     """Returns historical daily quality score trends."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")

@@ -4,14 +4,10 @@ import base64
 import json
 import time
 from typing import Optional, Dict, Any
-from fastapi import HTTPException, Security, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
-from database import get_user_by_email, get_user_by_id
-
-security = HTTPBearer(auto_error=False)
 
 def create_jwt_token(payload: Dict[str, Any], expires_in: int = 86400 * 7) -> str:
+    """Generates an HMAC-SHA256 signed JWT token."""
     now = int(time.time())
     header = {"alg": "HS256", "typ": "JWT"}
     payload_copy = {**payload, "iat": now, "exp": now + expires_in}
@@ -28,7 +24,9 @@ def create_jwt_token(payload: Dict[str, Any], expires_in: int = 86400 * 7) -> st
     
     return f"{header_b64}.{payload_b64}.{sig_b64}"
 
+
 def verify_jwt_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verifies JWT signature and expiry. Returns decoded claims dict if valid."""
     try:
         parts = token.split(".")
         if len(parts) != 3:
@@ -58,19 +56,3 @@ def verify_jwt_token(token: str) -> Optional[Dict[str, Any]]:
         return payload
     except Exception:
         return None
-
-async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Security(security)) -> Dict[str, Any]:
-    if not credentials or not credentials.credentials:
-        raise HTTPException(status_code=401, detail="Authentication credentials were not provided")
-    
-    token = credentials.credentials
-    payload = verify_jwt_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-        
-    user_id = payload.get("sub")
-    user = get_user_by_id(user_id)
-    if not user or not user.get("is_active"):
-        raise HTTPException(status_code=401, detail="User account is inactive or not found")
-        
-    return user

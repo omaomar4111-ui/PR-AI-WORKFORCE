@@ -110,6 +110,11 @@ def reset_db_for_tests():
     AI_USAGE_LOGS_DB.clear()
     QUALITY_SCORES_DB.clear()
     SYSTEM_METRICS_DB.clear()
+    try:
+        from middleware.rate_limit import reset_rate_limits
+        reset_rate_limits()
+    except Exception:
+        pass
 
 
 # ── User Helpers ─────────────────────────────────────────────────────────────

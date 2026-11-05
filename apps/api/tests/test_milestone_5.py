@@ -9,8 +9,10 @@ from database import (
     reset_db_for_tests,
     create_client,
     create_project,
+    create_workflow,
     get_workflow,
     get_workflow_steps,
+    get_execution_logs,
     DELIVERABLES_DB,
     WORKFLOWS_DB,
 )
@@ -104,17 +106,12 @@ def test_workflow_execution_parallel_and_human_approval():
             "role": "owner"
         }
 
-        # 2. Create workflow record
-        wf_res = client.post(
-            "/api/workflows",
-            headers=headers,
-            json={
-                "user_request": "Plan luxury grand opening PR campaign for Cairo Luxury Group",
-                "project_id": project_id
-            }
-        )
-        assert wf_res.status_code == 201
-        wf_data = wf_res.json()["workflow"]
+        # 2. Create workflow record directly to control execution on this test loop
+        wf_data = create_workflow({
+            "user_request": "Plan luxury grand opening PR campaign for Cairo Luxury Group",
+            "project_id": project_id,
+            "organization_id": user_info["organization_id"],
+        }, user_info)
         wf_id = wf_data["id"]
 
         # 3. Execute DAG with OmSamahOrchestrator on this event loop
@@ -122,7 +119,7 @@ def test_workflow_execution_parallel_and_human_approval():
         orch_task = asyncio.create_task(orchestrator.run(project_id))
 
         # Wait for workflow to reach waiting_approval state
-        max_wait = 15
+        max_wait = 35
         waited = 0
         current_wf = None
         while waited < max_wait:

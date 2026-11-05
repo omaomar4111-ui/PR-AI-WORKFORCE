@@ -109,9 +109,9 @@ def test_clients_and_projects_rls_isolation():
     forbidden_resp = client.get(f"/api/clients/{c1_id}", headers=member_headers)
     assert forbidden_resp.status_code == 404
 
-    # Member cannot delete unassigned Client 1
+    # Member cannot delete unassigned Client 1 (Forbidden or Not Found)
     del_forbidden = client.delete(f"/api/clients/{c1_id}", headers=member_headers)
-    assert del_forbidden.status_code == 404
+    assert del_forbidden.status_code in [403, 404]
 
 
 # ── Projects CRUD & Stats Tests ──────────────────────────────────────────────
