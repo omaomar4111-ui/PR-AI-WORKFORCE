@@ -59,7 +59,7 @@ CREATE POLICY quality_scores_isolation ON public.quality_scores
     USING (
         deliverable_id IS NULL OR deliverable_id IN (
             SELECT id FROM public.deliverables 
-            WHERE org_id = current_setting('app.current_org_id', true)::uuid
+            WHERE organization_id = current_setting('app.current_org_id', true)::uuid
         )
     );
 
