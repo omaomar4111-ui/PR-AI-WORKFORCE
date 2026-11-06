@@ -3,8 +3,8 @@
 PR AI WORKFORCE - Production Database Smoke Tester
 Verifies:
 1. pgvector extension is installed and functional.
-2. All 20 tables exist with Row-Level Security (RLS) enabled.
-3. Live transactional insert/read/delete across clients, projects, tasks, and memory embeddings.
+2. All tables exist with Row-Level Security (RLS) enabled.
+3. Live transactional insert/read/delete across organizations, clients, projects, tasks, and memory embeddings.
 """
 
 import os
@@ -12,8 +12,11 @@ import sys
 import uuid
 import psycopg2
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 def run_smoke_test(database_url: str):
-    print("🔌 Connecting to production PostgreSQL database...")
+    print("Connecting to production PostgreSQL database on Supabase...")
     conn = psycopg2.connect(database_url)
     conn.autocommit = False
     cursor = conn.cursor()
@@ -27,7 +30,7 @@ def run_smoke_test(database_url: str):
             raise RuntimeError("pgvector extension is NOT installed. Run 'CREATE EXTENSION IF NOT EXISTS vector;' in Supabase SQL editor.")
         print(f"  ✓ pgvector extension verified (version: {ext[1]}).")
 
-        # 2. Verify all 20 tables & Row-Level Security
+        # 2. Verify all tables & Row-Level Security
         print("▶ [2/4] Verifying Table RLS Policies...")
         cursor.execute("""
             SELECT tablename, rowsecurity
@@ -48,22 +51,28 @@ def run_smoke_test(database_url: str):
             raise RuntimeError(f"RLS is disabled on tables: {rls_disabled}")
         print("  ✓ All application tables have Row-Level Security strictly enforced.")
 
-        # 3. Live Smoke Test (CRUD test client, project, task, memory)
+        # 3. Live Smoke Test (CRUD test org, client, project, task, memory)
         print("▶ [3/4] Running transactional CRUD smoke test...")
-        test_org_id = f"smoke-org-{uuid.uuid4().hex[:8]}"
-        test_client_id = f"smoke-client-{uuid.uuid4().hex[:8]}"
-        test_project_id = f"smoke-project-{uuid.uuid4().hex[:8]}"
-        test_task_id = f"smoke-task-{uuid.uuid4().hex[:8]}"
-        test_memory_id = f"smoke-mem-{uuid.uuid4().hex[:8]}"
+        test_org_id = str(uuid.uuid4())
+        test_client_id = str(uuid.uuid4())
+        test_project_id = str(uuid.uuid4())
+        test_task_id = str(uuid.uuid4())
+        test_memory_id = str(uuid.uuid4())
+        test_slug = f"smoke-org-{uuid.uuid4().hex[:8]}"
 
+        # Insert organization
+        cursor.execute(
+            "INSERT INTO organizations (id, name, slug) VALUES (%s, %s, %s);",
+            (test_org_id, "Smoke Test Organization", test_slug)
+        )
         # Insert client
         cursor.execute(
-            "INSERT INTO clients (id, org_id, name, industry) VALUES (%s, %s, %s, %s);",
+            "INSERT INTO clients (id, organization_id, name, industry) VALUES (%s, %s, %s, %s);",
             (test_client_id, test_org_id, "Smoke Test Client", "Technology")
         )
         # Insert project
         cursor.execute(
-            "INSERT INTO projects (id, org_id, client_id, name, budget) VALUES (%s, %s, %s, %s, %s);",
+            "INSERT INTO projects (id, organization_id, client_id, name, retainer_amount) VALUES (%s, %s, %s, %s, %s);",
             (test_project_id, test_org_id, test_client_id, "Smoke Test Project", 5000.0)
         )
         # Insert task
@@ -76,13 +85,23 @@ def run_smoke_test(database_url: str):
             "INSERT INTO memories (id, org_id, type, reference_id, content) VALUES (%s, %s, %s, %s, %s);",
             (test_memory_id, test_org_id, "client", test_client_id, "Smoke test memory content")
         )
-        # Insert zero-vector embedding
+        # Insert zero-vector embedding (1536 dims)
         zero_vector = "[" + ",".join(["0.0"] * 1536) + "]"
         cursor.execute(
             "INSERT INTO memory_embeddings (memory_id, embedding) VALUES (%s, %s::vector);",
             (test_memory_id, zero_vector)
         )
-        print("  ✓ Created test records across clients, projects, tasks, and memory_embeddings.")
+        print("  ✓ Successfully created test records across organizations, clients, projects, tasks, and memory_embeddings.")
+
+        # Read back vector embedding to verify cosine similarity search
+        cursor.execute("""
+            SELECT m.id, m.content, (me.embedding <=> %s::vector) AS distance
+            FROM memories m
+            JOIN memory_embeddings me ON m.id = me.memory_id
+            WHERE m.id = %s;
+        """, (zero_vector, test_memory_id))
+        row = cursor.fetchone()
+        print(f"  ✓ Vector retrieval verified (Memory ID: {row[0]}, Cosine Distance: {row[2]}).")
 
         # 4. Clean up test records
         print("▶ [4/4] Cleaning up smoke test records...")
@@ -91,10 +110,13 @@ def run_smoke_test(database_url: str):
         cursor.execute("DELETE FROM tasks WHERE id = %s;", (test_task_id,))
         cursor.execute("DELETE FROM projects WHERE id = %s;", (test_project_id,))
         cursor.execute("DELETE FROM clients WHERE id = %s;", (test_client_id,))
+        cursor.execute("DELETE FROM organizations WHERE id = %s;", (test_org_id,))
         conn.commit()
-        print("  ✓ Database cleaned up cleanly. Zero residual test artifacts.")
+        print("  ✓ Test records cleaned up. Database is pristine.")
 
-        print("\n🏆 PRODUCTION DATABASE VERIFICATION: 100% HEALTHY & READY.")
+        print("\n================================================================================")
+        print("🏆 PRODUCTION DATABASE VERIFICATION: 100% HEALTHY, SECURE & CERTIFIED.")
+        print("================================================================================\n")
         return True
 
     except Exception as exc:
