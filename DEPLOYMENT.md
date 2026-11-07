@@ -316,4 +316,30 @@ flowchart LR
 | **Cross-Region (e.g. US-East to EU-West)** | `85 - 120 ms` | `425 - 600 ms` | **Severe network lag (> 500 ms penalty)** |
 | **Co-located (eu-west-1 to eu-west-1)** | **`2 - 4 ms`** | **`< 15 ms total`** | **> 96% latency savings (< 15 ms total)** |
 
+---
+
+## 🧹 9. Automated Data Retention & GDPR Lifecycle (`retention.yml`)
+
+To prevent database bloat and enforce GDPR compliance, telemetry records in `web_vitals` have an enforced **30-day lifecycle SLA**.
+
+### Architecture:
+- Database function: `purge_old_web_vitals()` (Migration `014_web_vitals_retention.sql`).
+- Automated scheduler: GitHub Actions workflow [`.github/workflows/retention.yml`](.github/workflows/retention.yml).
+- Schedule: Runs every 24 hours at **03:00 AM UTC** (`cron: '0 3 * * *'`).
+
+### Configuration in GitHub Repository:
+1. Navigate to your GitHub repository: **Settings** → **Secrets and variables** → **Actions**.
+2. Click **New repository secret**.
+3. Name: `SUPABASE_DB_URL`.
+4. Value: `postgresql://postgres.[ref]:[password]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres` (Transaction Pooler URI).
+5. Click **Add secret**.
+
+### On-Demand / Manual Purge Execution:
+1. Navigate to **Actions** tab in GitHub repository.
+2. Select **Daily Web Vitals Retention Purge** from the left workflows sidebar.
+3. Click **Run workflow** → select branch (`main`) → click green **Run workflow** button.
+4. The runner executes `SELECT purge_old_web_vitals();` and prints the count of deleted rows.
+
+---
+
 *Production readiness certified by Om Samah CEO Orchestrator & PR AI Workforce Engineering Team.*

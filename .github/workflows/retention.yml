@@ -1,0 +1,44 @@
+name: Daily Web Vitals Retention Purge
+
+on:
+  schedule:
+    # Run every day at 03:00 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    # Enable manual on-demand trigger from GitHub Actions tab
+
+jobs:
+  purge-retention:
+    name: Purge Expired Telemetry (> 30 Days)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Execute Web Vitals Retention Cleanup
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not configured in repository secrets."
+            exit 1
+          fi
+
+          echo "Initiating automated 30-day telemetry retention purge..."
+          # Execute the migration 014 database purge function without exposing connection string
+          RESULT=$(psql "$DB_URL" -t -A -c "SELECT purge_old_web_vitals();" 2>&1)
+          EXIT_CODE=$?
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Telemetry retention purge completed successfully."
+            echo "📊 Purged rows count: $RESULT"
+          else
+            echo "::error::Failed to execute purge_old_web_vitals(). Check database connectivity."
+            # Mask any potentially leaked connection info from error output
+            echo "$RESULT" | sed -E 's/:[^@]+@/:****@/g'
+            exit $EXIT_CODE
+          fi
