@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { AgentCard } from "@/components/AgentCard";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -145,6 +145,12 @@ const ORDERED_DEPARTMENTS = [
   "quality",
 ];
 
+const DEFAULT_DEPARTMENT_COLORS = {
+  bg: "bg-gray-800/20",
+  text: "text-gray-400",
+  border: "border-gray-800",
+};
+
 const AgentExecutionModal = dynamic(() => import("@/components/AgentExecutionModal"), {
   ssr: false,
   loading: () => null,
@@ -162,15 +168,6 @@ export default function AgentsPage() {
 
   // Execution Modal state
   const [activeAgent, setActiveAgent] = useState<Agent | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [inputJsonText, setInputJsonText] = useState("");
-  const [taskTitle, setTaskTitle] = useState("");
-  const [executing, setExecuting] = useState(false);
-  const [execResult, setExecResult] = useState<{
-    deliverable: Deliverable;
-    output: Record<string, any>;
-  } | null>(null);
-  const [execError, setExecError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -181,9 +178,6 @@ export default function AgentsPage() {
         ]);
         setAgents(agentsData);
         setProjects(projectsData);
-        if (projectsData.length > 0) {
-          setSelectedProjectId(projectsData[0].id);
-        }
       } catch (err: any) {
         console.error("Failed to load agents:", err);
       } finally {
@@ -193,74 +187,42 @@ export default function AgentsPage() {
     load();
   }, []);
 
-  const openExecutionConsole = (agent: Agent) => {
+  // Stable callback ensures React.memo(AgentCard) is never broken on keystrokes
+  const openExecutionConsole = useCallback((agent: Agent) => {
     setActiveAgent(agent);
-    setExecResult(null);
-    setExecError(null);
-    setTaskTitle(`${agent.name} - ${agent.role}`);
-    if (agent.sample_input) {
-      setInputJsonText(JSON.stringify(agent.sample_input, null, 2));
-    } else {
-      setInputJsonText("{}");
+  }, []);
+
+  const closeExecutionConsole = useCallback(() => {
+    setActiveAgent(null);
+  }, []);
+
+  // Memoize department agent counts so tabs don't filter 8 times on every keystroke
+  const departmentCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const agent of agents) {
+      counts[agent.department] = (counts[agent.department] || 0) + 1;
     }
-  };
+    return counts;
+  }, [agents]);
 
-  const handleLoadSample = () => {
-    if (activeAgent?.sample_input) {
-      setInputJsonText(JSON.stringify(activeAgent.sample_input, null, 2));
-      setExecError(null);
-    }
-  };
-
-  const handleRunAgent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeAgent) return;
-
-    let parsedInput: Record<string, any>;
-    try {
-      parsedInput = JSON.parse(inputJsonText);
-    } catch (err: any) {
-      setExecError("Invalid JSON input syntax. Please verify JSON format.");
-      return;
-    }
-
-    try {
-      setExecuting(true);
-      setExecError(null);
-      setExecResult(null);
-
-      const result = await executeAgent(activeAgent.id, {
-        input: parsedInput,
-        project_id: selectedProjectId || undefined,
-        title: taskTitle.trim() || undefined,
-      });
-
-      setExecResult({
-        deliverable: result.deliverable,
-        output: result.output,
-      });
-    } catch (err: any) {
-      setExecError(err.message || "Agent execution failed");
-    } finally {
-      setExecuting(false);
-    }
-  };
-
-  const filteredAgents = agents.filter((a) => {
-    const matchesDept = selectedDept === "all" || a.department === selectedDept;
-    if (!matchesDept) return false;
-    if (!debouncedSearch.trim()) return true;
-    const q = debouncedSearch.toLowerCase().trim();
-    return (
-      a.name.toLowerCase().includes(q) ||
-      (a.name_ar && a.name_ar.toLowerCase().includes(q)) ||
-      a.role.toLowerCase().includes(q) ||
-      (a.role_ar && a.role_ar.toLowerCase().includes(q)) ||
-      a.department.toLowerCase().includes(q) ||
-      a.id.toLowerCase().includes(q) ||
-      (a.tools && a.tools.some((tool) => tool.toLowerCase().includes(q)))
-    );
-  });
+  // Memoize filtered agents list so 38 card filters only execute when query/dept changes
+  const filteredAgents = useMemo(() => {
+    return agents.filter((a) => {
+      const matchesDept = selectedDept === "all" || a.department === selectedDept;
+      if (!matchesDept) return false;
+      if (!debouncedSearch.trim()) return true;
+      const q = debouncedSearch.toLowerCase().trim();
+      return (
+        a.name.toLowerCase().includes(q) ||
+        (a.name_ar && a.name_ar.toLowerCase().includes(q)) ||
+        a.role.toLowerCase().includes(q) ||
+        (a.role_ar && a.role_ar.toLowerCase().includes(q)) ||
+        a.department.toLowerCase().includes(q) ||
+        a.id.toLowerCase().includes(q) ||
+        (a.tools && a.tools.some((tool) => tool.toLowerCase().includes(q)))
+      );
+    });
+  }, [agents, selectedDept, debouncedSearch]);
 
   return (
     <AppShell>
@@ -330,7 +292,7 @@ export default function AgentsPage() {
           {t("agents.all_departments")} ({agents.length})
         </button>
         {ORDERED_DEPARTMENTS.map((dept) => {
-          const count = agents.filter((a) => a.department === dept).length;
+          const count = departmentCounts[dept] || 0;
           const deptNameObj = DEPARTMENT_NAMES[dept];
           const label = isAr && deptNameObj ? deptNameObj.ar : deptNameObj ? deptNameObj.en : dept;
           return (
@@ -380,7 +342,7 @@ export default function AgentsPage() {
               key={agent.id}
               agent={agent}
               isAr={isAr}
-              colors={DEPARTMENT_COLORS[agent.department] || { bg: "bg-gray-800/20", text: "text-gray-400", border: "border-gray-800" }}
+              colors={DEPARTMENT_COLORS[agent.department] || DEFAULT_DEPARTMENT_COLORS}
               IconComponent={AGENT_ICONS[agent.id] || Bot}
               onDeploy={openExecutionConsole}
               toolsCountLabel={t("agents.tools_count")}
@@ -395,7 +357,7 @@ export default function AgentsPage() {
       {activeAgent && (
         <AgentExecutionModal
           agent={activeAgent}
-          onClose={() => setActiveAgent(null)}
+          onClose={closeExecutionConsole}
           projects={projects}
           agentIcons={AGENT_ICONS}
         />

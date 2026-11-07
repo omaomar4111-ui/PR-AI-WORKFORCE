@@ -2,7 +2,7 @@
 /**
  * PR AI WORKFORCE — Central Command Center Dashboard
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -27,7 +27,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -39,16 +39,24 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [loadStats]);
 
-  const totalClients = stats?.total_clients ?? 0;
-  const activeProjects = stats?.active_projects ?? 0;
-  const totalRetainer = stats?.total_retainer ?? 0;
-  const isEmpty = totalClients === 0 && activeProjects === 0;
+  const { totalClients, activeProjects, totalRetainer, isEmpty, formattedRetainer } = useMemo(() => {
+    const clients = stats?.total_clients ?? 0;
+    const projects = stats?.active_projects ?? 0;
+    const retainer = stats?.total_retainer ?? 0;
+    return {
+      totalClients: clients,
+      activeProjects: projects,
+      totalRetainer: retainer,
+      isEmpty: clients === 0 && projects === 0,
+      formattedRetainer: retainer.toLocaleString("en-US", { minimumFractionDigits: 0 }),
+    };
+  }, [stats]);
 
   return (
     <AppShell>
@@ -147,7 +155,7 @@ export default function DashboardPage() {
               </div>
               <div className="mt-4 flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-white">
-                  ${totalRetainer.toLocaleString("en-US", { minimumFractionDigits: 0 })}
+                  ${formattedRetainer}
                 </span>
                 <span className="text-xs text-emerald-400 font-semibold">
                   {isAr ? "/ شهرياً" : "/ month"}
