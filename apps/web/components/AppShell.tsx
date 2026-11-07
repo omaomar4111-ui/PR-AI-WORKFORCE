@@ -80,17 +80,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    fetchMe()
-      .then((data) => setUser(data.user))
+    Promise.all([
+      fetchMe().then((data) => data.user),
+      fetchPendingApprovalsCount().catch(() => 0),
+    ])
+      .then(([userData, count]) => {
+        setUser(userData);
+        setPendingApprovalsCount(count);
+      })
       .catch(() => {
         clearStoredSession();
         router.replace("/login");
       })
       .finally(() => setLoading(false));
-
-    fetchPendingApprovalsCount()
-      .then((count) => setPendingApprovalsCount(count))
-      .catch(() => {});
 
     // Live Approvals WebSocket sync
     let ws: WebSocket | null = null;

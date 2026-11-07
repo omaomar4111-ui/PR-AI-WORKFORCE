@@ -90,59 +90,72 @@ export default function DashboardPage() {
 
       {/* Real Data Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        {/* Total Clients */}
-        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-400">{t("dash.total_clients")}</span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#8b5cf6]/10 text-[#a78bfa]">
-              <Users className="h-5 w-5" />
+        {loading ? (
+          Array.from({ length: 3 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm h-28 animate-pulse flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <div className="h-3 w-24 bg-gray-800 rounded" />
+                <div className="h-9 w-9 bg-gray-800 rounded-lg" />
+              </div>
+              <div className="h-7 w-24 bg-gray-800 rounded" />
             </div>
-          </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">
-              {loading ? "..." : totalClients}
-            </span>
-            <span className="text-xs text-gray-400">
-              {isAr ? "عميل مسجل" : "clients recorded"}
-            </span>
-          </div>
-        </div>
+          ))
+        ) : (
+          <>
+            {/* Total Clients */}
+            <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-400">{t("dash.total_clients")}</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#8b5cf6]/10 text-[#a78bfa]">
+                  <Users className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-white">{totalClients}</span>
+                <span className="text-xs text-gray-400">
+                  {isAr ? "عميل مسجل" : "clients recorded"}
+                </span>
+              </div>
+            </div>
 
-        {/* Active Projects */}
-        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-400">{t("dash.active_projects")}</span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-              <FolderGit2 className="h-5 w-5" />
+            {/* Active Projects */}
+            <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-400">{t("dash.active_projects")}</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                  <FolderGit2 className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-white">{activeProjects}</span>
+                <span className="text-xs text-gray-400">
+                  {isAr ? `من إجمالي ${stats?.total_projects ?? 0}` : `of ${stats?.total_projects ?? 0} total`}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">
-              {loading ? "..." : activeProjects}
-            </span>
-            <span className="text-xs text-gray-400">
-              {isAr ? `من إجمالي ${stats?.total_projects ?? 0}` : `of ${stats?.total_projects ?? 0} total`}
-            </span>
-          </div>
-        </div>
 
-        {/* Total Retainer Revenue */}
-        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-400">{t("dash.total_retainer")}</span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
-              <DollarSign className="h-5 w-5" />
+            {/* Total Retainer Revenue */}
+            <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-400">{t("dash.total_retainer")}</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+                  <DollarSign className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-white">
+                  ${totalRetainer.toLocaleString("en-US", { minimumFractionDigits: 0 })}
+                </span>
+                <span className="text-xs text-emerald-400 font-semibold">
+                  {isAr ? "/ شهرياً" : "/ month"}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">
-              {loading ? "..." : `$${totalRetainer.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
-            </span>
-            <span className="text-xs text-emerald-400 font-semibold">
-              {isAr ? "/ شهرياً" : "/ month"}
-            </span>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* If Database is Empty -> Show Clean CTA */}
