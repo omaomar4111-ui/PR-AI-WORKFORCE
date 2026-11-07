@@ -276,7 +276,7 @@ flowchart LR
         direction TB
         RailwayApp["Railway PaaS Containers\n(FastAPI Gateway + Next.js App)\nTarget Region: eu-west-1 / europe-west4"]
         SupabaseDB["Supabase PostgreSQL 17 + pgvector\n(Transaction Pooler Port 6543)\nHost: aws-0-eu-west-1.pooler.supabase.com\nLatency: 2-4 ms"]
-        UpstashRedis["Upstash Redis 7 (TLS Enabled)\n(Async Cache & Rate Limiting)\nHost: happy-cod-101575.upstash.io\nLatency: 1-3 ms"]
+        UpstashRedis["Upstash Redis 7 (TLS Enabled)\n(Async Cache & Rate Limiting)\nHost: happy-*.upstash.io\nLatency: 1-3 ms"]
     end
 
     CloudflareEdge["Cloudflare Edge Global Anycast CDN\n(Local Edge PoPs terminating TLS closest to user)"]
@@ -339,6 +339,58 @@ To prevent database bloat and enforce GDPR compliance, telemetry records in `web
 2. Select **Daily Web Vitals Retention Purge** from the left workflows sidebar.
 3. Click **Run workflow** → select branch (`main`) → click green **Run workflow** button.
 4. The runner executes `SELECT purge_old_web_vitals();` and prints the count of deleted rows.
+
+---
+
+## 🔐 10. Secrets Rotation Workflow & Rollback Procedure
+
+When rotating production secrets (database password, Redis tokens, application secrets, JWT signing keys):
+
+### Rotation Protocol Overview:
+1. **Pre-flight Check:** Ensure no active high-traffic production workloads or long-running database transactions.
+2. **Generate Application Secrets:**
+   ```bash
+   python scripts/generate_secrets.py --output-file NEW_SECRETS.txt
+   ```
+   *Generates 256-bit cryptographically secure hex strings for `APP_SECRET` and `JWT_SECRET`.*
+3. **Dashboard Rotations (Manual User Action):**
+   - **Supabase DB Password:** Project Settings → Database → Reset database password. Append new `DATABASE_URL` to `NEW_SECRETS.txt`.
+   - **Upstash Redis Token:** Upstash Console → Database Details → Rest API / Redis Tokens → Rotate. Append new `REDIS_URL` to `NEW_SECRETS.txt`.
+   - Full guide and step-by-step UI instructions are documented in [docs/ROTATION_GUIDE.md](docs/ROTATION_GUIDE.md).
+4. **Pre-flight Live Verification:**
+   Before modifying any production environment file, run:
+   ```bash
+   python scripts/verify_rotation.py
+   ```
+   *Verifies that new secrets differ from old secrets, executes a live PostgreSQL `SELECT 1` ping, and an Upstash Redis `PING`.*
+5. **Atomic Application & Backup:**
+   Apply new secrets safely:
+   ```bash
+   python scripts/apply_rotation.py
+   ```
+   *Creates a timestamped backup (`.env.production.bak.<timestamp>`), updates `.env.production` in-place, and securely scrubs `NEW_SECRETS.txt` from disk.*
+6. **Deploy / Restart Services:** Restart FastAPI and Web services (Railway / Docker).
+
+### Rollback Procedure (Emergency Reversion):
+If the verification passes but production services report connection drops or auth failures after application:
+1. **Locate Most Recent Backup:**
+   ```bash
+   ls -la .env.production.bak.*
+   ```
+2. **Restore Backup File:**
+   ```bash
+   cp .env.production.bak.<LATEST_TIMESTAMP> .env.production
+   ```
+3. **Revert Cloud Dashboard Credentials:**
+   - In Supabase: Re-enter the previous DB password if known, or re-run rotation flow with immediate verification.
+   - In Upstash: Reactivate previous token or update runner with current token.
+4. **Restart Services:**
+   Restart the API and Web containers to reload restored environment variables.
+5. **Verify Live Health:**
+   ```bash
+   curl -f http://127.0.0.1:8000/health
+   curl -f http://127.0.0.1:8000/health/redis
+   ```
 
 ---
 
