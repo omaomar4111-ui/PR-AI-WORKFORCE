@@ -316,14 +316,39 @@ export const DEFAULT_TIMEOUT_MS = 12000;
 // In-flight deduplication map for concurrent identical GET requests
 const inflightGetRequests = new Map<string, Promise<Response>>();
 
+/**
+ * Generate W3C compliant traceparent header (00-{trace_id_32}-{span_id_16}-01)
+ * Enables distributed trace correlation between Next.js frontend and FastAPI backend.
+ */
+function generateTraceparent(): string {
+  let hex = "";
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  } else {
+    for (let i = 0; i < 48; i++) {
+      hex += Math.floor(Math.random() * 16).toString(16);
+    }
+  }
+  const traceId = hex.slice(0, 32);
+  const spanId = hex.slice(32, 48);
+  return `00-${traceId}-${spanId}-01`;
+}
+
 export async function customFetch(url: string | URL, options: RequestInit = {}): Promise<Response> {
   const method = (options.method || "GET").toUpperCase();
   const urlStr = url.toString();
 
+  // Inject W3C traceparent header for distributed tracing
+  const reqHeaders = new Headers(options.headers || {});
+  if (!reqHeaders.has("traceparent")) {
+    reqHeaders.set("traceparent", generateTraceparent());
+  }
+
   // Deduplicate identical in-flight GET requests
   const canDeduplicate = method === "GET" && !options.body;
-  const headersObj = options.headers ? (options.headers as Record<string, string>) : {};
-  const authHeader = (headersObj as any)?.Authorization || (headersObj as any)?.authorization || "";
+  const authHeader = reqHeaders.get("authorization") || reqHeaders.get("Authorization") || "";
   const cacheKey = canDeduplicate ? `${urlStr}::${authHeader}` : null;
 
   if (cacheKey && inflightGetRequests.has(cacheKey)) {
@@ -338,7 +363,12 @@ export async function customFetch(url: string | URL, options: RequestInit = {}):
 
   const fetchPromise = (async () => {
     try {
-      return await globalThis.fetch(url, { ...options, signal });
+      const res = await globalThis.fetch(url, { ...options, headers: reqHeaders, signal });
+      const traceHeader = res.headers.get("traceparent") || res.headers.get("x-trace-id");
+      if (traceHeader && typeof window !== "undefined") {
+        console.debug(`[OTel Trace Correlation] ${method} ${urlStr} -> ${traceHeader}`);
+      }
+      return res;
     } catch (error: any) {
       if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
         throw new Error("انتهت مهلة الطلب (12 ثانية). الخادم لا يستجيب.");

@@ -10,9 +10,28 @@ import json
 import logging
 from typing import Dict, Any, Optional, List, Set
 
-logger = logging.getLogger("uvicorn.error")
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from opentelemetry.trace import Status, StatusCode, SpanKind
 
 from config import settings
+logger = logging.getLogger("uvicorn.error")
+
+# OpenTelemetry Tracer Provider Configuration (Console Exporter)
+otel_resource = Resource.create({
+    "service.name": "pr-ai-workforce-api",
+    "service.version": "1.0.0",
+    "deployment.environment": settings.APP_ENV,
+})
+otel_provider = TracerProvider(resource=otel_resource)
+otel_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+trace.set_tracer_provider(otel_provider)
+otel_tracer = trace.get_tracer("pr.workforce.api")
+otel_propagator = TraceContextTextMapPropagator()
+
 import database
 from database import (
     get_user_by_email,
@@ -132,6 +151,50 @@ async def security_headers_middleware(request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
     return response
+
+
+# OpenTelemetry Distributed Tracing Middleware (W3C traceparent Propagation)
+@app.middleware("http")
+async def opentelemetry_tracing_middleware(request: Request, call_next):
+    headers_dict = dict(request.headers)
+    extracted_context = otel_propagator.extract(carrier=headers_dict)
+    span_name = f"{request.method} {request.url.path}"
+    
+    with otel_tracer.start_as_current_span(
+        span_name,
+        context=extracted_context,
+        kind=SpanKind.SERVER,
+    ) as span:
+        span.set_attribute("http.method", request.method)
+        span.set_attribute("http.url", str(request.url))
+        span.set_attribute("http.target", request.url.path)
+        if request.client:
+            span.set_attribute("http.client_ip", request.client.host)
+
+        span_ctx = span.get_span_context()
+        trace_id_hex = f"{span_ctx.trace_id:032x}"
+        span_id_hex = f"{span_ctx.span_id:016x}"
+        traceparent_header = f"00-{trace_id_hex}-{span_id_hex}-01"
+
+        try:
+            response = await call_next(request)
+            span.set_attribute("http.status_code", response.status_code)
+            if response.status_code >= 500:
+                span.set_status(Status(StatusCode.ERROR))
+            else:
+                span.set_status(Status(StatusCode.OK))
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_status(Status(StatusCode.ERROR, str(exc)))
+            raise exc
+
+        response.headers["traceparent"] = traceparent_header
+        response.headers["x-trace-id"] = trace_id_hex
+        logger.info(
+            f"[OTel Trace] {request.method} {request.url.path} "
+            f"status={response.status_code} trace_id={trace_id_hex} span_id={span_id_hex}"
+        )
+        return response
 
 
 # ── WebSocket Connection Manager ─────────────────────────────────────────────
