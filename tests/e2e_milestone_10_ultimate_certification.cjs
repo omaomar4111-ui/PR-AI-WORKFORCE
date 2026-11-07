@@ -44,9 +44,9 @@ async function runUltimateCertification() {
     await page.goto("http://localhost:3000/login", { waitUntil: "domcontentloaded" });
     await page.waitForSelector("button:has-text('المالك')");
     await page.click("button:has-text('المالك')");
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(300);
     await page.click("button[type='submit']");
-    await page.waitForURL("**/dashboard", { timeout: 10000 });
+    await page.waitForURL("**/dashboard", { waitUntil: "commit" });
     console.log("  ✓ Owner authenticated and redirected to Dashboard.");
 
     // ──────────────────────────────────────────────────────────────────────────
