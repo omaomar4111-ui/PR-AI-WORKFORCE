@@ -10,13 +10,17 @@ Features:
 
 import os
 import time
+import json
+import logging
 import urllib.parse
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 
 import redis.asyncio as aioredis
 from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialBackoff
+
+logger = logging.getLogger("cache")
 
 # Global pool & client singletons
 _redis_pool: Optional[aioredis.ConnectionPool] = None
@@ -51,10 +55,26 @@ def get_redis_url() -> str:
     return "redis://127.0.0.1:6379/0"
 
 
-def get_connection_pool() -> aioredis.ConnectionPool:
-    """Initialize or return the global async Redis ConnectionPool."""
-    global _redis_pool
-    if _redis_pool is None:
+_clients_by_loop: Dict[Any, aioredis.Redis] = {}
+
+
+def get_redis_client() -> aioredis.Redis:
+    """
+    Get an async Redis client bound to the current running event loop.
+    Automatically purges clients bound to terminated loops (e.g. in Starlette TestClient).
+    """
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    # Clean up dead/closed loops
+    closed = [l for l in list(_clients_by_loop.keys()) if l is not None and getattr(l, "is_closed", lambda: False)()]
+    for l in closed:
+        _clients_by_loop.pop(l, None)
+
+    if loop not in _clients_by_loop or _clients_by_loop[loop] is None:
         raw_url = get_redis_url()
         parsed = urllib.parse.urlsplit(raw_url)
         is_tls = parsed.scheme.lower() == "rediss"
@@ -73,29 +93,22 @@ def get_connection_pool() -> aioredis.ConnectionPool:
         if is_tls:
             pool_kwargs["ssl_cert_reqs"] = "required"
 
-        _redis_pool = aioredis.ConnectionPool.from_url(raw_url, **pool_kwargs)
+        pool = aioredis.ConnectionPool.from_url(raw_url, **pool_kwargs)
+        _clients_by_loop[loop] = aioredis.Redis(connection_pool=pool)
 
-    return _redis_pool
-
-
-def get_redis_client() -> aioredis.Redis:
-    """Get the singleton async Redis client."""
-    global _redis_client
-    if _redis_client is None:
-        pool = get_connection_pool()
-        _redis_client = aioredis.Redis(connection_pool=pool)
-    return _redis_client
+    return _clients_by_loop[loop]
 
 
 async def close_redis() -> None:
-    """Close the global client and connection pool on app shutdown."""
-    global _redis_client, _redis_pool
-    if _redis_client is not None:
-        await _redis_client.close()
-        _redis_client = None
-    if _redis_pool is not None:
-        await _redis_pool.disconnect()
-        _redis_pool = None
+    """Close all async Redis clients and connection pools across all loops."""
+    for loop, client in list(_clients_by_loop.items()):
+        try:
+            await client.close()
+            if getattr(client, "connection_pool", None) is not None:
+                await client.connection_pool.disconnect()
+        except Exception:
+            pass
+    _clients_by_loop.clear()
 
 
 async def check_redis_health() -> Dict[str, Any]:
@@ -142,3 +155,76 @@ async def check_redis_health() -> Dict[str, Any]:
             "tls": is_tls,
             "error": f"{type(exc).__name__}: {str(exc)}",
         }
+
+
+# ── Cache-Aside Core Operations ──────────────────────────────────────────────
+async def cache_get(key: str) -> Optional[Any]:
+    """
+    Retrieve and deserialize JSON value from Redis cache.
+    Gracefully returns None on cache miss or connection error.
+    """
+    try:
+        client = get_redis_client()
+        val = await client.get(key)
+        if val is not None:
+            return json.loads(val)
+    except Exception as exc:
+        logger.warning(f"Cache lookup failed for key '{key}': {exc}")
+    return None
+
+
+async def cache_set(key: str, value: Any, ttl: int = 300) -> bool:
+    """
+    Serialize and store a JSON value in Redis with a TTL in seconds.
+    Gracefully catches errors to preserve request execution.
+    """
+    try:
+        client = get_redis_client()
+        serialized = json.dumps(value, default=str)
+        await client.set(key, serialized, ex=ttl)
+        return True
+    except Exception as exc:
+        logger.warning(f"Cache set failed for key '{key}': {exc}")
+        return False
+
+
+async def cache_delete(key: str) -> bool:
+    """Delete a specific cache key."""
+    try:
+        client = get_redis_client()
+        await client.delete(key)
+        return True
+    except Exception as exc:
+        logger.warning(f"Cache delete failed for key '{key}': {exc}")
+        return False
+
+
+async def cache_delete_pattern(pattern: str) -> int:
+    """
+    Safely delete all keys matching pattern using non-blocking scan_iter.
+    """
+    try:
+        client = get_redis_client()
+        count = 0
+        batch: List[str] = []
+        async for key in client.scan_iter(match=pattern, count=100):
+            batch.append(key)
+            if len(batch) >= 100:
+                count += await client.delete(*batch)
+                batch = []
+        if batch:
+            count += await client.delete(*batch)
+        return count
+    except Exception as exc:
+        logger.warning(f"Cache pattern invalidation failed for '{pattern}': {exc}")
+        return 0
+
+
+async def invalidate_dashboard_cache() -> int:
+    """Invalidate all cached dashboard statistics across all orgs and users."""
+    return await cache_delete_pattern("cache:dashboard:stats:*")
+
+
+async def invalidate_agents_cache() -> int:
+    """Invalidate all cached agent registries and profiles."""
+    return await cache_delete_pattern("cache:agents:*")

@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-11-07T03:52:54Z",
+  "endpoint": "http://localhost:8000/health/redis",
+  "http_status": 200,
+  "response": {
+    "status": "connected",
+    "ping": true,
+    "latency_ms": 119.85,
+    "cold_latency_ms": 760.41,
+    "host": "happy-cod-101575.upstash.io",
+    "port": 6379,
+    "tls": true,
+    "version": "8.4.0"
+  },
+  "verified": true
+}

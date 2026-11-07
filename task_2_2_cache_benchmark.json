@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-11-07T04:02:45Z",
+  "redis_health": {
+    "status": "connected",
+    "ping": true,
+    "latency_ms": 543.91,
+    "host": "happy-cod-101575.upstash.io",
+    "port": 6379,
+    "tls": true,
+    "version": "8.4.0"
+  },
+  "endpoints": {
+    "/api/agents": {
+      "miss_latency_ms": 327.99,
+      "hit_latency_ms": 267.29,
+      "speedup_percentage": 18.5,
+      "invalidation_verified": true
+    },
+    "/api/dashboard/stats": {
+      "miss_latency_ms": 150.84,
+      "hit_latency_ms": 73.33,
+      "speedup_percentage": 51.4
+    }
+  }
+}

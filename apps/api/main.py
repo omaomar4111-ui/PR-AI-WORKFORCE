@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -86,7 +86,14 @@ from analytics.service import (
     get_token_usage_summary,
     log_ai_usage,
 )
-from cache import check_redis_health, close_redis
+from cache import (
+    check_redis_health,
+    close_redis,
+    cache_get,
+    cache_set,
+    invalidate_dashboard_cache,
+    invalidate_agents_cache,
+)
 
 app = FastAPI(
     title="PR AI WORKFORCE API",
@@ -441,11 +448,12 @@ def get_clients(
 
 
 @app.post("/api/clients", status_code=201)
-def add_client(
+async def add_client(
     payload: ClientCreate,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     client = create_client(payload.model_dump(), user=current_user)
+    await invalidate_dashboard_cache()
     return {"client": client}
 
 
@@ -461,7 +469,7 @@ def get_client_by_id(
 
 
 @app.put("/api/clients/{client_id}")
-def update_client_by_id(
+async def update_client_by_id(
     client_id: str,
     payload: ClientUpdate,
     current_user: Dict[str, Any] = Depends(get_current_user)
@@ -469,17 +477,19 @@ def update_client_by_id(
     updated = update_client(client_id, payload.model_dump(exclude_unset=True), user=current_user)
     if not updated:
         raise HTTPException(status_code=404, detail="Client not found or access denied")
+    await invalidate_dashboard_cache()
     return {"client": updated}
 
 
 @app.delete("/api/clients/{client_id}")
-def remove_client(
+async def remove_client(
     client_id: str,
     current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     success = delete_client(client_id, user=current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Client not found or access denied")
+    await invalidate_dashboard_cache()
     return {"success": True, "message": "Client deleted successfully"}
 
 
@@ -495,12 +505,13 @@ def get_projects(
 
 
 @app.post("/api/projects", status_code=201)
-def add_project(
+async def add_project(
     payload: ProjectCreate,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     try:
         project = create_project(payload.model_dump(), user=current_user)
+        await invalidate_dashboard_cache()
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"project": project}
@@ -527,7 +538,7 @@ def project_progress_endpoint(
 
 
 @app.put("/api/projects/{project_id}")
-def update_project_by_id(
+async def update_project_by_id(
     project_id: str,
     payload: ProjectUpdate,
     current_user: Dict[str, Any] = Depends(get_current_user)
@@ -535,17 +546,19 @@ def update_project_by_id(
     updated = update_project(project_id, payload.model_dump(exclude_unset=True), user=current_user)
     if not updated:
         raise HTTPException(status_code=404, detail="Project not found or access denied")
+    await invalidate_dashboard_cache()
     return {"project": updated}
 
 
 @app.delete("/api/projects/{project_id}")
-def remove_project(
+async def remove_project(
     project_id: str,
     current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
 ):
     success = delete_project(project_id, user=current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Project not found or access denied")
+    await invalidate_dashboard_cache()
     return {"success": True, "message": "Project deleted successfully"}
 
 
@@ -575,6 +588,7 @@ async def add_task(
 ):
     try:
         task = create_task(payload.model_dump(), user=current_user)
+        await invalidate_dashboard_cache()
         # Broadcast real-time event to all connected UI clients
         await ws_manager.broadcast({"type": "task_created", "task": task})
     except ValueError as e:
@@ -602,6 +616,7 @@ async def patch_task(
     updated = update_task(task_id, payload.model_dump(exclude_unset=True), user=current_user)
     if not updated:
         raise HTTPException(status_code=404, detail="Task not found or access denied")
+    await invalidate_dashboard_cache()
     # Broadcast real-time status/task update
     await ws_manager.broadcast({"type": "task_updated", "task": updated})
     return {"task": updated}
@@ -615,15 +630,31 @@ async def remove_task(
     success = delete_task(task_id, user=current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Task not found or access denied")
+    await invalidate_dashboard_cache()
     await ws_manager.broadcast({"type": "task_deleted", "task_id": task_id})
     return {"success": True, "message": "Task deleted successfully"}
 
 
 # ── Dashboard Stats ──────────────────────────────────────────────────────────
 @app.get("/api/dashboard/stats")
-def dashboard_stats(current_user: Dict[str, Any] = Depends(get_current_user)):
+async def dashboard_stats(
+    response: Response,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    org_id = current_user.get("organization_id", "global")
+    user_id = current_user.get("id", "default")
+    cache_key = f"cache:dashboard:stats:{org_id}:{user_id}"
+
+    cached_data = await cache_get(cache_key)
+    if cached_data is not None:
+        response.headers["X-Cache"] = "HIT"
+        return cached_data
+
     stats = get_dashboard_stats(user=current_user)
-    return {"stats": stats}
+    result = {"stats": stats}
+    await cache_set(cache_key, result, ttl=60)
+    response.headers["X-Cache"] = "MISS"
+    return result
 
 
 # ── Milestone 4 & 9: Agents & Virtual Office Status Endpoints ─────────────────
@@ -647,6 +678,7 @@ async def update_agent_status_endpoint(
             status=payload.status,
             current_task=payload.current_task,
         )
+        await invalidate_agents_cache()
         return {"agent": updated}
     except ValueError as val_err:
         raise HTTPException(status_code=422, detail=str(val_err))
@@ -655,10 +687,22 @@ async def update_agent_status_endpoint(
 
 
 @app.get("/api/agents")
-def get_agents(current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))):
-    """Returns the registry of specialized AI agents."""
+async def get_agents(
+    response: Response,
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))
+):
+    """Returns the registry of specialized AI agents with Redis caching (TTL 300s)."""
+    cache_key = "cache:agents:all"
+    cached_data = await cache_get(cache_key)
+    if cached_data is not None:
+        response.headers["X-Cache"] = "HIT"
+        return cached_data
+
     agents = get_all_agents_dict()
-    return {"agents": agents, "count": len(agents)}
+    result = {"agents": agents, "count": len(agents)}
+    await cache_set(cache_key, result, ttl=300)
+    response.headers["X-Cache"] = "MISS"
+    return result
 
 
 @app.get("/api/agents/{agent_id}")
@@ -716,6 +760,7 @@ async def execute_agent_task(
         # Reset status back to idle
         try:
             await update_agent_status(agent_id, status="idle")
+            await invalidate_agents_cache()
         except Exception:
             pass
 
