@@ -545,14 +545,150 @@ Phase 5.5 complete. Proceeding with Phase 2 implementation.
    - التحقق من تطبيق نمط الـ Non-blocking pattern باستخدام `client.scan_iter` عند مسح مفاتيح الكاش.
    - التأكد من عدم تعديل أي من الاختبارات الـ 59 السابقة نهائياً.
 3. **❌ ما لم يتم اختباره (بشفافية كاملة):**
-   - بنود Phase 2 القادمة (2.3 Invalidation Strategy الشاملة، 2.4 Pagination، 2.5 DB Pool Tuning، 2.6 Cache Headers) — سيتم تنفيذها تباعاً.
+   - تم استكمال جميع بنود Phase 2 بالكامل (2.1، 2.2، 2.3، 2.4، 2.5، 2.6).
 
-### 3. Commits
-- `feat(cache): setup async Redis client, connection pool and healthcheck` (Commit 2.1)
-- `feat(cache): implement cache-aside layer with invalidation for agents and dashboard stats` (Commit 2.2)
+---
 
-### 4. Next Exact Step (single line)
-Phase 2.1 and 2.2 complete and fully verified. Proceeding to Item 2.3 (Targeted Invalidation Strategy for Remaining Collections).
+### 3. Item 2.3: Targeted Invalidation Strategy
+- **Status:** ✅ Completed & Test Verified
+- **Scope:** Invalidation applied across all 9 mutation endpoints:
+  - `POST /api/clients`, `PUT /api/clients/{id}`, `DELETE /api/clients/{id}`
+  - `POST /api/projects`, `PUT /api/projects/{id}`, `DELETE /api/projects/{id}`
+  - `POST /api/tasks`, `PATCH /api/tasks/{id}`, `DELETE /api/tasks/{id}`
+- **Multi-Tenant Invalidation Pattern:** `invalidate_dashboard_cache(org_id)` scans and deletes only keys matching `cache:dashboard:stats:{org_id}:*`, preventing cross-tenant cache pollution or global cache flushing.
+
+#### Before vs After:
+| المؤشر / المعيار | قبل البند 2.3 (Before) | بعد البند 2.3 (After) | الفارق / التحسين |
+|:-----------------|:----------------------:|:--------------------:|:-----------------:|
+| **اتساق بيانات Dashboard بعد عمليات CRUD** | كاش معلق لمدة 60 ثانية بعد التعديل | إبطال فوري وموجه لكاش المنظمة | **100% بيانات حية وطازجة فور التعديل** |
+| **نطاق الإبطال (Scope)** | غير موجود | موجه للمنظمة فقط (`{org_id}:*`) | **صفر تأثير على كاش المنظمات الأخرى** |
+| **اختبارات Pytest** | 61 اختباراً | **62 اختباراً ناجحاً (100% passing)** | **+1 اختبار جديد في `test_invalidation_strategy.py`** |
+
+#### 📊 تقرير الأقسام الإلزامية الثلاثة (البند 2.3):
+1. **✅ ما تم اختباره فعلياً:**
+   - تنفيذ دورة حياة كاملة: استدعاء `GET /api/dashboard/stats` (MISS ثم HIT)، ثم إنشاء مهمة جديدة `POST /api/tasks`، ثم فحص الاستدعاء التالي لـ `GET /api/dashboard/stats` -> عاد كـ `MISS` فوراً ببيانات دقيقة ومحدثة.
+   - تشغيل `pytest apps/api/tests/test_invalidation_strategy.py` بنجاح (1 passed).
+2. **🟡 ما تم التحقق منه آلياً:**
+   - الفحص الثابت لجميع دوال التعديل في `apps/api/main.py` للتأكد من استدعاء `await invalidate_dashboard_cache(current_user["org_id"])`.
+3. **❌ ما لم يتم اختباره:**
+   - فحص الإبطال تحت ضغط 1,000 عملية كتابة متزامنة في الثانية (خارج نطاق البيئة الفردية الحالية).
+
+---
+
+### 4. Item 2.4: Pagination on Heavy Collections
+- **Status:** ✅ Completed & Payload Benchmark Verified
+- **Scope:** Added `skip` (default 0) and `limit` (default 20, max 100) parameters on:
+  - `GET /api/tasks`
+  - `GET /api/deliverables`
+  - `GET /api/workflows`
+  - `GET /api/memories` (and alias `GET /api/memory`)
+- **Contract:** Returns standard paginated payload: `{"items": [...], "count": len, "total": total, "skip": skip, "limit": limit}` with backward compatibility for legacy callers.
+
+#### Before vs After (500 Records Benchmark):
+| المؤشر / الحجم | قبل البند 2.4 (Before - 500 عنصر) | بعد البند 2.4 (After - 20 عنصر) | نسبة التخفيض / التوفير |
+|:---------------|:--------------------------------:|:------------------------------:|:----------------------:|
+| **حجم الـ Payload الخام** | **534.37 KB** (547,195 bytes) | **21.36 KB** (21,872 bytes) | **-96.0% تخفيض هائل** |
+| **الباندويث الموفر لكل طلب** | 0 B | **513.01 KB لكل طلب** | **حماية كاملة من استهلاك الباندويث** |
+| **توافق الفرونت إند** | لم يتأثر | بناء الإنتاج لـ Next.js نجح 100% (18/18 مساراً) | **صفر كسر في واجهة المستخدم** |
+| **اختبارات Pytest** | 62 اختباراً | **64 اختباراً ناجحاً (100% passing)** | **+2 اختبار جديد في `test_pagination.py`** |
+
+#### 📊 تقرير الأقسام الإلزامية الثلاثة (البند 2.4):
+1. **✅ ما تم اختباره فعلياً:**
+   - تشغيل `python scripts/measure_pagination_savings.py` وقياس حجم 500 سجل مقابل 20 سجل بدقة البايت.
+   - ملف الدليل: [`task_2_4_pagination_benchmark.json`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/task_2_4_pagination_benchmark.json).
+   - تشغيل `pytest apps/api/tests/test_pagination.py` بنجاح كامل (2 passed).
+   - تشغيل `npm run build` في `apps/web` للتأكد من قراءة المصفوفات دون أي خطأ في الـ Typescript أو الـ Layout.
+2. **🟡 ما تم التحقق منه آلياً:**
+   - التحقق من فرض الحد الأقصى `limit = min(limit, 100)` لحماية الخادم من طلبات سحب البيانات الضخمة (DDoS prevention).
+3. **❌ ما لم يتم اختباره:**
+   - تجربة تمرير لا نهائي (Infinite scroll) على شاشة هاتف محمول حقيقي في وضع بطيء (Edge / 2G).
+
+---
+
+### 5. Item 2.5: Connection Pool Tuning (Supabase Transaction Mode)
+- **Status:** ✅ Completed & Concurrency Verified
+- **Scope:** Configured SQLAlchemy `QueuePool` with:
+  - `pool_size=10`
+  - `max_overflow=20` (Total capacity: 30 concurrent connections)
+  - `pool_pre_ping=True` (lightweight ping to discard stale/closed sockets)
+  - `pool_recycle=300` (recycle connections every 5 min)
+  - `pool_timeout=30.0`
+  - Prioritized `DATABASE_POOLER_URL` on **Port 6543 (Transaction Mode)** to avoid port 5432 session-mode bottlenecks (`EMAXCONNSESSION`).
+  - Added live monitoring endpoint: `GET /health/db`.
+
+#### Before vs After:
+| المؤشر / المعيار | قبل البند 2.5 (Before) | بعد البند 2.5 (After) | الفارق / التحسين |
+|:-----------------|:----------------------:|:--------------------:|:-----------------:|
+| **Pool Architecture** | Unmanaged / Default pool | Tuned `QueuePool` (10 base + 20 overflow) | **قدرة استيعاب تصل لـ 30 اتصال متزامن** |
+| **Stale Connection Handling** | بدون فحص مسبق (`pre_ping=False`) | فحص ذاتي نشط (`pool_pre_ping=True`) | **القضاء على أخطاء `Connection reset by peer`** |
+| **Supabase Port Strategy** | المنفذ 5432 (Session mode limit 15) | المنفذ 6543 (Transaction mode pooler) | **تحمل رشقات الاستعلامات العالية بدون اختناق** |
+| **اختبار التزامن (25 Workers)** | فشل وتجاوز حدود الجلسات | **25/25 استعلام ناجح بنسبة 100% (0 فشل)** | **زمن استجابة مستقر 1.5s لكامل الرشقة** |
+| **اختبارات Pytest** | 64 اختباراً | **66 اختباراً ناجحاً (100% passing)** | **+2 اختبار جديد في `test_db_pool.py`** |
+
+#### 📊 تقرير الأقسام الإلزامية الثلاثة (البند 2.5):
+1. **✅ ما تم اختباره فعلياً:**
+   - تشغيل اختبار التزامن الحي `python scripts/measure_db_pool_concurrency.py` بإطلاق 25 خيط متزامن على قاعدة بيانات Supabase الحية. النتيجة: 25/25 نجاح (0 فشل، معدل نجاح 100.0%).
+   - ملف الدليل: [`task_2_5_db_pool_benchmark.json`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/task_2_5_db_pool_benchmark.json).
+   - استدعاء نقطة النهاية `GET /health/db` والتأكد من إرجاع حالة المجمّع كاملة:
+     ```json
+     {"status":"connected","pool":{"pool_size":10,"max_overflow":20,"checkedin":10,"checkedout":0,"overflow":0,"total_active":0,"max_capacity":30,"pre_ping":true,"recycle_seconds":300,"status":"active"}}
+     ```
+   - تشغيل `pytest apps/api/tests/test_db_pool.py` بنجاح (2 passed).
+2. **🟡 ما تم التحقق منه آلياً:**
+   - التحقق من قراءة `DATABASE_POOLER_URL` من بيئة الإنتاج `.env.production` وتهيئة `create_engine` بمعلمات `QueuePool` الصحيحة.
+3. **❌ ما لم يتم اختباره:**
+   - اختبار ضغط 500 اتصال متزامن من موزعات أحمال متعددة في وقت واحد.
+
+---
+
+### 6. Item 2.6: API Response Caching Headers & ETags
+- **Status:** ✅ Completed & Bandwidth Savings Verified
+- **Scope:**
+  - Added `Cache-Control: public, max-age=60, stale-while-revalidate=300` on `GET /api/agents`.
+  - Added deterministic `ETag` generation (MD5 hash of serialized payload).
+  - Implemented conditional request handling via `If-None-Match` returning `304 Not Modified` with empty body.
+
+#### Before vs After (Live Measurements):
+| المؤشر / المعيار | طلب عادي 200 OK (Before) | طلب مشروط 304 Not Modified (After) | نسبة التوفير / التحسين |
+|:-----------------|:-------------------------:|:----------------------------------:|:----------------------:|
+| **حجم جسم الاستجابة (Body)** | **80,974 bytes** (~79.08 KB) | **0 bytes** (جسم فارغ تماماً) | **100.0% توفير كامل في الباندويث** |
+| **زمن الاستجابة (Latency)** | **1,403.33 ms** | **656.75 ms** | **تحسن السرعة بنسبة 53.2%** (توفير 746.59 ms) |
+| **ترويسة التحكم في الكاش** | غير موجودة | `public, max-age=60, stale-while-revalidate=300` | **كاش متصفح وشبكة CDN قياسي** |
+| **اختبارات Pytest** | 66 اختباراً | **70 اختباراً ناجحاً (100% passing)** | **+4 اختبارات جديدة في `test_cache_headers.py`** |
+
+#### 📊 تقرير الأقسام الإلزامية الثلاثة (البند 2.6):
+1. **✅ ما تم اختباره فعلياً:**
+   - تشغيل `python scripts/measure_etag_savings.py` وقياس حجم الباندويث وزمن الاستجابة للطلبين (200 مقابل 304).
+   - ملف الدليل: [`task_2_6_etag_benchmark.json`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/task_2_6_etag_benchmark.json).
+   - تشغيل `pytest apps/api/tests/test_cache_headers.py` بنجاح كامل (4 passed):
+     - فحص ترويسات `Cache-Control` و `ETag`.
+     - فحص إرجاع `304 Not Modified` مع جسم فارغ عند تطابق `If-None-Match`.
+     - فحص دعم الـ Weak ETags (`W/"..."`) والقوائم المفصولة بفواصل.
+     - فحص إرجاع `200 OK` مع جسم كامل عند عدم تطابق الـ ETag.
+2. **🟡 ما تم التحقق منه آلياً:**
+   - التحقق من توافق سلوك الـ 304 مع معيار RFC 7232 (عدم إرسال أي محتوى في جسم الرسالة).
+   - التأكد التام من استمرار نجاح كافة الاختبارات الـ 59 الأصلية دون تعديل أي اختبار موجود.
+3. **❌ ما لم يتم اختباره:**
+   - سلوك وسيط الـ CDN التابع لـ Cloudflare/CloudFront في تفريغ الكاش الموزع عالمياً عند استقبال ترويسة `stale-while-revalidate`.
+
+---
+
+### 7. Complete Phase 2 Git Commits
+1. `c5a5b05`: feat(cache): setup async Redis client, connection pool and healthcheck (Item 2.1)
+2. `6b5bc80`: feat(cache): implement cache-aside layer with invalidation for agents and dashboard stats (Item 2.2)
+3. `cc14027`: feat(cache): implement targeted cache invalidation for clients, projects, and tasks (Item 2.3)
+4. `75b6590`: feat(api): add skip-limit pagination to tasks, deliverables, workflows, and memory (Item 2.4)
+5. `0a4448d`: perf(db): tune SQLAlchemy connection pool parameters for Supabase pooler (Item 2.5)
+6. `e046596`: feat(api): add Cache-Control and ETag headers to agents endpoint (Item 2.6)
+
+### 8. Phase 2 Verification Status
+- **Pytest Full Suite:** **70/70 passed (100%)**
+- **Original Tests Preservation:** **100% untouched** (59 original tests intact)
+- **Secrets Cleanliness:** **0 secrets committed or logged**
+- **Live Health Status:** `/health` (200), `/health/redis` (200), `/health/db` (200)
+
+### 9. Next Exact Step (single line)
+Phase 2 Complete. Awaiting review.
 
 
 

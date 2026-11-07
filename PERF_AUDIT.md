@@ -15,7 +15,7 @@
 | 2 | **WebP / AVIF** | N/A | مجلد `public/` خالٍ حالياً وأيقونات النظام SVG؛ تتفعل بصيغ حديثة عند إضافة وسائط صور فعلية. | 3 | 1 | 15 | **Med** | تفعيل تحويل الصور تلقائياً بمجرد رفع صور عملاء حقيقية. |
 | 3 | **Duplicate API Calls** | ✅ | أُضيف `inflightGetRequests = new Map()` في `lib/api.ts` لدمج أي طلبات GET متزامنة مع استنساخ الاستجابة عبر `.clone()`. | 4 | 2 | 16 | **High** | **تم الإنجاز في Phase 1:** اختفاء تكرار طلبات `/api/auth/me` المتزامنة بين Shell والصفحات. |
 | 4 | **Debounce** | ✅ | أُنشئ Hook خفيف `useDebounce(value, 300)` وطُبّق على حقول البحث والتصفية في `agents`, `deliverables`, `memory`, `tasks`. | 4 | 1 | 20 | **High** | **تم الإنجاز في Phase 1:** منع استدعاء التصفية عند كل نقرة زر، وتحسين استجابة الواجهة بنسبة 100%. |
-| 5 | **Pagination** | ⚠️ | وجود `LIMIT 50`؛ نقاط النهاية الثقيلة ستحصل على cursor/limit-offset في المراحل القادمة. | 4 | 3 | 12 | **Med** | سيتم استكمال الـ cursor pagination في مرحلة الـ API Caching. |
+| 5 | **Pagination** | ✅ | أُضيف `skip` (افتراضي 0) و `limit` (افتراضي 20، حد أقصى 100) لنقاط النهاية الثقيلة: `tasks`, `deliverables`, `workflows`, `memory`. انخفض حجم البيانات لـ 500 سجل من **534.37 KB** إلى **21.36 KB** (**-96.0%**). | 4 | 3 | 12 | **Med** | **تم الإنجاز في Phase 2:** بنية Pagination قياسية تمنع التحميل الزائد للذاكرة وشبكة العميل. |
 | 6 | **CDN** | ⚠️ | مهيأ لشبكة Vercel Edge / Cloudflare؛ سيتم تثبيت ترويسات التخزين الثابت غير القابل للتغيير في المرحلة المتقدمة. | 3 | 2 | 12 | **Med** | البنية التحتية موزعة عالمياً عبر الشبكة السحابية. |
 | 7 | **Background Job Queue** | ⚠️ | استخدام `BackgroundTasks` داخلياً؛ سيتم ربط طابور Redis الموزع بعد تفعيل Upstash في Phase 2. | 4 | 3 | 12 | **Med** | طابور مهام في الخلفية للوكلاء وأم سماح. |
 | 8 | **N+1 Queries** | ✅ | كود `database.py` خالٍ 100% من الحلقات التكرارية الداخلية للاستعلامات؛ جميع العلاقات تجلب عبر JOIN أو batch lookups. | 4 | 3 | 12 | **Med** | بنية نظيفة ومعتمدة وموثقة. |
@@ -35,9 +35,9 @@
 | 22 | **Code Splitting** | ✅ | تفعيل تقسيم المكونات على مستوى المسارات والمودالات الكبيرة عبر Chunks منفصلة تُحمل حسب الطلب. | 3 | 2 | 12 | **Med** | **تم الإنجاز جزئياً في Phase 1:** فصل كونسول تنفيذ الوكلاء. |
 | 23 | **Virtualization** | ⚠️ | عرض بطاقات الوكلاء وسجلات التحليل مباشرة في الـ DOM؛ الأداء ممتاز (< 100ms) للمصفوفات الحالية. | 3 | 3 | 9 | **Low** | يمكن تفعيل `@tanstack/react-virtual` مستقبلاً عند تجاوز 200 سجل. |
 | 24 | **Required Columns Only** | ✅ | صفر استعلامات `SELECT *` في كود قاعدة البيانات؛ حصر الأعمدة المطلوب جلبها بدقة بالغة. | 4 | 1 | 20 | **High** | التزام معماري صارم باستهلاك أقل قدر ممكن من البيانات. |
-| 25 | **Connection Pooling** | ✅ | الاتصال المجمّع عبر Supavisor Pooler على المنفذ `5432` و `6543` في أيرلندا؛ 14 اتصالاً نشطاً. | 5 | 2 | 20 | **High** | منع استنزاف اتصالات الخادم وقاعدة البيانات. |
+| 25 | **Connection Pooling** | ✅ | ضبط معلمات الـ QueuePool في SQLAlchemy (`pool_size=10`, `max_overflow=20`, `total_capacity=30`, `pool_pre_ping=True`, `pool_recycle=300`, `pool_timeout=30.0`) عبر Supabase Pooler على المنفذ `6543` (Transaction Mode). نجح اختبار الضغط لـ 25 استعلام متزامن بنسبة **100% (25/25)** بدون أي فشل. | 5 | 2 | 20 | **High** | **تم الإنجاز في Phase 2:** منع استنزاف اتصالات الخادم وقاعدة البيانات وتحمل ذروة العمليات. |
 | 26 | **Unnecessary Re-renders** | ✅ | تغليف `AgentCard` و `AvatarNode` بـ `React.memo` مع تثبيت دوال الاستدعاء عبر `useCallback` لمنع إعادة الرسم غير المبرر. | 4 | 2 | 16 | **High** | **تم الإنجاز في Phase 1:** صفر إعادة رسم للبطاقات الـ 38 عند تحريك المؤشر أو استلام نبضات WebSocket. |
-| 27 | **Browser Caching** | ⚠️ | كاش الأصول الثابتة شغال بـ `max-age=31536000`؛ كاش استجابات الـ API سيتم إثراؤه في Phase 2. | 3 | 2 | 12 | **Med** | ترويسات الكاش للأصول الثابتة نشطة ومثالية. |
+| 27 | **Browser Caching** | ✅ | كاش الأصول الثابتة شغال بـ `max-age=31536000`؛ وتفعيل ترويسة `Cache-Control: public, max-age=60, stale-while-revalidate=300` مع ترويسة `ETag` ودعم استجابة `304 Not Modified` على `GET /api/agents`، مما وفر **100.0%** من حجم البيانات لجسم الاستجابة (80,974 bytes -> 0 bytes) وخفض زمن الاستجابة بنسبة 53.2%. | 3 | 2 | 12 | **Med** | **تم الإنجاز في Phase 2:** توفير هائل للباندويث وتسريع أداء العميل والتطبيق المتنقل. |
 | 28 | **Load Balancing** | N/A | استضافة PaaS (Railway) تتولى موازنة الأحمال والـ Ingress Proxy تلقائياً. | 2 | 3 | 6 | **Low** | متاح سحابياً عبر المنصة. |
 | 29 | **Font Optimization** | ✅ | استبدال رابط Google Fonts CDN الخارجي بـ `next/font/google` المحلي (`Cairo`, `Inter`) مع Preload ذاتي أثناء البناء. | 4 | 1 | 20 | **High** | **تم الإنجاز في Phase 1:** التخلص من طلبات الشبكة المعطلة للعرض، وتحسن LCP إلى **88 ms**. |
 | 30 | **Real User Monitoring (RUM)** | ❌ | لا توجد حزمة قياس حية مدمجة؛ مؤجلة لمرحلة الإنتاج النهائي. | 3 | 2 | 12 | **Med** | تفعيل Speed Insights مع لوحة التحكم الإنتاجية. |
@@ -85,5 +85,19 @@
 - API timeouts safely enforced after 12 seconds with descriptive error handling.
 
 ### Test Suite Verification
-- **Pytest:** `58/58 passed (100%)` across all milestones (Auth, Health, Deliverables, Workflows, Approvals, Memory, Registry, Virtual Office, Analytics, Security).
+- **Pytest:** `70/70 passed (100%)` across all milestones (Auth, Health, Deliverables, Workflows, Approvals, Memory, Registry, Virtual Office, Analytics, Security, + Phase 2 Cache, Invalidation, Pagination, DB Pool, Cache Headers).
 - **Playwright E2E:** `100% passed` across `e2e_milestone_8.cjs`, `e2e_milestone_9.cjs`, `e2e_milestone_10_analytics.cjs`, and `e2e_milestone_10_ultimate_certification.cjs`.
+
+---
+
+## ⚡ Phase 2 — Redis Caching & Data Layer Execution Results
+
+| Item # | Feature / Standard | Target / Scope | Before Metric | After Metric | Improvement / Savings | Evidence File |
+|:------:|:-------------------|:---------------|:-------------:|:------------:|:---------------------:|:--------------:|
+| **2.1** | **Redis Client & Health** | Upstash Redis TLS (Async Client + Connection Pool) | Stub file / no connection | HTTP 200 OK (Latency: `119.85 ms`, TLS: `True`, Version: `8.4.0`) | Live connection established | `task_2_1_live_redis_health.json` |
+| **2.2** | **Cache-Aside Layer** | `GET /api/agents` (TTL 300s) & `GET /api/dashboard/stats` (TTL 60s) | Agents: `327.99 ms`<br>Stats: `150.84 ms` | Agents: `267.29 ms`<br>Stats: `73.33 ms` | **+18.5% faster** (Agents)<br>**+51.4% faster** (Stats) | `task_2_2_cache_benchmark.json` |
+| **2.3** | **Targeted Invalidation** | Mutation endpoints: `/api/clients`, `/api/projects`, `/api/tasks` | Stale cache after writes | Scoped invalidation purges `cache:dashboard:stats:{org_id}:*` instantly | Multi-tenant fresh data | `test_invalidation_strategy.py` |
+| **2.4** | **Resource Pagination** | `skip` (0) / `limit` (20, max 100) on tasks, deliverables, workflows, memory | Unpaginated 500 records: `534.37 KB` | Paginated 20 records: `21.36 KB` | **-96.0% payload reduction** (513.01 KB saved) | `task_2_4_pagination_benchmark.json` |
+| **2.5** | **DB Connection Pool** | SQLAlchemy QueuePool on Supabase Port 6543 (Transaction Mode) | Default unmanaged pool / session mode | `pool_size=10`, `max_overflow=20`, `pre_ping=True`, 25 concurrent queries: 100% success (25/25) | Zero dropped connections | `task_2_5_db_pool_benchmark.json` |
+| **2.6** | **Cache-Control & ETags** | `GET /api/agents` conditional request via `If-None-Match` | Full 200 payload: `80,974 bytes` (`79.08 KB`) | HTTP 304 Not Modified: `0 bytes` body | **100.0% body bandwidth savings**, **53.2% latency reduction** (`1403 ms` -> `656 ms`) | `task_2_6_etag_benchmark.json` |
+
