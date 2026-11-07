@@ -22,9 +22,7 @@
 - `ANTIGRAVITY_REPORT.md` (created)
 
 ### 4. Git Commits
-- `c35d1e8` feat(scripts): add production database smoke test script
-- `d499bf1` fix(migrations): align organization_id column in 010_analytics RLS policy
-- `eebb811` fix(scripts): support UTF-8 and full schema foreign keys in smoke test runner
+- `850a1bb` docs(perf): phase 0 audit + baseline (no code changes)
 
 ### 5. Commands Run (بدون أسرار)
 - `git status` → exit 0
