@@ -27,6 +27,18 @@ export default function InstallPrompt() {
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
 
+    // Register Service Worker in production
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js", { scope: "/" })
+        .then((reg) => {
+          console.log("[PWA] ServiceWorker registered with scope:", reg.scope);
+        })
+        .catch((err) => {
+          console.warn("[PWA] ServiceWorker registration failed:", err);
+        });
+    }
+
     if (checkStandalone) {
       setIsStandalone(true);
       return;
