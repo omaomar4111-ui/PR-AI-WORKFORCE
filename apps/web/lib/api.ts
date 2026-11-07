@@ -289,6 +289,7 @@ export function setStoredSession(session: AuthSession) {
   if (typeof window === "undefined") return;
   localStorage.setItem("pr_auth_token", session.access_token);
   localStorage.setItem("pr_auth_user", JSON.stringify(session.user));
+  document.cookie = `pr_auth_token=${session.access_token}; path=/; max-age=604800; SameSite=Lax`;
 }
 
 export function getStoredUser(): User | null {
@@ -306,6 +307,7 @@ export function clearStoredSession() {
   if (typeof window === "undefined") return;
   localStorage.removeItem("pr_auth_token");
   localStorage.removeItem("pr_auth_user");
+  document.cookie = "pr_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 }
 
 function authHeaders(): HeadersInit {
