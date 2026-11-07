@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import AppShell from "@/components/AppShell";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -55,6 +56,22 @@ export default function AnalyticsPage() {
   const [filterAgent, setFilterAgent] = useState<string>("all");
   const [filterProject, setFilterProject] = useState<string>("all");
   const [filterDays, setFilterDays] = useState<number>(30);
+
+  // Virtualization for high-volume logs table
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: usageLogs.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 45,
+    overscan: 5,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? totalSize - virtualItems[virtualItems.length - 1].end
+      : 0;
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -607,10 +624,10 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto border border-slate-800 rounded-lg">
+          {/* Virtualized High-Performance Logs Table */}
+          <div ref={parentRef} className="overflow-auto border border-slate-800 rounded-lg max-h-[500px]">
             <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-800/60 uppercase text-[10px] text-slate-400 font-semibold border-b border-slate-800">
+              <thead className="sticky top-0 z-10 bg-slate-900 uppercase text-[10px] text-slate-400 font-semibold border-b border-slate-800 shadow-md">
                 <tr>
                   <th className="px-4 py-3">{t("analytics.col_time")}</th>
                   <th className="px-4 py-3">{t("analytics.col_agent")}</th>
@@ -636,7 +653,14 @@ export default function AnalyticsPage() {
                     </td>
                   </tr>
                 ) : (
-                  usageLogs.map((log) => {
+                  <>
+                    {paddingTop > 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ height: `${paddingTop}px` }} />
+                      </tr>
+                    )}
+                    {virtualItems.map((virtualRow) => {
+                      const log = usageLogs[virtualRow.index];
                     const ag = agentMap.get(log.agent_id);
                     const pr = log.project_id ? projectMap.get(log.project_id) : undefined;
                     const dateFormatted = new Date(log.created_at).toLocaleString(
@@ -688,7 +712,13 @@ export default function AnalyticsPage() {
                         </td>
                       </tr>
                     );
-                  })
+                    })}
+                    {paddingBottom > 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ height: `${paddingBottom}px` }} />
+                      </tr>
+                    )}
+                  </>
                 )}
               </tbody>
             </table>

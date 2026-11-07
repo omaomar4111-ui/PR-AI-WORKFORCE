@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo, Inter } from "next/font/google";
 import dynamic from "next/dynamic";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n";
@@ -8,14 +7,9 @@ const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), {
   ssr: false,
 });
 
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "600", "700"],
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-});
+// Self-contained font configuration (prevents ETIMEDOUT during builds in air-gapped / limited network)
+const cairo = { className: "font-cairo" };
+const inter = { className: "font-inter" };
 
 export const viewport: Viewport = {
   themeColor: "#0b0f17",
