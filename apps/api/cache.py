@@ -220,8 +220,15 @@ async def cache_delete_pattern(pattern: str) -> int:
         return 0
 
 
-async def invalidate_dashboard_cache() -> int:
-    """Invalidate all cached dashboard statistics across all orgs and users."""
+async def invalidate_dashboard_cache(org_id: Optional[str] = None) -> int:
+    """
+    Targeted invalidation of cached dashboard statistics for a specific organization
+    or across all tenants if org_id is not specified.
+    """
+    if org_id:
+        count = await cache_delete_pattern(f"cache:dashboard:stats:{org_id}:*")
+        count += await cache_delete_pattern("cache:dashboard:stats:global:*")
+        return count
     return await cache_delete_pattern("cache:dashboard:stats:*")
 
 

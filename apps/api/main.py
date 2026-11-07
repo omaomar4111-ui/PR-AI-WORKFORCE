@@ -453,7 +453,7 @@ async def add_client(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     client = create_client(payload.model_dump(), user=current_user)
-    await invalidate_dashboard_cache()
+    await invalidate_dashboard_cache(current_user.get("organization_id"))
     return {"client": client}
 
 
@@ -477,7 +477,7 @@ async def update_client_by_id(
     updated = update_client(client_id, payload.model_dump(exclude_unset=True), user=current_user)
     if not updated:
         raise HTTPException(status_code=404, detail="Client not found or access denied")
-    await invalidate_dashboard_cache()
+    await invalidate_dashboard_cache(current_user.get("organization_id"))
     return {"client": updated}
 
 
@@ -489,7 +489,7 @@ async def remove_client(
     success = delete_client(client_id, user=current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Client not found or access denied")
-    await invalidate_dashboard_cache()
+    await invalidate_dashboard_cache(current_user.get("organization_id"))
     return {"success": True, "message": "Client deleted successfully"}
 
 
@@ -511,7 +511,7 @@ async def add_project(
 ):
     try:
         project = create_project(payload.model_dump(), user=current_user)
-        await invalidate_dashboard_cache()
+        await invalidate_dashboard_cache(current_user.get("organization_id"))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"project": project}
@@ -546,7 +546,7 @@ async def update_project_by_id(
     updated = update_project(project_id, payload.model_dump(exclude_unset=True), user=current_user)
     if not updated:
         raise HTTPException(status_code=404, detail="Project not found or access denied")
-    await invalidate_dashboard_cache()
+    await invalidate_dashboard_cache(current_user.get("organization_id"))
     return {"project": updated}
 
 
@@ -558,7 +558,7 @@ async def remove_project(
     success = delete_project(project_id, user=current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Project not found or access denied")
-    await invalidate_dashboard_cache()
+    await invalidate_dashboard_cache(current_user.get("organization_id"))
     return {"success": True, "message": "Project deleted successfully"}
 
 
@@ -588,7 +588,7 @@ async def add_task(
 ):
     try:
         task = create_task(payload.model_dump(), user=current_user)
-        await invalidate_dashboard_cache()
+        await invalidate_dashboard_cache(current_user.get("organization_id"))
         # Broadcast real-time event to all connected UI clients
         await ws_manager.broadcast({"type": "task_created", "task": task})
     except ValueError as e:
@@ -616,7 +616,7 @@ async def patch_task(
     updated = update_task(task_id, payload.model_dump(exclude_unset=True), user=current_user)
     if not updated:
         raise HTTPException(status_code=404, detail="Task not found or access denied")
-    await invalidate_dashboard_cache()
+    await invalidate_dashboard_cache(current_user.get("organization_id"))
     # Broadcast real-time status/task update
     await ws_manager.broadcast({"type": "task_updated", "task": updated})
     return {"task": updated}
@@ -630,7 +630,7 @@ async def remove_task(
     success = delete_task(task_id, user=current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Task not found or access denied")
-    await invalidate_dashboard_cache()
+    await invalidate_dashboard_cache(current_user.get("organization_id"))
     await ws_manager.broadcast({"type": "task_deleted", "task_id": task_id})
     return {"success": True, "message": "Task deleted successfully"}
 
