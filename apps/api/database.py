@@ -1,6 +1,94 @@
+import os
 from typing import Optional, Dict, Any, List, Set
+from pathlib import Path
 import datetime
 import uuid
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import QueuePool
+
+# ── Supabase PostgreSQL Tuned Connection Pool (Phase 2.5) ─────────────────────
+# Configuration parameters tuned specifically for Supabase Pooler / Transaction mode:
+# - pool_size=10: Maintain baseline of 10 persistent hot connections in pool
+# - max_overflow=20: Allow dynamic expansion up to 30 total concurrent connections
+# - pool_pre_ping=True: Issue lightweight SELECT 1 before checkout to discard stale/closed sockets
+# - pool_recycle=300: Re-create connections every 5 min to prevent server-side NAT/firewall drops
+# - pool_timeout=30.0: Max wait time for a connection from pool before raising timeout
+
+def _get_database_url() -> Optional[str]:
+    url = os.getenv("DATABASE_POOLER_URL") or os.getenv("DATABASE_URL")
+    if url:
+        return url
+
+    candidate_paths = [
+        Path(__file__).resolve().parent.parent.parent / ".env.production",
+        Path(__file__).resolve().parent / ".env.production",
+        Path.cwd() / ".env.production",
+    ]
+    pooler_val = None
+    db_val = None
+    for p in candidate_paths:
+        if p.exists():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("DATABASE_POOLER_URL=") and not line.startswith("#"):
+                            pooler_val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        elif line.startswith("DATABASE_URL=") and not line.startswith("#"):
+                            db_val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                if pooler_val:
+                    return pooler_val
+                if db_val:
+                    return db_val
+            except Exception:
+                pass
+    return None
+
+_DB_URL = _get_database_url()
+if _DB_URL and _DB_URL.startswith("postgres://"):
+    _DB_URL = _DB_URL.replace("postgres://", "postgresql://", 1)
+
+if _DB_URL:
+    engine = create_engine(
+        _DB_URL,
+        poolclass=QueuePool,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        pool_timeout=30.0,
+    )
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+else:
+    engine = None
+    SessionLocal = None
+
+
+def get_db_pool_status() -> Dict[str, Any]:
+    """Return active status of tuned connection pool."""
+    if engine and hasattr(engine, "pool"):
+        p = engine.pool
+        return {
+            "pool_size": p.size(),
+            "max_overflow": 20,
+            "checkedin": p.checkedin(),
+            "checkedout": p.checkedout(),
+            "overflow": p.overflow(),
+            "total_active": p.checkedout(),
+            "max_capacity": p.size() + 20,
+            "pre_ping": True,
+            "recycle_seconds": 300,
+            "status": "active"
+        }
+    return {
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pre_ping": True,
+        "recycle_seconds": 300,
+        "status": "configured"
+    }
 
 # In-memory storage for development and testing
 MOCK_USERS: Dict[str, Dict[str, Any]] = {

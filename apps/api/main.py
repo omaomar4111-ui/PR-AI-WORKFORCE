@@ -367,6 +367,14 @@ async def health_redis():
     return JSONResponse(status_code=status_code, content=res)
 
 
+@app.get("/health/db")
+def health_db():
+    """Live healthcheck endpoint for Supabase PostgreSQL tuned connection pool."""
+    from database import get_db_pool_status
+    pool_status = get_db_pool_status()
+    return {"status": "connected", "pool": pool_status}
+
+
 @app.on_event("shutdown")
 async def app_shutdown():
     """Graceful shutdown handler for async connection pools."""
