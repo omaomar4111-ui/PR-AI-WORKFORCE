@@ -1,9 +1,10 @@
-from fastapi import FastAPI, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect, Response
+from fastapi import FastAPI, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect, Response, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, EmailStr, Field
 import datetime
+import hashlib
 import json
 from typing import Dict, Any, Optional, List, Set
 
@@ -706,20 +707,54 @@ async def update_agent_status_endpoint(
 
 @app.get("/api/agents")
 async def get_agents(
+    request: Request,
     response: Response,
     current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))
 ):
-    """Returns the registry of specialized AI agents with Redis caching (TTL 300s)."""
+    """Returns the registry of specialized AI agents with Redis caching, Cache-Control and ETag headers."""
     cache_key = "cache:agents:all"
     cached_data = await cache_get(cache_key)
     if cached_data is not None:
-        response.headers["X-Cache"] = "HIT"
-        return cached_data
+        result = cached_data
+        cache_hit = True
+    else:
+        agents = get_all_agents_dict()
+        result = {"agents": agents, "count": len(agents)}
+        await cache_set(cache_key, result, ttl=300)
+        cache_hit = False
 
-    agents = get_all_agents_dict()
-    result = {"agents": agents, "count": len(agents)}
-    await cache_set(cache_key, result, ttl=300)
-    response.headers["X-Cache"] = "MISS"
+    # Compute deterministic ETag
+    content_bytes = json.dumps(result, sort_keys=True).encode("utf-8")
+    etag = f'"{hashlib.md5(content_bytes).hexdigest()}"'
+    cache_control = "public, max-age=60, stale-while-revalidate=300"
+
+    # Check conditional If-None-Match request
+    if_none_match = request.headers.get("if-none-match")
+    if if_none_match:
+        candidates = [t.strip() for t in if_none_match.split(",")]
+        clean_etag = etag.strip('"').removeprefix("W/")
+        matched = False
+        if "*" in candidates:
+            matched = True
+        else:
+            for c in candidates:
+                clean_c = c.strip('"').removeprefix("W/").strip('"')
+                if clean_c == clean_etag:
+                    matched = True
+                    break
+        if matched:
+            return Response(
+                status_code=304,
+                headers={
+                    "ETag": etag,
+                    "Cache-Control": cache_control,
+                    "X-Cache": "HIT" if cache_hit else "MISS",
+                }
+            )
+
+    response.headers["Cache-Control"] = cache_control
+    response.headers["ETag"] = etag
+    response.headers["X-Cache"] = "HIT" if cache_hit else "MISS"
     return result
 
 

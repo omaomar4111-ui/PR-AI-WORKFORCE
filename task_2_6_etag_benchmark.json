@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-11-07T05:08:51.363571Z",
+  "endpoint": "/api/agents",
+  "etag": "\"f76c7ad28cb9ddf82bc970b9be08fdfc\"",
+  "cache_control": "public, max-age=60, stale-while-revalidate=300",
+  "request_200_full": {
+    "status_code": 200,
+    "raw_body_bytes": 80974,
+    "raw_body_kb": 79.08,
+    "gzipped_bytes": 20796,
+    "gzipped_kb": 20.31,
+    "response_time_ms": 1403.33
+  },
+  "request_304_conditional": {
+    "status_code": 304,
+    "raw_body_bytes": 0,
+    "raw_body_kb": 0.0,
+    "response_time_ms": 656.75
+  },
+  "bandwidth_savings": {
+    "bytes_saved_per_request": 80974,
+    "kb_saved_per_request": 79.08,
+    "reduction_percentage": 100.0,
+    "latency_improvement_ms": 746.59
+  }
+}
