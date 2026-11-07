@@ -1,0 +1,15 @@
+{
+  "record_count_total": 500,
+  "paginated_page_size": 20,
+  "unpaginated": {
+    "bytes": 547195,
+    "kb": 534.37
+  },
+  "paginated": {
+    "bytes": 21872,
+    "kb": 21.36
+  },
+  "reduction_percentage": 96.0,
+  "bytes_saved": 525323,
+  "kb_saved": 513.01
+}

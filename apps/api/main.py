@@ -569,6 +569,8 @@ def get_tasks(
     status: Optional[str] = None,
     priority: Optional[str] = None,
     assigned_to: Optional[str] = None,
+    skip: int = Query(0, ge=0, description="Items to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     tasks = list_tasks(
@@ -578,7 +580,15 @@ def get_tasks(
         priority=priority,
         assigned_to=assigned_to
     )
-    return {"tasks": tasks, "count": len(tasks)}
+    total = len(tasks)
+    paginated = tasks[skip : skip + limit]
+    return {
+        "tasks": paginated,
+        "count": len(paginated),
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 
 @app.post("/api/tasks", status_code=201)
@@ -772,9 +782,11 @@ def list_deliverables_endpoint(
     agent_id: Optional[str] = Query(None),
     task_id: Optional[str] = Query(None),
     type: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0, description="Items to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Lists deliverables accessible to the current user with multi-faceted filtering."""
+    """Lists deliverables accessible to the current user with multi-faceted filtering and pagination."""
     deliverables = list_deliverables(
         user=current_user,
         project_id=project_id,
@@ -783,7 +795,15 @@ def list_deliverables_endpoint(
         task_id=task_id,
         deliverable_type=type,
     )
-    return {"deliverables": deliverables, "count": len(deliverables)}
+    total = len(deliverables)
+    paginated = deliverables[skip : skip + limit]
+    return {
+        "deliverables": paginated,
+        "count": len(paginated),
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 
 @app.post("/api/deliverables/{deliverable_id}/version", status_code=201)
@@ -871,11 +891,21 @@ async def create_workflow_endpoint(
 @app.get("/api/workflows")
 def list_workflows_endpoint(
     project_id: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0, description="Items to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Lists all workflows for the organization."""
+    """Lists all workflows for the organization with pagination."""
     workflows = list_workflows(user=current_user, project_id=project_id)
-    return {"workflows": workflows, "count": len(workflows)}
+    total = len(workflows)
+    paginated = workflows[skip : skip + limit]
+    return {
+        "workflows": paginated,
+        "count": len(paginated),
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 
 @app.get("/api/workflows/{workflow_id}")
@@ -995,21 +1025,32 @@ def search_memories_endpoint(
 
 
 @app.get("/api/memories")
+@app.get("/api/memory")
 def list_memories_endpoint(
     type: Optional[str] = Query(None),
     reference_id: Optional[str] = Query(None),
-    limit: int = Query(50, ge=1, le=100),
+    skip: int = Query(0, ge=0, description="Items to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Lists organization memories without vector search."""
+    """Lists organization memories without vector search with pagination."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    # Fetch list from memory service
     mems = list_mems(
         org_id=org_id,
         type=type,
         reference_id=reference_id,
-        limit=limit,
+        limit=1000,
     )
-    return {"memories": mems, "count": len(mems)}
+    total = len(mems)
+    paginated = mems[skip : skip + limit]
+    return {
+        "memories": paginated,
+        "count": len(paginated),
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 
 @app.delete("/api/memories/{memory_id}")
