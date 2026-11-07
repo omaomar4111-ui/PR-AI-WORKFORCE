@@ -7,6 +7,10 @@ const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), {
   ssr: false,
 });
 
+const WebVitalsReporter = dynamic(() => import("@/components/WebVitalsReporter"), {
+  ssr: false,
+});
+
 // Self-contained font configuration (prevents ETIMEDOUT during builds in air-gapped / limited network)
 const cairo = { className: "font-cairo" };
 const inter = { className: "font-inter" };
@@ -51,6 +55,7 @@ export default function RootLayout({
         <I18nProvider>
           {children}
           <InstallPrompt />
+          <WebVitalsReporter />
         </I18nProvider>
       </body>
     </html>

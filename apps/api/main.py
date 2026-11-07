@@ -7,7 +7,10 @@ import asyncio
 import datetime
 import hashlib
 import json
+import logging
 from typing import Dict, Any, Optional, List, Set
+
+logger = logging.getLogger("uvicorn.error")
 
 from config import settings
 import database
@@ -375,6 +378,36 @@ def health_db():
     from database import get_db_pool_status
     pool_status = get_db_pool_status()
     return {"status": "connected", "pool": pool_status}
+
+
+# ── Real User Monitoring (RUM) Endpoint ──────────────────────────────────────
+class WebVitalTelemetry(BaseModel):
+    name: str
+    value: float
+    rating: Optional[str] = "good"
+    delta: Optional[float] = 0.0
+    id: Optional[str] = None
+    navigationType: Optional[str] = None
+    url: Optional[str] = None
+    timestamp: Optional[int] = None
+
+
+@app.post("/api/telemetry/vitals")
+async def record_web_vital(metric: WebVitalTelemetry):
+    """
+    RUM (Real User Monitoring) telemetry ingestion endpoint.
+    Collects Core Web Vitals (LCP, INP, CLS, FCP, TTFB) reported from real user sessions.
+    """
+    logger.info(
+        f"[RUM Telemetry] metric={metric.name} value={metric.value:.2f} "
+        f"rating={metric.rating} url={metric.url} id={metric.id}"
+    )
+    return {
+        "status": "recorded",
+        "metric": metric.name,
+        "value": metric.value,
+        "rating": metric.rating,
+    }
 
 
 @app.on_event("shutdown")
