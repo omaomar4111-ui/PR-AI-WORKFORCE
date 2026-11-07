@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { AvatarNode } from "@/components/AvatarNode";
 import Link from "next/link";
 import {
   Bot,
@@ -222,6 +223,9 @@ const AgentExecutionModal = dynamic(() => import("@/components/AgentExecutionMod
 });
 
 export default function VirtualOfficePage() {
+  const handleSelectAgent = useCallback((agent: Agent) => {
+    setSelectedAgent(agent);
+  }, []);
   const { t, isAr } = useI18n();
 
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -608,73 +612,16 @@ export default function VirtualOfficePage() {
 
                 {/* Room Workspace Grid: Desks & Agent Avatars */}
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-                  {visibleAgents.map((agent) => {
-                    const st = statuses[agent.id]?.status || "idle";
-                    const currentTask = statuses[agent.id]?.current_task;
-                    const AgentIcon = AGENT_ICONS[agent.id] || Bot;
-
-                    const isWorking = st === "working";
-                    const isBlocked = st === "blocked";
-
-                    return (
-                      <div
-                        key={agent.id}
-                        data-testid={`avatar-${agent.id}`}
-                        onClick={() => setSelectedAgent(agent)}
-                        className={`group relative flex flex-col items-center justify-center rounded-xl border p-3 cursor-pointer text-center transition duration-200 select-none ${
-                          isWorking
-                            ? "border-amber-500/60 bg-amber-500/10 shadow-lg shadow-amber-500/10 scale-102"
-                            : isBlocked
-                            ? "border-rose-500/60 bg-rose-500/10 shadow-lg shadow-rose-500/10 animate-pulse"
-                            : "border-gray-800 bg-[#141622]/80 hover:border-[#8b5cf6]/60 hover:bg-[#1a1d2e]"
-                        }`}
-                      >
-                        {/* Status Beacon Top Corner */}
-                        <div className="absolute top-2 right-2 rtl:right-auto rtl:left-2 flex items-center">
-                          {isWorking ? (
-                            <span className="relative flex h-2.5 w-2.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
-                            </span>
-                          ) : isBlocked ? (
-                            <span className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500" />
-                          ) : (
-                            <span className="h-2 w-2 rounded-full bg-emerald-500/80" />
-                          )}
-                        </div>
-
-                        {/* Avatar Token with Gradient Ring */}
-                        <div
-                          className={`relative mb-2 flex h-11 w-11 items-center justify-center rounded-full border transition group-hover:scale-105 ${
-                            isWorking
-                              ? "border-amber-400 bg-amber-500/20 text-amber-300"
-                              : isBlocked
-                              ? "border-rose-400 bg-rose-500/20 text-rose-300"
-                              : "border-[#8b5cf6]/40 bg-[#8b5cf6]/15 text-[#c4b5fd]"
-                          }`}
-                        >
-                          <AgentIcon className="h-5 w-5" />
-                        </div>
-
-                        {/* Agent Label */}
-                        <div className="w-full">
-                          <h4 className="text-xs font-bold text-white truncate group-hover:text-[#c4b5fd]">
-                            {isAr && agent.name_ar ? agent.name_ar : agent.name}
-                          </h4>
-                          <p className="text-[10px] text-gray-400 truncate mt-0.5">
-                            {isAr && agent.role_ar ? agent.role_ar : agent.role}
-                          </p>
-                        </div>
-
-                        {/* Working Task Tooltip if active */}
-                        {currentTask && isWorking && (
-                          <div className="mt-2 text-[9px] font-mono text-amber-300/90 truncate w-full px-1 py-0.5 rounded bg-black/40 border border-amber-500/20">
-                            ⚡ {currentTask}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {visibleAgents.map((agent) => (
+                    <AvatarNode
+                      key={agent.id}
+                      agent={agent}
+                      status={statuses[agent.id]}
+                      isAr={isAr}
+                      onSelect={handleSelectAgent}
+                      IconComponent={AGENT_ICONS[agent.id] || Bot}
+                    />
+                  ))}
                 </div>
 
                 {visibleAgents.length === 0 && (
