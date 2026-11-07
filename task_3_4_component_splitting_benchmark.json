@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-11-07T05:44:30Z",
+  "feature": "3.4 — Component Splitting & Modularization",
+  "target": "apps/web/app/virtual-office/page.tsx",
+  "extracted_components": [
+    "apps/web/components/virtual-office/types.ts (Shared constants, department configs, icons)",
+    "apps/web/components/virtual-office/OfficeHeader.tsx (Header + WebSocket badge + Live KPI counters)",
+    "apps/web/components/virtual-office/OfficeControls.tsx (Status filter tabs + search box)",
+    "apps/web/components/virtual-office/DepartmentStudio.tsx (Department room floor plan card + AvatarNode desk grid)",
+    "apps/web/components/virtual-office/AgentDrawer.tsx (Slide-over profile drawer + simulator buttons + deliverables)"
+  ],
+  "metrics": {
+    "before": {
+      "file_lines_count": 1135,
+      "architecture": "Monolithic single-file component (drawer, studios, filters, headers, modals combined)",
+      "cyclomatic_complexity": "High (cascading state re-renders across all 38 agent nodes)"
+    },
+    "after": {
+      "file_lines_count": 325,
+      "architecture": "Modularized presentation architecture with React.memo on subcomponents",
+      "cyclomatic_complexity": "Low (decoupled concerns, isolated prop changes)"
+    },
+    "improvements": {
+      "lines_reduced": 810,
+      "code_reduction_percentage": 71.4,
+      "reusability": "Components can be independently tested, themed, and maintained"
+    }
+  }
+}
