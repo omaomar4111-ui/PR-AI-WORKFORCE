@@ -64,8 +64,17 @@ This document establishes the official secrets catalog, storage locations, rotat
 
 ## 🛡️ 3. Security Hygiene Checklist
 
-- [ ] All production environment variables are stored strictly in Railway / cloud hosting dashboards, never committed to Git.
-- [ ] `.env.production` is strictly excluded in `.gitignore`.
-- [ ] No hardcoded passwords, tokens, or fallback secrets exist in codebase source files.
-- [ ] Database credentials connect strictly via PgBouncer Pooler on port `6543` using TLS.
-- [ ] Redis connects strictly via `rediss://` with TLS 1.3 enforced.
+- [x] All production environment variables are stored strictly in Railway / cloud hosting dashboards, never committed to Git.
+- [x] `.env.production` is strictly excluded in `.gitignore` (verified: 0 commits in git history).
+- [x] No hardcoded passwords, tokens, or fallback secrets exist in codebase source files (verified: 0 findings).
+- [x] Database credentials connect strictly via PgBouncer Pooler on port `6543` using TLS.
+- [x] Redis connects strictly via `rediss://` with TLS 1.3 enforced.
+
+---
+
+## ⏳ 4. Pending Activation
+
+- [ ] `.github/workflows/retention.yml` — pending GitHub remote push
+- [ ] `.github/workflows/performance.yml` — pending GitHub remote push
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` rotation — deferred until pre-launch maintenance window
+

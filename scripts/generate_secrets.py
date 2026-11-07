@@ -8,6 +8,9 @@ These values are printed ONCE to stdout and are NEVER persisted to disk automati
 import secrets
 import sys
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 def generate_production_secrets():
     jwt_secret = secrets.token_hex(32)
     app_secret = secrets.token_hex(32)

@@ -16,6 +16,8 @@ ENV/
 .env.development.local
 .env.test.local
 .env.production.local
+NEW_SECRETS.txt
+NEW_SECRETS*
 !.env.example
 
 # Next.js build
