@@ -1425,9 +1425,9 @@ def create_system_metric(metric_name: str, metric_value: float) -> Dict[str, Any
     return record
 
 
-# ── RUM Telemetry Persistence (011_web_vitals) ──────────────────────────────
+# ── RUM Telemetry Persistence (011_web_vitals & 012_drop_web_vitals_pii) ──────
 def record_web_vital_db(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Persists a Core Web Vital measurement in DB / memory."""
+    """Persists a Core Web Vital measurement in DB / memory (privacy-safe without PII)."""
     vital_id = str(uuid.uuid4())
     record = {
         "id": vital_id,
@@ -1437,8 +1437,8 @@ def record_web_vital_db(data: Dict[str, Any]) -> Dict[str, Any]:
         "delta": float(data.get("delta", 0.0)),
         "metric_id": data.get("id"),
         "navigation_type": data.get("navigationType"),
-        "url": data.get("url"),
-        "client_ip": data.get("client_ip"),
+        "route_template": data.get("route_template"),
+        "country_code": data.get("country_code"),
         "trace_id": data.get("trace_id"),
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
@@ -1450,8 +1450,16 @@ def record_web_vital_db(data: Dict[str, Any]) -> Dict[str, Any]:
             with engine.begin() as conn:
                 conn.execute(
                     text("""
-                        INSERT INTO web_vitals (id, metric_name, metric_value, rating, delta, metric_id, navigation_type, url, client_ip, trace_id, created_at)
-                        VALUES (:id, :metric_name, :metric_value, :rating, :delta, :metric_id, :navigation_type, :url, :client_ip, :trace_id, :created_at)
+                        INSERT INTO web_vitals (
+                            id, metric_name, metric_value, rating, delta,
+                            metric_id, navigation_type, route_template, country_code,
+                            trace_id, created_at
+                        )
+                        VALUES (
+                            :id, :metric_name, :metric_value, :rating, :delta,
+                            :metric_id, :navigation_type, :route_template, :country_code,
+                            :trace_id, :created_at
+                        )
                     """),
                     record
                 )
@@ -1462,13 +1470,20 @@ def record_web_vital_db(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def list_web_vitals_db(limit: int = 50) -> List[Dict[str, Any]]:
-    """Returns recently recorded web vitals."""
+    """Returns recently recorded privacy-safe web vitals."""
     if engine:
         try:
             from sqlalchemy import text
             with engine.connect() as conn:
                 res = conn.execute(
-                    text("SELECT id, metric_name, metric_value, rating, delta, metric_id, navigation_type, url, client_ip, trace_id, created_at FROM web_vitals ORDER BY created_at DESC LIMIT :limit"),
+                    text("""
+                        SELECT id, metric_name, metric_value, rating, delta,
+                               metric_id, navigation_type, route_template, country_code,
+                               trace_id, created_at
+                        FROM web_vitals
+                        ORDER BY created_at DESC
+                        LIMIT :limit
+                    """),
                     {"limit": limit}
                 ).mappings().all()
                 return [dict(row) for row in res]

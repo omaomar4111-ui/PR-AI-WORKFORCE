@@ -450,7 +450,7 @@ def health_check():
         "version": "1.0.0",
         "environment": settings.APP_ENV,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "database": "connected (PostgreSQL 16)",
+        "database": "connected (PostgreSQL 17)",
         "redis": "connected (Redis 7)"
     }
 
@@ -475,7 +475,8 @@ def health_db():
 MAX_TELEMETRY_BODY_SIZE = 8192  # 8KB strict maximum
 PROHIBITED_PII_KEYS = {
     "user_id", "userid", "user", "email", "session_id", "sessionid",
-    "password", "token", "auth", "secret", "user_name", "username", "phone"
+    "password", "token", "auth", "secret", "user_name", "username", "phone",
+    "ip", "client_ip", "clientip", "referrer", "referer"
 }
 
 
@@ -486,6 +487,7 @@ class WebVitalTelemetry(BaseModel):
     delta: Optional[float] = 0.0
     id: Optional[str] = Field(None, max_length=128)
     navigationType: Optional[str] = Field(None, max_length=64)
+    route_template: Optional[str] = Field(None, max_length=200)
     url: Optional[str] = Field(None, max_length=1024)
     timestamp: Optional[int] = None
 
@@ -498,7 +500,8 @@ async def record_web_vital(request: Request):
     Strictly enforced with:
     - 60 req/min/IP rate limit (via RateLimitMiddleware)
     - 8KB max body size
-    - Strict PII rejection (user_id, email, session_id, etc.)
+    - Strict PII rejection (user_id, email, session_id, ip, referrer, etc.)
+    - Privacy sanitization: zero client IP storage, stripped route template
     - CORS origin validation
     - Structured JSON logging with trace_id correlation
     - Supabase/PostgreSQL database persistence (web_vitals table)
@@ -540,24 +543,40 @@ async def record_web_vital(request: Request):
     span = trace.get_current_span()
     span_ctx = span.get_span_context()
     trace_id_hex = f"{span_ctx.trace_id:032x}" if span_ctx and span_ctx.trace_id else None
-    client_ip = request.client.host if request.client else "unknown"
 
-    # 5. Structured JSON logging with trace correlation
+    # 5. Privacy sanitization (GDPR compliance):
+    # Compute route_template (strip query parameters and hash fragments)
+    from urllib.parse import urlparse
+    if metric.route_template:
+        route_template = metric.route_template.strip()
+    elif metric.url:
+        parsed_url = urlparse(metric.url)
+        route_template = parsed_url.path or "/"
+    else:
+        route_template = "/"
+
+    # Derive anonymous country code from Cloudflare / Edge header (never store IP)
+    raw_country = request.headers.get("cf-ipcountry") or request.headers.get("x-country-code")
+    country_code = raw_country.strip().upper()[:2] if raw_country else None
+
+    # 6. Structured JSON logging with trace correlation (zero PII)
     log_payload = {
         "event": "rum_vital_recorded",
         "metric": metric.name,
         "value": metric.value,
         "rating": metric.rating,
-        "url": metric.url,
+        "route_template": route_template,
+        "country_code": country_code,
         "trace_id": trace_id_hex,
-        "client_ip": client_ip,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
     logger.info(json.dumps(log_payload))
 
-    # 6. Database persistence (Supabase PostgreSQL web_vitals table)
+    # 7. Database persistence (Supabase PostgreSQL web_vitals table)
     vital_dict = metric.model_dump()
-    vital_dict["client_ip"] = client_ip
+    vital_dict.pop("url", None)  # Discard full url to prevent query string PII leakage
+    vital_dict["route_template"] = route_template
+    vital_dict["country_code"] = country_code
     vital_dict["trace_id"] = trace_id_hex
     saved_record = record_web_vital_db(vital_dict)
 
@@ -567,6 +586,7 @@ async def record_web_vital(request: Request):
         "metric": metric.name,
         "value": metric.value,
         "rating": metric.rating,
+        "route_template": route_template,
         "trace_id": trace_id_hex,
     }
 

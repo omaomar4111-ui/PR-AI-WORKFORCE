@@ -14,9 +14,21 @@ with open(env_path, "r", encoding="utf-8") as f:
 db_url = env_vars.get("DATABASE_POOLER_URL") or env_vars.get("DATABASE_URL")
 conn = psycopg2.connect(db_url)
 cur = conn.cursor()
-cur.execute("SELECT id, metric_name, metric_value, rating, url, trace_id, created_at FROM web_vitals ORDER BY created_at DESC LIMIT 3;")
-rows = cur.fetchall()
+
+cur.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name='web_vitals' ORDER BY ordinal_position")
+columns = cur.fetchall()
+print("=== UPDATED COLUMNS IN WEB_VITALS ===")
+for col in columns:
+    print("Column:", col)
+
+cur.execute("SELECT polname, polcmd, polroles::regrole[] FROM pg_policy WHERE polrelid='web_vitals'::regclass")
+policies = cur.fetchall()
+print("\n=== UPDATED RLS POLICIES ===")
+for pol in policies:
+    print("Policy:", pol)
+
+cur.execute("SELECT COUNT(*) FROM web_vitals;")
+print("\n=== RECORD COUNT ===")
+print("Total rows:", cur.fetchone()[0])
+
 conn.close()
-print("=== PERSISTED WEB VITALS IN SUPABASE POSTGRESQL ===")
-for r in rows:
-    print("Record:", r)
