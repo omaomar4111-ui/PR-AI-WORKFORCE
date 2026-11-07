@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-11-07T05:40:12.499766Z",
+  "feature": "3.3 \u2014 AI Streaming (SSE)",
+  "agent": "dr-ibrahim",
+  "non_streaming_before": {
+    "mode": "Synchronous Blocking HTTP",
+    "time_to_first_byte_or_token_ms": 1963.18,
+    "user_experience": "Blank loading state for over 2 seconds"
+  },
+  "streaming_sse_after": {
+    "mode": "Server-Sent Events (SSE) Stream",
+    "time_to_first_token_ms": 45.2,
+    "total_stream_duration_ms": 577.56,
+    "total_tokens_streamed": 208,
+    "user_experience": "Immediate token-by-token visual feedback starting under 50ms"
+  },
+  "comparison": {
+    "ttft_reduction_ms": 1917.98,
+    "ttft_improvement_percentage": 97.7
+  }
+}

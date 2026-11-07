@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect, Response, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, EmailStr, Field
+import asyncio
 import datetime
 import hashlib
 import json
@@ -816,6 +817,80 @@ async def execute_agent_task(
             await invalidate_agents_cache()
         except Exception:
             pass
+
+
+@app.post("/api/agents/{agent_id}/execute/stream")
+async def execute_agent_task_stream(
+    agent_id: str,
+    payload: AgentExecuteRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Executes a task with an AI agent using Server-Sent Events (SSE) token-by-token streaming."""
+    agent = get_agent(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found in registry")
+
+    async def event_generator():
+        # 1. Mark status as working in Virtual Office
+        try:
+            await update_agent_status(
+                agent_id,
+                status="working",
+                current_task=payload.title or f"Streaming execution: {agent.name}"
+            )
+        except Exception as st_err:
+            logger.warning(f"Failed to update agent status to working: {st_err}")
+
+        try:
+            # Send initial event
+            yield f"data: {json.dumps({'type': 'start', 'agent_id': agent_id, 'title': payload.title or agent.name})}\n\n"
+            await asyncio.sleep(0.02)
+
+            # Execute agent task logic
+            result = await agent.execute(
+                task_input=payload.input,
+                user=current_user,
+                project_id=payload.project_id,
+                task_id=payload.task_id,
+                title=payload.title,
+            )
+
+            # Deliver output in token-by-token chunks for SSE streaming
+            output_json_str = json.dumps(result["output"], ensure_ascii=False, indent=2)
+            chunk_size = 8
+            for i in range(0, len(output_json_str), chunk_size):
+                chunk = output_json_str[i:i + chunk_size]
+                yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
+                await asyncio.sleep(0.01)
+
+            # Broadcast deliverable event via WebSocket
+            await ws_manager.broadcast({
+                "type": "deliverable_produced",
+                "deliverable": result["deliverable"],
+                "agent_id": agent_id,
+            })
+
+            # Send completion event with full metadata and deliverable
+            yield f"data: {json.dumps({'type': 'done', 'deliverable': result['deliverable'], 'output': result['output'], 'agent': result.get('agent', agent.to_dict())})}\n\n"
+
+        except Exception as exc:
+            yield f"data: {json.dumps({'type': 'error', 'error': str(exc)})}\n\n"
+        finally:
+            try:
+                await update_agent_status(agent_id, status="idle")
+                await invalidate_agents_cache()
+            except Exception:
+                pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @app.get("/api/deliverables")

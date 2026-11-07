@@ -660,6 +660,63 @@ export async function executeAgent(
   return data;
 }
 
+export async function executeAgentStream(
+  agentId: string,
+  payload: {
+    input: Record<string, any>;
+    project_id?: string;
+    task_id?: string;
+    title?: string;
+  },
+  onToken: (token: string) => void,
+  onDone: (result: AgentExecuteResult) => void,
+  onError: (error: Error) => void
+): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}/execute/stream`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ detail: "Streaming execution failed" }));
+    throw new Error(errorData.detail || `Server error: ${res.status}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("ReadableStream not supported by browser");
+
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data:")) continue;
+      const jsonStr = trimmed.replace(/^data:\s*/, "");
+      try {
+        const event = JSON.parse(jsonStr);
+        if (event.type === "token") {
+          onToken(event.token);
+        } else if (event.type === "done") {
+          onDone({ deliverable: event.deliverable, output: event.output, agent: event.agent || event.deliverable.agent_id });
+        } else if (event.type === "error") {
+          onError(new Error(event.error));
+        }
+      } catch (e) {
+        console.warn("Failed to parse SSE event", e);
+      }
+    }
+  }
+}
+
 // ── Milestone 9: Virtual Office Status API ──────────────────────────────────
 export async function fetchAgentStatuses(): Promise<AgentStatus[]> {
   const res = await customFetch(`${API_BASE_URL}/api/agents/status`, {

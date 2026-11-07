@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { Agent, Project, Deliverable, executeAgent } from "@/lib/api";
+import { Agent, Project, Deliverable, executeAgent, executeAgentStream } from "@/lib/api";
 
 interface AgentExecutionModalProps {
   agent: Agent;
@@ -47,6 +47,7 @@ export default function AgentExecutionModal({
     output: Record<string, any>;
   } | null>(null);
   const [execError, setExecError] = useState<string | null>(null);
+  const [streamedText, setStreamedText] = useState<string>("");
 
   const handleLoadSample = () => {
     if (agent.sample_input) {
@@ -69,21 +70,35 @@ export default function AgentExecutionModal({
     try {
       setExecuting(true);
       setExecError(null);
+      setExecResult(null);
+      setStreamedText("");
 
-      const result = await executeAgent(agent.id, {
-        project_id: selectedProjectId || undefined,
-        title: taskTitle.trim() || undefined,
-        input: parsedInput,
-      });
-
-      setExecResult(result);
-      if (onExecutionSuccess && result.deliverable) {
-        onExecutionSuccess(result.deliverable);
-      }
+      await executeAgentStream(
+        agent.id,
+        {
+          project_id: selectedProjectId || undefined,
+          title: taskTitle.trim() || undefined,
+          input: parsedInput,
+        },
+        (token: string) => {
+          setStreamedText((prev) => prev + token);
+        },
+        (result) => {
+          setExecResult(result);
+          if (onExecutionSuccess && result.deliverable) {
+            onExecutionSuccess(result.deliverable);
+          }
+          setExecuting(false);
+        },
+        (err) => {
+          console.error("Streaming execution error:", err);
+          setExecError(err.message || "Streaming failed. Server error.");
+          setExecuting(false);
+        }
+      );
     } catch (err: any) {
       console.error("Execution failed:", err);
       setExecError(err.message || "Failed to execute agent. Server error.");
-    } finally {
       setExecuting(false);
     }
   };
@@ -256,7 +271,21 @@ export default function AgentExecutionModal({
                 )}
               </div>
 
-              {execResult ? (
+              {executing ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400">
+                    <Sparkles className="h-4 w-4 animate-spin text-[#8b5cf6]" />
+                    <span>{isAr ? "جارٍ توليد المخرج بالذكاء الاصطناعي (تدفق مباشر SSE)..." : "Streaming AI Output in Real-Time (SSE)..."}</span>
+                  </div>
+                  <pre
+                    data-testid="streaming-output-preview"
+                    className="max-h-[340px] overflow-auto rounded-lg border border-[#8b5cf6]/40 bg-[#0d0e14] p-3 text-[11px] font-mono text-cyan-300 whitespace-pre-wrap"
+                  >
+                    {streamedText || "Connecting to stream..."}
+                    <span className="inline-block w-2 h-3.5 ml-1 bg-cyan-400 animate-pulse align-middle" />
+                  </pre>
+                </div>
+              ) : execResult ? (
                 <div className="space-y-4">
                   {/* Deliverable Meta */}
                   <div className="rounded-lg border border-gray-800 bg-[#12141e] p-3 text-xs">
