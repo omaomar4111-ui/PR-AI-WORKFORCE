@@ -263,12 +263,26 @@ flowchart LR
 
 ### Verified Service Regions Matrix:
 
-| Component | Provider & Tier | Region Identifier | Geographic Location | Typical Internal RTT |
-|:----------|:----------------|:------------------|:-------------------:|:--------------------:|
-| **Database & Vector Store** | Supabase (PostgreSQL 17 + pgvector) | `aws-0-eu-west-1` | Dublin, Ireland | `2.8 ms` |
-| **Distributed Cache & State**| Upstash Redis (TLS 1.3) | `eu-west-1` | Dublin, Ireland | `1.9 ms` |
-| **API & Web Containers** | Railway Pro Production Runner | `eu-west-1` / `europe-west4` | Western Europe | `3.4 ms` |
-| **Edge Ingress & CDN** | Cloudflare / Vercel Edge Network | Anycast (300+ PoPs) | Global Edge | `0-15 ms` (Edge) |
+| Component | Provider & Tier | Region Identifier | Geographic Location | In-Region SLA (Estimated) | Measured Local RTT (Egypt to eu-west-1) |
+|:----------|:----------------|:------------------|:-------------------:|:-------------------------:|:---------------------------------------:|
+| **Database & Vector Store** | Supabase (PostgreSQL 17 + pgvector) | `aws-0-eu-west-1` | Dublin, Ireland | `2.8 ms` (VPC internal) | `83.62 ms` (TCP Handshake) |
+| **Distributed Cache & State**| Upstash Redis (TLS 1.3) | `eu-west-1` | Dublin, Ireland | `1.9 ms` (VPC internal) | `226.17 ms` (TCP+TLS Handshake) |
+| **API & Web Containers** | Railway Pro Production Runner | `eu-west-1` / `europe-west4` | Western Europe | `3.4 ms` (Inter-DC internal) | Local Dev Server: `0.08 ms` DNS, `0.97 ms` Connect, `6.98 ms` TTFB |
+| **Edge Ingress & CDN** | Cloudflare / Vercel Edge Network | Anycast (300+ PoPs) | Global Edge | `0-15 ms` (Edge) | Pending custom domain DNS activation |
+
+> **Measurement Methodology Distinction:**
+> - **In-Region SLA (Estimated / Documented):** Sub-5ms internal network latencies when application containers run on Railway's `eu-west-1` compute cluster communicating over AWS internal network backbones to Supabase `aws-0-eu-west-1` and Upstash `eu-west-1`.
+> - **Measured Local Verification (Live Environment):** Executed from local development machine in Cairo/Egypt (cross-continent transit to Dublin, Ireland) via `scripts/measure_live_infra.py` and `curl.exe`:
+>   ```bash
+>   python scripts/measure_live_infra.py
+>   # Output:
+>   # Supabase Pooler TCP Handshake RTT: 83.62 ms
+>   # Upstash Host TCP+TLS Handshake RTT: 226.17 ms
+>   
+>   curl.exe -s -o NUL -w "dns:%{time_namelookup}s connect:%{time_connect}s ttfb:%{time_starttransfer}s total:%{time_total}s code:%{http_code}\n" http://127.0.0.1:8000/health
+>   # Output:
+>   # dns:0.000080s connect:0.000966s ttfb:0.006975s total:0.007271s code:200
+>   ```
 
 ### Impact Analysis: Co-location vs Cross-Region Penalty:
 

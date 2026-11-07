@@ -1,6 +1,6 @@
 {
   "task": "4.3 — Performance Testing in CI",
-  "timestamp": "2026-11-07T08:16:30Z",
+  "timestamp": "2026-11-08T00:56:00Z",
   "workflow_path": ".github/workflows/performance.yml",
   "config_path": ".lighthouserc.json",
   "metrics": {
@@ -20,8 +20,32 @@
         "cumulative-layout-shift": "<= 0.10",
         "total-blocking-time": "<= 300 ms"
       },
-      "audited_routes": ["/login", "/dashboard"]
+      "audited_routes": ["/login", "/dashboard"],
+      "local_verification": {
+        "status": "PASSED",
+        "collect_command": "npx @lhci/cli collect --url=\"http://localhost:3000/login\" --numberOfRuns=1 --settings.preset=\"desktop\"",
+        "assert_command": "npx @lhci/cli assert",
+        "report_file": ".lighthouseci/lhr-1794092109691-69200.json",
+        "measured_scores": {
+          "performance_score": 1.0,
+          "largest_contentful_paint_ms": 265.52,
+          "first_contentful_paint_ms": 265.52,
+          "total_blocking_time_ms": 0.0,
+          "cumulative_layout_shift": 0.0,
+          "speed_index_ms": 562.41
+        },
+        "assert_result": "PASSED (0 violations against thresholds)"
+      },
+      "remote_ci_status": {
+        "status": "READY_PENDING_REMOTE_PUSH",
+        "instructions_to_trigger": [
+          "git remote add origin https://github.com/<owner>/<repo>.git",
+          "git branch -M main",
+          "git push -u origin main"
+        ],
+        "notes": "Workflow .github/workflows/performance.yml runs on Ubuntu runner with Chrome headless on push/pull_request to main/master."
+      }
     }
   },
-  "status": "PASSED"
+  "status": "VERIFIED_LOCALLY_PENDING_REMOTE"
 }
