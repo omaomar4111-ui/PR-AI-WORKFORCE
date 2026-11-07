@@ -41,6 +41,11 @@ coverage/
 .coverage
 htmlcov/
 test-results/
+.lighthouseci/
+*.tsbuildinfo
+lighthouse-report.*
+scratch/
+*.log
 
 # Local Storage Deliverables
 apps/api/storage/deliverables/*.json
