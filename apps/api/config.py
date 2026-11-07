@@ -19,5 +19,10 @@ class Settings(BaseSettings):
     SUPABASE_JWT_SECRET: str = "mock_jwt_secret_32_chars_minimum_dev_2026"
     
     REDIS_URL: str = "redis://localhost:6379/0"
+    
+    # OpenTelemetry Observability Configuration
+    OTEL_EXPORTER: str = "console"
+    OTEL_SAMPLING_RATE: float = 1.0
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"
 
 settings = Settings()

@@ -13,6 +13,7 @@ from typing import Dict, Any, Optional, List, Set
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.sampling import ParentBased, TraceIdRatioBased
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from opentelemetry.trace import Status, StatusCode, SpanKind
@@ -20,14 +21,37 @@ from opentelemetry.trace import Status, StatusCode, SpanKind
 from config import settings
 logger = logging.getLogger("uvicorn.error")
 
-# OpenTelemetry Tracer Provider Configuration (Console Exporter)
+# OpenTelemetry Tracer Provider Configuration with ParentBased TraceIdRatio sampling
 otel_resource = Resource.create({
     "service.name": "pr-ai-workforce-api",
     "service.version": "1.0.0",
     "deployment.environment": settings.APP_ENV,
 })
-otel_provider = TracerProvider(resource=otel_resource)
-otel_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+
+sampling_rate = float(os.getenv("OTEL_SAMPLING_RATE", "0.1" if settings.APP_ENV == "production" else "1.0"))
+otel_sampler = ParentBased(TraceIdRatioBased(sampling_rate))
+otel_provider = TracerProvider(resource=otel_resource, sampler=otel_sampler)
+
+# Exporter Selection: console | otlp | none
+# Guard against console spam in production; ConsoleSpanExporter is strictly for development
+otel_exporter_mode = os.getenv("OTEL_EXPORTER", "console" if settings.APP_ENV == "development" else "none").lower()
+
+if otel_exporter_mode == "console":
+    otel_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+    logger.info(f"[OTel] Initialized ConsoleSpanExporter (dev mode, sampling={sampling_rate})")
+elif otel_exporter_mode == "otlp":
+    # Production OTLP Exporter -> Grafana Tempo / Jaeger / Signoz
+    try:
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+        otel_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint)))
+        logger.info(f"[OTel] Initialized OTLPSpanExporter targeting {otlp_endpoint} (sampling={sampling_rate})")
+    except ImportError:
+        logger.warning("[OTel] opentelemetry-exporter-otlp not installed; falling back to none exporter")
+else:
+    logger.info(f"[OTel] Tracer configured with exporter='none' (production safe, sampling={sampling_rate})")
+
 trace.set_tracer_provider(otel_provider)
 otel_tracer = trace.get_tracer("pr.workforce.api")
 otel_propagator = TraceContextTextMapPropagator()
@@ -190,10 +214,11 @@ async def opentelemetry_tracing_middleware(request: Request, call_next):
 
         response.headers["traceparent"] = traceparent_header
         response.headers["x-trace-id"] = trace_id_hex
-        logger.info(
-            f"[OTel Trace] {request.method} {request.url.path} "
-            f"status={response.status_code} trace_id={trace_id_hex} span_id={span_id_hex}"
-        )
+        if settings.APP_ENV == "development" or otel_exporter_mode == "console":
+            logger.info(
+                f"[OTel Trace] {request.method} {request.url.path} "
+                f"status={response.status_code} trace_id={trace_id_hex} span_id={span_id_hex}"
+            )
         return response
 
 
