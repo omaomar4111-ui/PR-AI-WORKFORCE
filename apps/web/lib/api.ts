@@ -310,6 +310,24 @@ export function clearStoredSession() {
   document.cookie = "pr_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 }
 
+
+export const DEFAULT_TIMEOUT_MS = 12000;
+
+export async function customFetch(url: string | URL, options: RequestInit = {}): Promise<Response> {
+  const signal = options.signal || (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
+    ? AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+    : undefined);
+
+  try {
+    return await globalThis.fetch(url, { ...options, signal });
+  } catch (error: any) {
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+      throw new Error("انتهت مهلة الطلب (12 ثانية). الخادم لا يستجيب.");
+    }
+    throw error;
+  }
+}
+
 function authHeaders(): HeadersInit {
   const token = getStoredToken();
   return {
@@ -319,13 +337,13 @@ function authHeaders(): HeadersInit {
 }
 
 export async function fetchHealth() {
-  const res = await fetch(`${API_BASE_URL}/health`);
+  const res = await customFetch(`${API_BASE_URL}/health`);
   if (!res.ok) throw new Error("Health check failed");
   return res.json();
 }
 
 export async function loginUser(email: string, password: string): Promise<AuthSession> {
-  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+  const res = await customFetch(`${API_BASE_URL}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -344,7 +362,7 @@ export async function fetchMe(): Promise<{ user: User }> {
   const token = getStoredToken();
   if (!token) throw new Error("No token stored");
 
-  const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+  const res = await customFetch(`${API_BASE_URL}/api/auth/me`, {
     headers: authHeaders(),
   });
 
@@ -358,7 +376,7 @@ export async function fetchMe(): Promise<{ user: User }> {
 }
 
 export async function fetchUsers(): Promise<User[]> {
-  const res = await fetch(`${API_BASE_URL}/api/users`, {
+  const res = await customFetch(`${API_BASE_URL}/api/users`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load users");
@@ -371,7 +389,7 @@ export async function fetchClients(search?: string): Promise<Client[]> {
   const url = new URL(`${API_BASE_URL}/api/clients`);
   if (search) url.searchParams.set("search", search);
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load clients");
@@ -380,7 +398,7 @@ export async function fetchClients(search?: string): Promise<Client[]> {
 }
 
 export async function fetchClient(clientId: string): Promise<Client> {
-  const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/clients/${clientId}`, {
     headers: authHeaders(),
   });
   if (!res.ok) {
@@ -392,7 +410,7 @@ export async function fetchClient(clientId: string): Promise<Client> {
 }
 
 export async function createClient(payload: Partial<Client>): Promise<Client> {
-  const res = await fetch(`${API_BASE_URL}/api/clients`, {
+  const res = await customFetch(`${API_BASE_URL}/api/clients`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -403,7 +421,7 @@ export async function createClient(payload: Partial<Client>): Promise<Client> {
 }
 
 export async function updateClient(clientId: string, payload: Partial<Client>): Promise<Client> {
-  const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/clients/${clientId}`, {
     method: "PUT",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -414,7 +432,7 @@ export async function updateClient(clientId: string, payload: Partial<Client>): 
 }
 
 export async function deleteClient(clientId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/clients/${clientId}`, {
     method: "DELETE",
     headers: authHeaders(),
   });
@@ -430,7 +448,7 @@ export async function fetchProjects(params?: { client_id?: string; status?: stri
   if (params?.client_id) url.searchParams.set("client_id", params.client_id);
   if (params?.status) url.searchParams.set("status", params.status);
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load projects");
@@ -439,7 +457,7 @@ export async function fetchProjects(params?: { client_id?: string; status?: stri
 }
 
 export async function fetchProject(projectId: string): Promise<Project> {
-  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/projects/${projectId}`, {
     headers: authHeaders(),
   });
   if (!res.ok) {
@@ -456,7 +474,7 @@ export async function fetchProjectProgress(projectId: string): Promise<{
   completed_tasks: number;
   progress_percentage: number;
 }> {
-  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
+  const res = await customFetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to fetch project progress");
@@ -465,7 +483,7 @@ export async function fetchProjectProgress(projectId: string): Promise<{
 }
 
 export async function createProject(payload: Partial<Project>): Promise<Project> {
-  const res = await fetch(`${API_BASE_URL}/api/projects`, {
+  const res = await customFetch(`${API_BASE_URL}/api/projects`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -476,7 +494,7 @@ export async function createProject(payload: Partial<Project>): Promise<Project>
 }
 
 export async function updateProject(projectId: string, payload: Partial<Project>): Promise<Project> {
-  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/projects/${projectId}`, {
     method: "PUT",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -487,7 +505,7 @@ export async function updateProject(projectId: string, payload: Partial<Project>
 }
 
 export async function deleteProject(projectId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/projects/${projectId}`, {
     method: "DELETE",
     headers: authHeaders(),
   });
@@ -510,7 +528,7 @@ export async function fetchTasks(params?: {
   if (params?.priority) url.searchParams.set("priority", params.priority);
   if (params?.assigned_to) url.searchParams.set("assigned_to", params.assigned_to);
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load tasks");
@@ -519,7 +537,7 @@ export async function fetchTasks(params?: {
 }
 
 export async function fetchTask(taskId: string): Promise<Task> {
-  const res = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
     headers: authHeaders(),
   });
   if (!res.ok) {
@@ -531,7 +549,7 @@ export async function fetchTask(taskId: string): Promise<Task> {
 }
 
 export async function createTask(payload: Partial<Task>): Promise<Task> {
-  const res = await fetch(`${API_BASE_URL}/api/tasks`, {
+  const res = await customFetch(`${API_BASE_URL}/api/tasks`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -542,7 +560,7 @@ export async function createTask(payload: Partial<Task>): Promise<Task> {
 }
 
 export async function updateTask(taskId: string, payload: Partial<Task>): Promise<Task> {
-  const res = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -553,7 +571,7 @@ export async function updateTask(taskId: string, payload: Partial<Task>): Promis
 }
 
 export async function deleteTask(taskId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
     method: "DELETE",
     headers: authHeaders(),
   });
@@ -565,7 +583,7 @@ export async function deleteTask(taskId: string): Promise<void> {
 
 // ── Dashboard Stats API ─────────────────────────────────────────────────────
 export async function fetchDashboardStats(): Promise<DashboardStats> {
-  const res = await fetch(`${API_BASE_URL}/api/dashboard/stats`, {
+  const res = await customFetch(`${API_BASE_URL}/api/dashboard/stats`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load dashboard stats");
@@ -575,7 +593,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
 
 // ── Milestone 4: Agents API ──────────────────────────────────────────────────
 export async function fetchAgents(): Promise<Agent[]> {
-  const res = await fetch(`${API_BASE_URL}/api/agents`, {
+  const res = await customFetch(`${API_BASE_URL}/api/agents`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load agents registry");
@@ -584,7 +602,7 @@ export async function fetchAgents(): Promise<Agent[]> {
 }
 
 export async function fetchAgent(agentId: string): Promise<Agent> {
-  const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/agents/${agentId}`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load agent profile");
@@ -601,7 +619,7 @@ export async function executeAgent(
     title?: string;
   }
 ): Promise<AgentExecuteResult> {
-  const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}/execute`, {
+  const res = await customFetch(`${API_BASE_URL}/api/agents/${agentId}/execute`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -613,7 +631,7 @@ export async function executeAgent(
 
 // ── Milestone 9: Virtual Office Status API ──────────────────────────────────
 export async function fetchAgentStatuses(): Promise<AgentStatus[]> {
-  const res = await fetch(`${API_BASE_URL}/api/agents/status`, {
+  const res = await customFetch(`${API_BASE_URL}/api/agents/status`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load agent statuses");
@@ -625,7 +643,7 @@ export async function updateAgentStatus(
   agentId: string,
   payload: { status: "idle" | "working" | "blocked"; current_task?: string }
 ): Promise<AgentStatus> {
-  const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}/status`, {
+  const res = await customFetch(`${API_BASE_URL}/api/agents/${agentId}/status`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -650,7 +668,7 @@ export async function fetchDeliverables(params?: {
   if (params?.task_id) url.searchParams.set("task_id", params.task_id);
   if (params?.type) url.searchParams.set("type", params.type);
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load deliverables");
@@ -659,7 +677,7 @@ export async function fetchDeliverables(params?: {
 }
 
 export async function fetchDeliverable(deliverableId: string): Promise<Deliverable> {
-  const res = await fetch(`${API_BASE_URL}/api/deliverables/${deliverableId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/deliverables/${deliverableId}`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load deliverable");
@@ -677,7 +695,7 @@ export async function createDeliverableVersion(
     status?: string;
   }
 ): Promise<Deliverable> {
-  const res = await fetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/version`, {
+  const res = await customFetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/version`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -688,7 +706,7 @@ export async function createDeliverableVersion(
 }
 
 export async function fetchDeliverableVersions(deliverableId: string): Promise<Deliverable[]> {
-  const res = await fetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/versions`, {
+  const res = await customFetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/versions`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load deliverable versions");
@@ -701,7 +719,7 @@ export async function fetchWorkflows(params?: { project_id?: string }): Promise<
   const url = new URL(`${API_BASE_URL}/api/workflows`);
   if (params?.project_id) url.searchParams.set("project_id", params.project_id);
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load workflows");
@@ -710,7 +728,7 @@ export async function fetchWorkflows(params?: { project_id?: string }): Promise<
 }
 
 export async function fetchWorkflow(workflowId: string): Promise<Workflow> {
-  const res = await fetch(`${API_BASE_URL}/api/workflows/${workflowId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load workflow");
@@ -722,7 +740,7 @@ export async function createWorkflow(payload: {
   user_request: string;
   project_id?: string;
 }): Promise<Workflow> {
-  const res = await fetch(`${API_BASE_URL}/api/workflows`, {
+  const res = await customFetch(`${API_BASE_URL}/api/workflows`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -733,7 +751,7 @@ export async function createWorkflow(payload: {
 }
 
 export async function fetchWorkflowLogs(workflowId: string): Promise<ExecutionLog[]> {
-  const res = await fetch(`${API_BASE_URL}/api/workflows/${workflowId}/logs`, {
+  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}/logs`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load workflow logs");
@@ -745,7 +763,7 @@ export async function approveWorkflowStep(
   workflowId: string,
   payload: { step_id: string; approved: boolean; notes?: string }
 ): Promise<WorkflowStep> {
-  const res = await fetch(`${API_BASE_URL}/api/workflows/${workflowId}/approve`, {
+  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}/approve`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -756,7 +774,7 @@ export async function approveWorkflowStep(
 }
 
 export async function cancelWorkflow(workflowId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/workflows/${workflowId}/cancel`, {
+  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}/cancel`, {
     method: "POST",
     headers: authHeaders(),
   });
@@ -777,7 +795,7 @@ export async function fetchMemories(params?: {
   if (params?.reference_id) url.searchParams.set("reference_id", params.reference_id);
   if (params?.limit) url.searchParams.set("limit", params.limit.toString());
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load memories");
@@ -799,7 +817,7 @@ export async function searchMemories(
   if (params?.reference_id) url.searchParams.set("reference_id", params.reference_id);
   if (params?.limit) url.searchParams.set("limit", params.limit.toString());
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to perform semantic search on memory");
@@ -813,7 +831,7 @@ export async function createMemory(payload: {
   content: string;
   metadata?: Record<string, any>;
 }): Promise<Memory> {
-  const res = await fetch(`${API_BASE_URL}/api/memories`, {
+  const res = await customFetch(`${API_BASE_URL}/api/memories`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -824,7 +842,7 @@ export async function createMemory(payload: {
 }
 
 export async function deleteMemory(memoryId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/memories/${memoryId}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/memories/${memoryId}`, {
     method: "DELETE",
     headers: authHeaders(),
   });
@@ -875,7 +893,7 @@ export async function fetchApprovals(status?: string): Promise<ApprovalRequest[]
   const url = new URL(`${API_BASE_URL}/api/approvals`);
   if (status && status !== "all") url.searchParams.set("status", status);
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load approval requests");
@@ -884,7 +902,7 @@ export async function fetchApprovals(status?: string): Promise<ApprovalRequest[]
 }
 
 export async function fetchPendingApprovalsCount(): Promise<number> {
-  const res = await fetch(`${API_BASE_URL}/api/approvals/count`, {
+  const res = await customFetch(`${API_BASE_URL}/api/approvals/count`, {
     headers: authHeaders(),
   });
   if (!res.ok) return 0;
@@ -893,7 +911,7 @@ export async function fetchPendingApprovalsCount(): Promise<number> {
 }
 
 export async function approveRequest(id: string, notes?: string): Promise<ApprovalRequest> {
-  const res = await fetch(`${API_BASE_URL}/api/approvals/${id}/approve`, {
+  const res = await customFetch(`${API_BASE_URL}/api/approvals/${id}/approve`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({ notes }),
@@ -904,7 +922,7 @@ export async function approveRequest(id: string, notes?: string): Promise<Approv
 }
 
 export async function rejectRequest(id: string, notes?: string): Promise<ApprovalRequest> {
-  const res = await fetch(`${API_BASE_URL}/api/approvals/${id}/reject`, {
+  const res = await customFetch(`${API_BASE_URL}/api/approvals/${id}/reject`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({ notes }),
@@ -919,7 +937,7 @@ export async function editAndApproveRequest(
   editedPayload: Record<string, any>,
   notes?: string
 ): Promise<ApprovalRequest> {
-  const res = await fetch(`${API_BASE_URL}/api/approvals/${id}/edit`, {
+  const res = await customFetch(`${API_BASE_URL}/api/approvals/${id}/edit`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({ edited_payload: editedPayload, notes }),
@@ -930,7 +948,7 @@ export async function editAndApproveRequest(
 }
 
 export async function fetchIntegrations(): Promise<Integration[]> {
-  const res = await fetch(`${API_BASE_URL}/api/integrations`, {
+  const res = await customFetch(`${API_BASE_URL}/api/integrations`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load integrations");
@@ -942,7 +960,7 @@ export async function connectIntegration(
   provider: string,
   config: Record<string, any>
 ): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/api/integrations/${provider}/connect`, {
+  const res = await customFetch(`${API_BASE_URL}/api/integrations/${provider}/connect`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({ config }),
@@ -953,7 +971,7 @@ export async function connectIntegration(
 }
 
 export async function disconnectIntegration(provider: string): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/api/integrations/${provider}/disconnect`, {
+  const res = await customFetch(`${API_BASE_URL}/api/integrations/${provider}/disconnect`, {
     method: "POST",
     headers: authHeaders(),
   });
@@ -963,7 +981,7 @@ export async function disconnectIntegration(provider: string): Promise<any> {
 }
 
 export async function testIntegration(provider: string): Promise<{ success: boolean; message: string; data?: any }> {
-  const res = await fetch(`${API_BASE_URL}/api/integrations/${provider}/test`, {
+  const res = await customFetch(`${API_BASE_URL}/api/integrations/${provider}/test`, {
     method: "POST",
     headers: authHeaders(),
   });
@@ -1038,7 +1056,7 @@ export interface QualityTrendPoint {
 }
 
 export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
-  const res = await fetch(`${API_BASE_URL}/api/analytics/summary`, {
+  const res = await customFetch(`${API_BASE_URL}/api/analytics/summary`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load analytics summary");
@@ -1058,7 +1076,7 @@ export async function fetchAnalyticsUsage(params?: {
   if (params?.agent_id) url.searchParams.set("agent_id", params.agent_id);
   if (params?.project_id) url.searchParams.set("project_id", params.project_id);
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load AI usage logs");
@@ -1074,7 +1092,7 @@ export async function fetchCostPerAgent(params?: {
   if (params?.start_date) url.searchParams.set("start_date", params.start_date);
   if (params?.end_date) url.searchParams.set("end_date", params.end_date);
 
-  const res = await fetch(url.toString(), {
+  const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load agent cost breakdown");
@@ -1083,7 +1101,7 @@ export async function fetchCostPerAgent(params?: {
 }
 
 export async function fetchCostPerProject(): Promise<CostPerProject[]> {
-  const res = await fetch(`${API_BASE_URL}/api/analytics/costs/projects`, {
+  const res = await customFetch(`${API_BASE_URL}/api/analytics/costs/projects`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load project cost breakdown");
@@ -1092,7 +1110,7 @@ export async function fetchCostPerProject(): Promise<CostPerProject[]> {
 }
 
 export async function fetchQualityTrend(days: number = 30): Promise<QualityTrendPoint[]> {
-  const res = await fetch(`${API_BASE_URL}/api/analytics/quality/trend?days=${days}`, {
+  const res = await customFetch(`${API_BASE_URL}/api/analytics/quality/trend?days=${days}`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load quality score trends");
