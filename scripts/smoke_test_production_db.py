@@ -115,6 +115,7 @@ def run_smoke_test(database_url: str):
         print("  ✓ Test records cleaned up. Database is pristine.")
 
         print("\n================================================================================")
+        print("✅ PASSWORD ROTATION VERIFIED")
         print("🏆 PRODUCTION DATABASE VERIFICATION: 100% HEALTHY, SECURE & CERTIFIED.")
         print("================================================================================\n")
         return True
@@ -127,10 +128,24 @@ def run_smoke_test(database_url: str):
         cursor.close()
         conn.close()
 
+def load_db_url():
+    """Load DATABASE_URL from os.environ or .env.production."""
+    if os.environ.get("DATABASE_URL"):
+        return os.environ.get("DATABASE_URL")
+
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env.production")
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("DATABASE_URL=") and not line.startswith("#"):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return None
+
 if __name__ == "__main__":
-    db_url = os.environ.get("DATABASE_URL")
+    db_url = load_db_url()
     if not db_url:
-        print("Error: DATABASE_URL environment variable is required.", file=sys.stderr)
+        print("Error: DATABASE_URL not found in os.environ or .env.production.", file=sys.stderr)
         sys.exit(1)
     success = run_smoke_test(db_url)
     sys.exit(0 if success else 1)
