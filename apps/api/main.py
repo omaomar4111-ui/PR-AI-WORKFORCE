@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, EmailStr, Field
@@ -85,6 +86,7 @@ from analytics.service import (
     get_token_usage_summary,
     log_ai_usage,
 )
+from cache import check_redis_health, close_redis
 
 app = FastAPI(
     title="PR AI WORKFORCE API",
@@ -348,6 +350,20 @@ def health_check():
         "database": "connected (PostgreSQL 16)",
         "redis": "connected (Redis 7)"
     }
+
+
+@app.get("/health/redis")
+async def health_redis():
+    """Live healthcheck endpoint for Redis connection pool and latency verification."""
+    res = await check_redis_health()
+    status_code = 200 if res.get("status") == "connected" else 503
+    return JSONResponse(status_code=status_code, content=res)
+
+
+@app.on_event("shutdown")
+async def app_shutdown():
+    """Graceful shutdown handler for async connection pools."""
+    await close_redis()
 
 
 # ── Auth Endpoints ───────────────────────────────────────────────────────────

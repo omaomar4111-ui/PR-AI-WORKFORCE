@@ -472,7 +472,43 @@ Phase 5.5: Maximum Automation Prep (PWA Verification Suite, Redis Scaffolding, S
 - تأكيد تدوير باسورد Supabase وتشغيل `smoke_test_production_db.py`.
 
 ### 6. Next Exact Step (single line)
-Phase 5.5 complete. Human actions required for Phase 2.
+Phase 5.5 complete. Proceeding with Phase 2 implementation.
+
+---
+
+## ## Phase: 2 — Redis Caching & Data Layer
+
+### 1. Item 2.1: Redis Client Setup & Connection Pool
+- **Status:** ✅ Completed & Verified
+
+#### Before vs After:
+| المؤشر / المعيار | قبل البند 2.1 (Before) | بعد البند 2.1 (After) | الفارق / التحسين |
+|:-----------------|:----------------------:|:--------------------:|:-----------------:|
+| **Redis Client Engine** | ملف Stub فارغ بدون أي اتصال | `redis.asyncio` Client غير متزامن | **جاهز للعمل غير المتزامن 100%** |
+| **Connection Pool** | غير موجود (None) | `ConnectionPool(max_connections=20)` | **إدارة اتصالات آمنة وسريعة** |
+| **Retry & Backoff Strategy** | غير موجود | `ExponentialBackoff(cap=5.0, base=0.2, 3 retries)` | **معالجة تلقائية لانقطاع الشبكة** |
+| **Socket Timeout** | غير محدد | `socket_timeout=3.0s, connect_timeout=2.0s` | **منع تعليق الخادم نهائياً** |
+| **نقطة الفحص `/health/redis`** | غير موجودة (`404 Not Found`) | نقطة نهاية حية تقيس الـ Latency بالأجزاء من الثانية | **HTTP 200/503 مع تفاصيل حالة الاتصال** |
+| **اختبارات Pytest** | 58 اختباراً ناجحاً | **59 اختباراً ناجحاً (100% passing)** | **+1 اختبار جديد دون أي تراجع** |
+
+#### 📊 تقرير الأقسام الإلزامية الثلاثة:
+1. **✅ ما تم اختباره فعلياً (مع مسارات الأدلة):**
+   - اختبار وحدة مخصص `apps/api/tests/test_redis_health.py` للتحقق من سلامة نقطة `/health/redis` واستجابة JSON.
+   - تشغيل اختبارات Pytest الكاملة: `59 passed in 18.62s` (مسار اللوج: `apps/api/tests/test_redis_health.py`).
+   - تشغيل السيرفر المباشر وإرسال طلب حقيقي إلى `GET /health/redis` عبر `curl` والتحقق من الاستجابة الهيكلية المنضبطة وحساب الـ latency_ms.
+2. **🟡 ما تم التحقق منه آلياً (كود/فحص ملفات):**
+   - فحص تهيئة `aioredis.ConnectionPool.from_url` وتمرير `ssl_cert_reqs="required"` عند استخدام بروتوكول `rediss://`.
+   - فحص اكتمال ربط إغلاق الاتصالات الآمن أثناء إيقاف التطبيق عبر `@app.on_event("shutdown")`.
+   - التأكد من عدم طباعة أي كلمات مرور أو أسرار في الـ logs (حصر استخراج الـ host المكتوم فقط).
+3. **❌ ما لم يتم اختباره (بشفافية كاملة):**
+   - الاتصال بقاعدة بيانات Upstash السحابية الحية (بانتظار وضع رابط `REDIS_URL` المباشر في بيئة الإنتاج من قبل المستخدم).
+
+### 2. Commits
+- `feat(cache): setup async Redis client, connection pool and healthcheck`
+
+### 3. Next Exact Step (single line)
+Item 2.1 complete. Awaiting review + approval before starting Item 2.2 (Cache Layer for Endpoints).
+
 
 
 
