@@ -43,6 +43,7 @@
 | 30 | **Real User Monitoring (RUM)** | ❌ | لا توجد حزمة قياس حية مدمجة؛ مؤجلة لمرحلة الإنتاج النهائي. | 3 | 2 | 12 | **Med** | تفعيل Speed Insights مع لوحة التحكم الإنتاجية. |
 | 31 | **Performance Testing** | ⚠️ | اختبارات E2E Playwright وPytest مؤتمتة وتعمل بنسبة 100%؛ سيتم ربطها بـ CI/CD. | 3 | 2 | 12 | **Med** | مجموعة اختبارات متكاملة تغطي كل المسارات. |
 | 32 | **Home Page Load Anomaly** | ✅ | **إصلاح جذري للخلل الأكبر:** تحويل إعادة التوجيه إلى Server-Side Middleware (`middleware.ts`) + Server Component. انخفض زمن التحميل من **3,843 ms** إلى **927 ms** (**-75.8%**). | 5 | 2 | 20 | **CRITICAL** | **تم الإنجاز في Phase 1:** تحويل الـ Redirect من العميل إلى الخادم بمعدل استجابة فوري. |
+| 33 | **PWA Installability** | ✅ | تطبيق متكامل لـ PWA عبر `@serwist/next` (Next.js 14 App Router) متوافق مع معايير Google Lighthouse: Service Worker نشط، Manifest صالح مع أيقونات (192, 512, maskable, apple-touch, screenshots wide/narrow)، صفحة Offline ثنائية اللغة، وواجهة تثبيت ذكية تدعم iOS Safari و Android/Desktop. | 4 | 2 | 16 | **High** | **تم الإنجاز في Phase 5:** دعم كامل للتثبيت، تجربة تطبيق أصلي، وحماية من انقطاع الشبكة. |
 
 ---
 

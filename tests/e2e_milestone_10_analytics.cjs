@@ -76,10 +76,11 @@ async function runE2E() {
     // ── 1. Owner Login ───────────────────────────────────────────────────────
     console.log("▶ [Test 1] Owner Login...");
     await page.goto("http://localhost:3000/login", { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("button:has-text('المالك')");
     await page.click("button:has-text('المالك')");
     await page.waitForTimeout(300);
     await page.click("button[type='submit']");
-    await page.waitForURL("**/dashboard");
+    await page.waitForURL("**/dashboard", { waitUntil: "commit" });
     console.log("  ✓ Logged in successfully.");
 
     // ── 2. Navigate to /analytics ────────────────────────────────────────────
