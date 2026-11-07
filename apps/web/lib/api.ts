@@ -313,19 +313,50 @@ export function clearStoredSession() {
 
 export const DEFAULT_TIMEOUT_MS = 12000;
 
+// In-flight deduplication map for concurrent identical GET requests
+const inflightGetRequests = new Map<string, Promise<Response>>();
+
 export async function customFetch(url: string | URL, options: RequestInit = {}): Promise<Response> {
+  const method = (options.method || "GET").toUpperCase();
+  const urlStr = url.toString();
+
+  // Deduplicate identical in-flight GET requests
+  const canDeduplicate = method === "GET" && !options.body;
+  const headersObj = options.headers ? (options.headers as Record<string, string>) : {};
+  const authHeader = (headersObj as any)?.Authorization || (headersObj as any)?.authorization || "";
+  const cacheKey = canDeduplicate ? `${urlStr}::${authHeader}` : null;
+
+  if (cacheKey && inflightGetRequests.has(cacheKey)) {
+    const existingPromise = inflightGetRequests.get(cacheKey)!;
+    const res = await existingPromise;
+    return res.clone();
+  }
+
   const signal = options.signal || (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
     ? AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
     : undefined);
 
-  try {
-    return await globalThis.fetch(url, { ...options, signal });
-  } catch (error: any) {
-    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
-      throw new Error("انتهت مهلة الطلب (12 ثانية). الخادم لا يستجيب.");
+  const fetchPromise = (async () => {
+    try {
+      return await globalThis.fetch(url, { ...options, signal });
+    } catch (error: any) {
+      if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+        throw new Error("انتهت مهلة الطلب (12 ثانية). الخادم لا يستجيب.");
+      }
+      throw error;
+    } finally {
+      if (cacheKey) {
+        inflightGetRequests.delete(cacheKey);
+      }
     }
-    throw error;
+  })();
+
+  if (cacheKey) {
+    inflightGetRequests.set(cacheKey, fetchPromise);
   }
+
+  const response = await fetchPromise;
+  return response.clone();
 }
 
 function authHeaders(): HeadersInit {
