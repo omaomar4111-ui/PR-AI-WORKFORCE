@@ -413,9 +413,66 @@ Phase 5: Progressive Web App (PWA) Implementation via `@serwist/next` (Next.js 1
 - عند نشر الموقع على نطاق إنتاجي حقيقي (Production Domain)، يجب التأكد من توفر شهادة SSL/HTTPS لتفعيل Service Worker على الأجهزة الحقيقية (المتصفحات تتطلب HTTPS لـ Service Worker باستثناء `localhost`).
 
 ### 11. Next Exact Step (single line)
-Phase 5 complete. Awaiting review + user input (REDIS_URL or approval) for Phase 2.
+Phase 5 complete. Proceeding to Phase 5.5 Automation Prep.
 
 ### 12. Blocked On
 موافقة المستخدم وتزويدنا ببيانات Redis للبدء في Phase 2.
+
+---
+
+## ## Phase: 5.5 — Maximum Automation Prep
+
+### 1. Phase Name
+Phase 5.5: Maximum Automation Prep (PWA Verification Suite, Redis Scaffolding, Supabase Security Rotation)
+
+### 2. Status: ✅ Complete
+
+### 3. ما تم اختباره فعلياً (آلياً مع الأدلة)
+- **PWA via Playwright Chromium (Desktop Emulation):**
+  - تم فحص Service Worker: `hasController: true`، `controllerState: "activated"`، و `scriptURL: "/sw.js"`.
+  - تم اختبار التقاط ومعالجة حدث `beforeinstallprompt` وظهور بطاقة التثبيت المخصصة بالهوية البصرية.
+  - الأدلة: [`pwa_verification_chrome.json`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/pwa_verification_chrome.json)
+  - لقطات الشاشة: [`screenshots/pwa_chrome_home.png`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/screenshots/pwa_chrome_home.png)، [`screenshots/pwa_chrome_install_prompt.png`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/screenshots/pwa_chrome_install_prompt.png).
+- **PWA via Playwright Safari Profile (iPhone 13 UA & Metrics):**
+  - فحص ميتا تاج: `apple-mobile-web-app-capable = "yes"`.
+  - فحص أيقونة آبل: `apple-touch-icon = "/icons/apple-touch-icon.png"` بحالة **HTTP 200 OK**.
+  - فحص الـ Fallback Flow: ظهور لافتة التثبيت للجوال بعد مهلة 3.5 ثانية، وعند النقر تم فتح الدرج الإرشادي المكون من 3 خطوات بنجاح (`guidanceDrawerOpened: true`).
+  - الأدلة: [`pwa_verification_webkit.json`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/pwa_verification_webkit.json)
+  - لقطة الشاشة: [`screenshots/pwa_webkit_ios_banner.png`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/screenshots/pwa_webkit_ios_banner.png).
+- **فحص أصول PWA وملف الـ Manifest (HTTP Asset Loop):**
+  - تم فحص 8 مسارات أصول برمجياً بحالة **200 OK** وتطابق كامل للـ Content-Type:
+    - `/manifest.webmanifest` (`application/manifest+json`)
+    - `/sw.js` (`application/javascript`)
+    - `/icons/icon-192.png`, `/icons/icon-512.png`, `/icons/maskable-512.png`, `/icons/apple-touch-icon.png`
+    - `/icons/screenshot-wide.png`, `/icons/screenshot-mobile.png`
+  - الأدلة: [`pwa_verification_assets.json`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/pwa_verification_assets.json).
+- **تجهيز طبقة Upstash Redis:**
+  - إنشاء هيكل طبقة الكاش [`apps/api/cache.py`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/apps/api/cache.py) (stub آمن ينتظر الرابط).
+  - كتابة سكربت الفحص الشامل الميداني [`scripts/verify_redis.py`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/scripts/verify_redis.py) لدعم TLS، وقياس الـ Latency، وفحص PING/SET/GET/DEL دون تسريب الأسرار.
+  - إعداد دليل الإعداد [`docs/UPSTASH_SETUP.md`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/docs/UPSTASH_SETUP.md).
+  - تحديث قالب البيئة [`.env.example`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/.env.example).
+  - *(لم يتم الاتصال بقاعدة بيانات فعلية لعدم إدخال رابط بعد)*.
+- **تجهيز تدوير كلمة مرور Supabase:**
+  - كتابة السكربت الآمن الميداني [`scripts/rotate_supabase_env.py`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/scripts/rotate_supabase_env.py) لطلب الباسورد بإدخال مخفي، وترميزه بـ URL Encoding وتحديث `.env.production` محلياً.
+  - تحديث سكربت الفحص الميداني [`scripts/smoke_test_production_db.py`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/scripts/smoke_test_production_db.py) ليقرأ ديناميكياً من `.env.production` ويطبع `✅ PASSWORD ROTATION VERIFIED`.
+  - إعداد دليل الخطوات الكامل [`docs/SUPABASE_ROTATION.md`](file:///C:/Users/DELL/.gemini/antigravity/scratch/PR-AI-WORKFORCE/docs/SUPABASE_ROTATION.md).
+  - *(لم يتم الاتصال أو تغيير كلمة المرور آلياً لكونها تتطلب إجراء بشري في لوحة تحكم Supabase)*.
+
+### 4. ما يحتاج إجراء بشري (لا يمكن أتمتته برمجياً)
+1. **اختبار التثبيت اليدوي على أجهزة حقيقية:**
+   - متصفح Chrome على هاتف Android حقيقي للتأكد من سلوك النظام التشغيلي (WebAPK / Add to Homescreen).
+   - متصفح Safari على هاتف iPhone حقيقي للتأكد من اكتمال الإضافة وحفظ الـ WebClip.
+2. **إنشاء قاعدة بيانات Upstash:**
+   - يحتاج تسجيل دخول بشري في `console.upstash.com` وتحديد المنطقة `eu-west-1`.
+3. **تدوير كلمة مرور Supabase:**
+   - يحتاج تسجيل دخول بشري في Supabase Dashboard والنقر على "Reset Database Password".
+
+### 5. Blockers for Phase 2
+- الحصول على `REDIS_URL` من Upstash.
+- تأكيد تدوير باسورد Supabase وتشغيل `smoke_test_production_db.py`.
+
+### 6. Next Exact Step (single line)
+Phase 5.5 complete. Human actions required for Phase 2.
+
 
 

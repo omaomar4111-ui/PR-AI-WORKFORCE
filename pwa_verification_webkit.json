@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-11-07T02:12:49.834Z",
+  "engine": "Playwright Chromium (iPhone 13 UA / Safari 16.5 Profile)",
+  "device": "iPhone 13",
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+  "checks": {
+    "appleMobileWebAppCapable": "yes",
+    "appleTouchIcon": {
+      "href": "/icons/apple-touch-icon.png",
+      "httpStatus": 200
+    },
+    "guidanceBannerVisible": true,
+    "guidanceDrawerOpened": true,
+    "bannerTextSnippet": "PRتثبيت تطبيق PR Workforceاحصل على تجربة سريعة وتصفح بدون إنترنتطريقة التثبيتلاحقاً"
+  },
+  "screenshot": "C:\\Users\\DELL\\.gemini\\antigravity\\scratch\\PR-AI-WORKFORCE\\screenshots\\pwa_webkit_ios_banner.png"
+}

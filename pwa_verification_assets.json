@@ -1,0 +1,64 @@
+{
+  "manifest": {
+    "url": "http://localhost:3000/manifest.webmanifest",
+    "status": 200,
+    "contentType": "application/manifest+json",
+    "contentLength": "1290"
+  },
+  "serviceWorker": {
+    "url": "http://localhost:3000/sw.js",
+    "status": 200,
+    "contentType": "application/javascript; charset=UTF-8",
+    "contentLength": "44671"
+  },
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "purpose": "any",
+      "status": 200,
+      "contentType": "image/png",
+      "contentLength": "16496"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "purpose": "any",
+      "status": 200,
+      "contentType": "image/png",
+      "contentLength": "52518"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "purpose": "maskable",
+      "status": 200,
+      "contentType": "image/png",
+      "contentLength": "47769"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "purpose": "any",
+      "status": 200,
+      "contentType": "image/png",
+      "contentLength": "15152"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot-wide.png",
+      "sizes": "1280x720",
+      "form_factor": "wide",
+      "status": 200,
+      "contentType": "image/png"
+    },
+    {
+      "src": "/icons/screenshot-mobile.png",
+      "sizes": "720x1280",
+      "form_factor": "narrow",
+      "status": 200,
+      "contentType": "image/png"
+    }
+  ]
+}
