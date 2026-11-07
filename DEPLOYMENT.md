@@ -191,7 +191,32 @@ The following indexes are already created in migrations for optimal query perfor
 - `idx_workflow_steps_agent` on `workflow_steps(assigned_agent_id)`
 - `idx_ai_usage_org` on `ai_usage_logs(org_id, created_at)`
 - `idx_ai_usage_agent` on `ai_usage_logs(agent_id)`
+- `idx_web_vitals_name_created` on `web_vitals(metric_name, created_at DESC)`
+- `idx_web_vitals_route_template` on `web_vitals(route_template)`
 - HNSW index on `memory_embeddings` using cosine similarity (`vector_cosine_ops`)
+
+### Database Migration Numbering & Lineage
+> **ملاحظة توثيقية حول ترقيم ملفات الهجرة (Migration Numbering):**
+> الأرقام **008** و **009** متخطاة بقصد — حيث كانت مراحل **Milestone 8** و **Milestone 9** تركز على اختبارات الـ E2E الشاملة وواجهة المكتب الافتراضي (Virtual Office UI) التي اعتمدت على الجداول القائمة دون الحاجة إلى إنشاء جداول قاعدة بيانات جديدة. الأرقام محفوظة ومسجلة في تاريخ المشروع منعاً للالتباس.
+
+#### جدول ملفات الهجرة المطبقة فعلياً في Supabase (`schema_migrations`):
+
+| # | اسم ملف الهجرة (Migration Script) | الغرض والمعمارية (Scope & Architecture) | تاريخ التطبيق الفعلي (`applied_at` UTC) | الحالة |
+|:---:|:---|:---|:---:|:---:|
+| 1 | `001_initial_schema.sql` | جداول المنظمة والمستخدمين ومصادقة الـ Auth | `2026-11-06 22:21:10 UTC` | ✅ Applied |
+| 2 | `002_clients_and_projects.sql` | إدارة العملاء والمشاريع والخدمات | `2026-11-06 22:21:11 UTC` | ✅ Applied |
+| 3 | `003_tasks.sql` | طابور المهام وتعيين الوكلاء والأحداث | `2026-11-06 22:21:11 UTC` | ✅ Applied |
+| 4 | `004_deliverables.sql` | مخرجات ومستندات الذكاء الاصطناعي | `2026-11-06 22:21:12 UTC` | ✅ Applied |
+| 5 | `005_workflows.sql` | خطوط سير العمل وقوالب الأتمتة الموزعة | `2026-11-06 22:21:12 UTC` | ✅ Applied |
+| 6 | `006_memory.sql` | الذاكرة طويلة المدى وتضمينات المتجهات (pgvector) | `2026-11-06 22:21:13 UTC` | ✅ Applied |
+| 7 | `007_approvals_integrations.sql` | بوابات الموافقات والتكاملات الخارجية | `2026-11-06 22:21:14 UTC` | ✅ Applied |
+| — | *(008 Skipped)* | Milestone 8: Playwright E2E Integration Suite | — | ⚪ No Schema |
+| — | *(009 Skipped)* | Milestone 9: Virtual Office 38-Agent Interactive UI | — | ⚪ No Schema |
+| 8 | `010_analytics.sql` | مقاييس الاستخدام ومراقبة الجودة والتكاليف | `2026-11-06 22:21:37 UTC` | ✅ Applied |
+| 9 | `011_web_vitals.sql` | تخزين مؤشرات الويب الحيوية (RUM Field Telemetry) | `2026-11-07 22:51:55 UTC` | ✅ Applied |
+| 10 | `012_drop_web_vitals_pii.sql` | حذف أعمدة PII (`client_ip`, `url`) وإضافة `route_template` | `2026-11-07 23:25:27 UTC` | ✅ Applied |
+| 11 | `013_web_vitals_rls_fix.sql` | قصر صلاحيات قراءة وكتابة الـ Telemetry على `service_role` فقط | `2026-11-07 23:25:28 UTC` | ✅ Applied |
+| 12 | `014_web_vitals_retention.sql` | دالة التنظيف التلقائي للأصول الأقدم من 30 يوماً | `2026-11-07 23:25:28 UTC` | ✅ Applied |
 
 ---
 
