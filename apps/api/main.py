@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, EmailStr, Field
 import datetime
 import json
@@ -99,6 +100,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip Compression Middleware (minimum 1000 bytes)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Production Rate Limiting Middleware
 app.add_middleware(RateLimitMiddleware)
