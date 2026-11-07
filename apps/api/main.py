@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, EmailStr, Field
+import os
 import asyncio
 import datetime
 import hashlib
@@ -90,6 +91,8 @@ from database import (
     update_workflow,
     get_workflow_steps,
     get_execution_logs,
+    record_web_vital_db,
+    list_web_vitals_db,
 )
 from auth import create_jwt_token, get_current_user, require_role, require_org_member
 from middleware import RateLimitMiddleware
@@ -469,33 +472,113 @@ def health_db():
 
 
 # ── Real User Monitoring (RUM) Endpoint ──────────────────────────────────────
+MAX_TELEMETRY_BODY_SIZE = 8192  # 8KB strict maximum
+PROHIBITED_PII_KEYS = {
+    "user_id", "userid", "user", "email", "session_id", "sessionid",
+    "password", "token", "auth", "secret", "user_name", "username", "phone"
+}
+
+
 class WebVitalTelemetry(BaseModel):
-    name: str
+    name: str = Field(..., max_length=32)
     value: float
-    rating: Optional[str] = "good"
+    rating: Optional[str] = Field("good", max_length=32)
     delta: Optional[float] = 0.0
-    id: Optional[str] = None
-    navigationType: Optional[str] = None
-    url: Optional[str] = None
+    id: Optional[str] = Field(None, max_length=128)
+    navigationType: Optional[str] = Field(None, max_length=64)
+    url: Optional[str] = Field(None, max_length=1024)
     timestamp: Optional[int] = None
 
 
 @app.post("/api/telemetry/vitals")
-async def record_web_vital(metric: WebVitalTelemetry):
+async def record_web_vital(request: Request):
     """
     RUM (Real User Monitoring) telemetry ingestion endpoint.
     Collects Core Web Vitals (LCP, INP, CLS, FCP, TTFB) reported from real user sessions.
+    Strictly enforced with:
+    - 60 req/min/IP rate limit (via RateLimitMiddleware)
+    - 8KB max body size
+    - Strict PII rejection (user_id, email, session_id, etc.)
+    - CORS origin validation
+    - Structured JSON logging with trace_id correlation
+    - Supabase/PostgreSQL database persistence (web_vitals table)
     """
-    logger.info(
-        f"[RUM Telemetry] metric={metric.name} value={metric.value:.2f} "
-        f"rating={metric.rating} url={metric.url} id={metric.id}"
-    )
-    return {
-        "status": "recorded",
+    # 1. Body size verification
+    raw_body = await request.body()
+    if len(raw_body) > MAX_TELEMETRY_BODY_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Payload too large. Telemetry body must be under {MAX_TELEMETRY_BODY_SIZE} bytes."
+        )
+
+    # 2. CORS origin validation
+    origin = request.headers.get("origin")
+    if origin:
+        allowed = [o.rstrip("/") for o in settings.API_CORS_ORIGINS]
+        if origin.rstrip("/") not in allowed and not settings.DEBUG and "localhost" not in origin:
+            raise HTTPException(status_code=403, detail="Forbidden origin for telemetry ingestion.")
+
+    # 3. Parse JSON & reject any PII fields
+    try:
+        body_json = json.loads(raw_body.decode("utf-8") if raw_body else "{}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON telemetry payload.")
+
+    for k in body_json.keys():
+        if k.lower() in PROHIBITED_PII_KEYS:
+            raise HTTPException(
+                status_code=422,
+                detail=f"PII is strictly prohibited in telemetry payloads. Key '{k}' was rejected."
+            )
+
+    try:
+        metric = WebVitalTelemetry(**body_json)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Invalid web vital schema: {str(e)}")
+
+    # 4. Extract active OpenTelemetry trace context
+    span = trace.get_current_span()
+    span_ctx = span.get_span_context()
+    trace_id_hex = f"{span_ctx.trace_id:032x}" if span_ctx and span_ctx.trace_id else None
+    client_ip = request.client.host if request.client else "unknown"
+
+    # 5. Structured JSON logging with trace correlation
+    log_payload = {
+        "event": "rum_vital_recorded",
         "metric": metric.name,
         "value": metric.value,
         "rating": metric.rating,
+        "url": metric.url,
+        "trace_id": trace_id_hex,
+        "client_ip": client_ip,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
+    logger.info(json.dumps(log_payload))
+
+    # 6. Database persistence (Supabase PostgreSQL web_vitals table)
+    vital_dict = metric.model_dump()
+    vital_dict["client_ip"] = client_ip
+    vital_dict["trace_id"] = trace_id_hex
+    saved_record = record_web_vital_db(vital_dict)
+
+    return {
+        "status": "recorded",
+        "id": saved_record["id"],
+        "metric": metric.name,
+        "value": metric.value,
+        "rating": metric.rating,
+        "trace_id": trace_id_hex,
+    }
+
+
+@app.get("/api/telemetry/vitals")
+def get_web_vitals(
+    limit: int = Query(50, ge=1, le=200),
+    user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
+):
+    """Admin endpoint to retrieve persisted RUM field telemetry."""
+    vitals = list_web_vitals_db(limit=limit)
+    return {"total": len(vitals), "vitals": vitals}
 
 
 @app.on_event("shutdown")

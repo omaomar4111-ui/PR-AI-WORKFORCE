@@ -164,6 +164,7 @@ INTEGRATIONS_DB: Dict[str, Dict[str, Any]] = {}
 AI_USAGE_LOGS_DB: Dict[str, Dict[str, Any]] = {}
 QUALITY_SCORES_DB: Dict[str, Dict[str, Any]] = {}
 SYSTEM_METRICS_DB: Dict[str, Dict[str, Any]] = {}
+WEB_VITALS_DB: Dict[str, Dict[str, Any]] = {}
 
 # Status to Progress mapping per Milestone 3 requirements
 STATUS_PROGRESS: Dict[str, int] = {
@@ -198,6 +199,7 @@ def reset_db_for_tests():
     AI_USAGE_LOGS_DB.clear()
     QUALITY_SCORES_DB.clear()
     SYSTEM_METRICS_DB.clear()
+    WEB_VITALS_DB.clear()
     try:
         from middleware.rate_limit import reset_rate_limits
         reset_rate_limits()
@@ -1421,6 +1423,61 @@ def create_system_metric(metric_name: str, metric_value: float) -> Dict[str, Any
     }
     SYSTEM_METRICS_DB[mid] = record
     return record
+
+
+# ── RUM Telemetry Persistence (011_web_vitals) ──────────────────────────────
+def record_web_vital_db(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Persists a Core Web Vital measurement in DB / memory."""
+    vital_id = str(uuid.uuid4())
+    record = {
+        "id": vital_id,
+        "metric_name": data["name"],
+        "metric_value": float(data["value"]),
+        "rating": data.get("rating", "good"),
+        "delta": float(data.get("delta", 0.0)),
+        "metric_id": data.get("id"),
+        "navigation_type": data.get("navigationType"),
+        "url": data.get("url"),
+        "client_ip": data.get("client_ip"),
+        "trace_id": data.get("trace_id"),
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    WEB_VITALS_DB[vital_id] = record
+
+    if engine:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO web_vitals (id, metric_name, metric_value, rating, delta, metric_id, navigation_type, url, client_ip, trace_id, created_at)
+                        VALUES (:id, :metric_name, :metric_value, :rating, :delta, :metric_id, :navigation_type, :url, :client_ip, :trace_id, :created_at)
+                    """),
+                    record
+                )
+        except Exception:
+            pass
+
+    return record
+
+
+def list_web_vitals_db(limit: int = 50) -> List[Dict[str, Any]]:
+    """Returns recently recorded web vitals."""
+    if engine:
+        try:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                res = conn.execute(
+                    text("SELECT id, metric_name, metric_value, rating, delta, metric_id, navigation_type, url, client_ip, trace_id, created_at FROM web_vitals ORDER BY created_at DESC LIMIT :limit"),
+                    {"limit": limit}
+                ).mappings().all()
+                return [dict(row) for row in res]
+        except Exception:
+            pass
+
+    items = list(WEB_VITALS_DB.values())
+    items.sort(key=lambda x: x["created_at"], reverse=True)
+    return items[:limit]
 
 
 
