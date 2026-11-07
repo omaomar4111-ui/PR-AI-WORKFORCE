@@ -414,25 +414,49 @@ export default function VirtualOfficePage() {
     }
   };
 
-  // Quick Manual Status Simulation (For Demo & Testing)
+  // Quick Manual Status Simulation (For Demo & Testing) with Optimistic UI & Rollback
   const handleSimulateStatus = async (
     agentId: string,
     targetStatus: "idle" | "working" | "blocked"
   ) => {
-    try {
-      const taskDescription =
-        targetStatus === "working"
-          ? "Live real-time operational simulation task"
-          : targetStatus === "blocked"
-          ? "Awaiting human review & approval sign-off"
-          : undefined;
+    const previousStatus = statuses[agentId];
+    const taskDescription =
+      targetStatus === "working"
+        ? "Live real-time operational simulation task"
+        : targetStatus === "blocked"
+        ? "Awaiting human review & approval sign-off"
+        : undefined;
 
+    // 1. Optimistic Update: immediately update UI state with zero perceived latency (< 16ms)
+    setStatuses((prev) => {
+      const current = prev[agentId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [agentId]: {
+          ...current,
+          status: targetStatus,
+          current_task: taskDescription,
+          updated_at: new Date().toISOString(),
+        },
+      };
+    });
+
+    // 2. Perform background network update with rollback on failure
+    try {
       await updateAgentStatus(agentId, {
         status: targetStatus,
         current_task: taskDescription,
       });
     } catch (err: any) {
-      console.error("Failed to update status manually:", err);
+      console.error("Failed to update status manually (rolling back):", err);
+      // Rollback to previous status snapshot
+      if (previousStatus) {
+        setStatuses((prev) => ({
+          ...prev,
+          [agentId]: previousStatus,
+        }));
+      }
     }
   };
 

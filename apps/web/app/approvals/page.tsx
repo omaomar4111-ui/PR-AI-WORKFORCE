@@ -95,11 +95,29 @@ export default function ApprovalsPage() {
 
   const handleApprove = async (id: string) => {
     setActionLoadingId(id);
+    const previousApprovals = [...approvals];
+
+    // Optimistic UI update: instantly reflect approved state with zero perceived latency
+    setApprovals((prev) =>
+      prev.map((appr) =>
+        appr.id === id
+          ? {
+              ...appr,
+              status: "approved",
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: "Current User (Optimistic)",
+            }
+          : appr
+      )
+    );
+
     try {
       await approveRequest(id);
       await loadApprovals();
     } catch (err: any) {
-      alert(err.message || "Approval failed");
+      // Rollback to snapshot on failure
+      setApprovals(previousApprovals);
+      alert(err.message || "Approval failed. Reverting changes.");
     } finally {
       setActionLoadingId(null);
     }
@@ -108,11 +126,30 @@ export default function ApprovalsPage() {
   const handleReject = async (id: string) => {
     const reason = prompt(t("approvals.notes_placeholder")) || "Rejected by user";
     setActionLoadingId(id);
+    const previousApprovals = [...approvals];
+
+    // Optimistic UI update: instantly reflect rejected state
+    setApprovals((prev) =>
+      prev.map((appr) =>
+        appr.id === id
+          ? {
+              ...appr,
+              status: "rejected",
+              notes: reason,
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: "Current User (Optimistic)",
+            }
+          : appr
+      )
+    );
+
     try {
       await rejectRequest(id, reason);
       await loadApprovals();
     } catch (err: any) {
-      alert(err.message || "Rejection failed");
+      // Rollback to snapshot on failure
+      setApprovals(previousApprovals);
+      alert(err.message || "Rejection failed. Reverting changes.");
     } finally {
       setActionLoadingId(null);
     }
@@ -129,14 +166,36 @@ export default function ApprovalsPage() {
     if (!editingApproval) return;
     try {
       const parsed = JSON.parse(editPayloadJson);
-      setActionLoadingId(editingApproval.id);
-      await editAndApproveRequest(editingApproval.id, parsed, editNotes);
+      const targetId = editingApproval.id;
+      const previousApprovals = [...approvals];
+
+      // Optimistic UI update
+      setApprovals((prev) =>
+        prev.map((appr) =>
+          appr.id === targetId
+            ? {
+                ...appr,
+                status: "approved",
+                payload: parsed,
+                notes: editNotes,
+                reviewed_at: new Date().toISOString(),
+                reviewed_by: "Current User (Optimistic)",
+              }
+            : appr
+        )
+      );
       setEditingApproval(null);
-      await loadApprovals();
+
+      try {
+        await editAndApproveRequest(targetId, parsed, editNotes);
+        await loadApprovals();
+      } catch (err: any) {
+        // Rollback on failure
+        setApprovals(previousApprovals);
+        alert(err.message || "Save & Approve failed. Reverting changes.");
+      }
     } catch (err: any) {
       setJsonError("Invalid JSON: " + err.message);
-    } finally {
-      setActionLoadingId(null);
     }
   };
 
