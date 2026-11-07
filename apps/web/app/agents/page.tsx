@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   Bot,
   Brain,
@@ -149,6 +150,7 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDept, setSelectedDept] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Execution Modal state
   const [activeAgent, setActiveAgent] = useState<Agent | null>(null);
@@ -239,8 +241,8 @@ export default function AgentsPage() {
   const filteredAgents = agents.filter((a) => {
     const matchesDept = selectedDept === "all" || a.department === selectedDept;
     if (!matchesDept) return false;
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
+    if (!debouncedSearch.trim()) return true;
+    const q = debouncedSearch.toLowerCase().trim();
     return (
       a.name.toLowerCase().includes(q) ||
       (a.name_ar && a.name_ar.toLowerCase().includes(q)) ||

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   CheckSquare,
   LayoutGrid,
@@ -63,6 +64,7 @@ export default function TasksPage() {
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedPriority, setSelectedPriority] = useState("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   // WebSocket Live Sync State
   const [wsConnected, setWsConnected] = useState(false);
@@ -268,8 +270,8 @@ export default function TasksPage() {
   };
 
   const filteredTasks = tasks.filter((task) => {
-    if (search) {
-      const term = search.toLowerCase();
+    if (debouncedSearch) {
+      const term = debouncedSearch.toLowerCase();
       const matchTitle = task.title.toLowerCase().includes(term);
       const matchProject = task.project_name?.toLowerCase().includes(term);
       if (!matchTitle && !matchProject) return false;

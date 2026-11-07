@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   Sparkles,
   FileCode,
@@ -42,6 +43,7 @@ export default function DeliverablesPage() {
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   // Filters
   const [clients, setClients] = useState<Client[]>([]);
@@ -141,8 +143,8 @@ export default function DeliverablesPage() {
   };
 
   const filtered = deliverables.filter((d) => {
-    if (!search) return true;
-    const term = search.toLowerCase();
+    if (!debouncedSearch) return true;
+    const term = debouncedSearch.toLowerCase();
     return (
       d.title.toLowerCase().includes(term) ||
       d.agent_name.toLowerCase().includes(term) ||
