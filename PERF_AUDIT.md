@@ -12,7 +12,7 @@
 | # | المعيار (Standard) | الحالة (Status) | Evidence (الدليل الميداني) | Impact (1-5) | Effort (1-5) | Priority Score | Priority | Notes & Recommendations |
 |---|-------------------|----------------|---------------------------|:------------:|:------------:|:--------------:|:--------:|-------------------------|
 | 1 | **Skeleton Loading** | ⚠️ | `animate-pulse` present on 8 pages (`agents`, `tasks`, `workflows`); 5 pages (`analytics`, `clients`, `deliverables`, `memory`, `projects`) fallback to generic text/spinners. | 4 | 2 | 16 | **High** | Replace generic spinners on 5 data tables with responsive CSS skeleton placeholder cards. |
-| 2 | **WebP / AVIF** | ❌ | `next.config.js` lacks `images.formats: ['image/avif', 'image/webp']`; `apps/web/public/` is empty; avatars render SVG/Lucide directly. | 3 | 1 | 15 | **Med** | Enable AVIF/WebP in `next.config.js` and enforce format optimization on client-uploaded brand logos. |
+| 2 | **WebP / AVIF** | N/A | public/ فاضي والأفاتار SVG؛ تتفعل لما يبقى فيه صور فعلية. | 3 | 1 | 15 | **Med** | Enable AVIF/WebP in next.config.js when uploaded brand image assets are added. |
 | 3 | **Duplicate API Calls** | ⚠️ | `AppShell.tsx` and `dashboard/page.tsx` both execute separate `fetchMe()` calls independently on initial load; `lib/api.ts` lacks request deduplication. | 4 | 2 | 16 | **High** | Add an in-memory request-promise deduplicator and lightweight TTL cache in `lib/api.ts` for GET requests. |
 | 4 | **Debounce** | ❌ | Codebase scan confirms 0 debounce usages across `apps/web`; search inputs in `agents`, `deliverables`, and `memory` filter on every keystroke. | 4 | 1 | 20 | **High** | Implement a lightweight `useDebounce` hook (300ms) on all search and filter inputs across the 4 main listing pages. |
 | 5 | **Pagination** | ⚠️ | Hardcoded `LIMIT 50` in specific queries; backend endpoints (`/api/tasks`, `/api/deliverables`, `/api/workflows`) lack `skip`/`limit` query parameters. | 4 | 3 | 12 | **Med** | Implement standard cursor/limit-offset pagination on heavy endpoints and add pagination controls in tables. |
@@ -20,7 +20,7 @@
 | 7 | **Background Job Queue** | ⚠️ | FastAPI `BackgroundTasks` executes workflows in-process (`main.py:1082`); distributed Redis task queue (ARQ / Celery) is not yet attached. | 4 | 3 | 12 | **Med** | Transition long-running AI workflow steps to an asynchronous Redis worker queue in Phase 2. |
 | 8 | **N+1 Queries** | ✅ | `apps/api/database.py` contains 0 loop-nested database queries; relations are joined or resolved via batch lookups. | 4 | 3 | 12 | **Med** | Architecture is clean. Maintain relational JOIN and batch fetching policies. |
 | 9 | **Brotli / Gzip** | ❌ | `apps/api/main.py` lacks `GZipMiddleware`; large JSON payloads (38 agent profiles, deliverables, usage logs > 100KB) are returned uncompressed. | 5 | 1 | 25 | **High** | Add `fastapi.middleware.gzip.GZipMiddleware(minimum_size=1000)` to compress API responses by 60–80%. |
-| 10 | **Redis Caching** | ❌ | Upstash Redis awaiting Phase 2 provisioning; currently operating with local in-memory dictionaries. | 5 | 2 | 20 | **High** | Provision Upstash Redis in Phase 2; cache static 38-agent registry, department stats, and daily analytics with 60s TTL. |
+| 10 | **Redis Caching** | ❌ | Upstash Redis awaiting Phase 2 provisioning; currently operating with local in-memory dictionaries. | 5 | 2 | 20 | **High** | Phase 2 — يحتاج Upstash provisioning أولاً; cache static 38-agent registry & dashboard stats with 60s TTL. |
 | 11 | **Unused Dependencies** | ✅ | `apps/web/package.json` contains only 6 lean production dependencies; `apps/api/requirements.txt` contains zero unneeded packages. | 3 | 1 | 15 | **Med** | Keep package manifests strictly audited to avoid bundle inflation. |
 | 12 | **API Timeouts** | ⚠️ | Backend LLM adapter sets `timeout=60`; frontend `lib/api.ts` uses raw `fetch()` with NO `AbortSignal.timeout()`, risking hanging requests. | 4 | 1 | 20 | **High** | Wrap `fetch()` in `lib/api.ts` with `AbortSignal.timeout(12000)` to fail gracefully with structured user alerts. |
 | 13 | **AI Streaming** | ⚠️ | WebSocket channel (`/ws/workflows/{id}`) notifies completed steps; token-by-token SSE streaming for agent output generation is not enabled. | 4 | 4 | 8 | **Low** | Consider Server-Sent Events (SSE) for real-time prompt generation in agent consoles. |
@@ -42,6 +42,7 @@
 | 29 | **Font Optimization** | ❌ | `app/layout.tsx` loads `Cairo` and `Inter` via external `<link rel="stylesheet">` from `fonts.googleapis.com`, causing render-blocking network requests. | 4 | 1 | 20 | **High** | Migrate to `next/font/google` (`Cairo`, `Inter`) for zero-overhead local font self-hosting and automatic preloading. |
 | 30 | **Real User Monitoring (RUM)** | ❌ | No RUM SDK or Web Vitals reporter (`@vercel/speed-insights`) configured in `apps/web`. | 3 | 2 | 12 | **Med** | Add `@vercel/speed-insights` to monitor field Core Web Vitals on live production traffic. |
 | 31 | **Performance Testing** | ❌ | No automated Lighthouse CI or k6 load test gate configured in `.github/workflows/ci_cd.yml`. | 3 | 2 | 12 | **Med** | Add a performance regression check in the GitHub Actions pipeline. |
+| 32 | **Home Page Load Anomaly** | ❌ | FCP 3,132ms / LCP 3,344ms — 25-40x أبطأ من باقي الصفحات بسبب redirect + client-side session check. | 5 | 2 | 20 | **CRITICAL** | تشخيص عميق وإصلاح الـ redirect والـ session check لخفض LCP إلى < 800ms. |
 
 ---
 
@@ -49,16 +50,19 @@
 
 | Rank | # | Standard | Status | Score | Action Summary |
 |:----:|:---:|:---------|:------:|:-----:|:---------------|
-| **1** | **9** | **Brotli / Gzip** | ❌ | **25** | Add `GZipMiddleware(minimum_size=1000)` to `apps/api/main.py`. Instant 65%+ response size drop. |
-| **2** | **4** | **Debounce** | ❌ | **20** | Add `useDebounce` (300ms) to search inputs in `agents`, `deliverables`, `memory`, and `tasks`. |
+| **1** | **32**| **Home `/` Load Anomaly**| ❌ | **CRITICAL** | Diagnose and fix 3.3s LCP bottleneck (server-side redirect / session check) to < 800ms. |
+| **2** | **9** | **Brotli / Gzip** | ❌ | **25** | Add `GZipMiddleware(minimum_size=1000)` to `apps/api/main.py`. Instant 65%+ response size drop. |
 | **3** | **12** | **API Timeouts** | ⚠️ | **20** | Wrap all `fetch()` calls in `apps/web/lib/api.ts` with `AbortSignal.timeout(12000)`. |
 | **4** | **29** | **Font Optimization** | ❌ | **20** | Replace Google Fonts CDN `<link>` in `app/layout.tsx` with native `next/font/google`. |
-| **5** | **10** | **Redis Caching** | ❌ | **20** | Connect Upstash Redis in Phase 2; cache 38-agent registry & dashboard stats with 60s TTL. |
-| **6** | **19** | **Server/DB Proximity**| ⚠️ | **20** | Co-locate Railway & Upstash in `eu-west-1` (same AWS region as Supabase). |
-| **7** | **1** | **Skeleton Loading** | ⚠️ | **16** | Add animated skeleton loaders to `analytics`, `clients`, `deliverables`, `memory`, `projects`. |
+| **5** | **4** | **Debounce** | ❌ | **20** | Add `useDebounce` (300ms) to search inputs in `agents`, `deliverables`, `memory`, and `tasks`. |
+| **6** | **1** | **Skeleton Loading** | ⚠️ | **16** | Add animated skeleton loaders to `analytics`, `clients`, `deliverables`, `memory`, `projects`. |
+| **7** | **16** | **Parallel Requests** | ⚠️ | **16** | Convert sequential fetches in `dashboard/page.tsx` and `AppShell.tsx` to `Promise.all`. |
 | **8** | **3** | **Duplicate API Calls** | ⚠️ | **16** | Implement in-memory request-promise deduplication in `apps/web/lib/api.ts`. |
 | **9** | **15** | **Lazy Loading** | ❌ | **16** | Code-split heavy modals and SVG charts using `next/dynamic({ ssr: false })`. |
-| **10**| **16** | **Parallel Requests** | ⚠️ | **16** | Convert sequential fetches in `dashboard/page.tsx` and `AppShell.tsx` to `Promise.all`. |
+| **10**| **26** | **React.memo** | ⚠️ | **16** | Memoize `AgentCard` and `AvatarNode` components with `React.memo` and `useCallback`. |
+| — | 10 | Redis Caching | ❌ | 20 | **Phase 2 Scope:** Requires Upstash provisioning first. |
+| — | 19 | Server/DB Proximity | ⚠️ | 20 | **Infra Scope:** Co-locate Railway & Upstash in `eu-west-1`. |
+| — | 2 | WebP / AVIF | N/A | 15 | **Deferred:** `public/` is empty and avatars are SVG. |
 
 ---
 
