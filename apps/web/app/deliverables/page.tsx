@@ -260,8 +260,24 @@ export default function DeliverablesPage() {
 
       {/* Deliverables Table */}
       {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8b5cf6] border-t-transparent" />
+        <div className="overflow-hidden rounded-2xl border border-gray-800 bg-[#12141e] shadow-xl">
+          <div className="p-4 border-b border-gray-800/60 bg-[#161824] flex items-center justify-between">
+            <div className="h-4 w-32 bg-gray-800 rounded animate-pulse" />
+            <div className="h-4 w-20 bg-gray-800 rounded animate-pulse" />
+          </div>
+          <div className="divide-y divide-gray-800/60 p-2 space-y-2">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="flex items-center justify-between px-4 py-3 animate-pulse">
+                <div className="space-y-1.5 flex-1 max-w-sm">
+                  <div className="h-4 w-48 bg-gray-800 rounded" />
+                  <div className="h-3 w-28 bg-gray-800/60 rounded" />
+                </div>
+                <div className="h-4 w-20 bg-gray-800 rounded hidden sm:block" />
+                <div className="h-4 w-24 bg-gray-800 rounded hidden md:block" />
+                <div className="h-6 w-12 bg-emerald-500/10 rounded-full" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-800 bg-[#12141e]/50 p-12 text-center">

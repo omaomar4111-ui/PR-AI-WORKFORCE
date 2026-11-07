@@ -330,8 +330,29 @@ export default function MemoryPage() {
 
         {/* Memories Grid */}
         {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8b5cf6] border-t-transparent" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col justify-between rounded-2xl border border-gray-800 bg-[#13151f] p-5 shadow-lg h-48 animate-pulse"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="h-5 w-24 bg-gray-800 rounded-full" />
+                    <div className="h-4 w-16 bg-gray-800 rounded" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3.5 w-full bg-gray-800 rounded" />
+                    <div className="h-3.5 w-4/5 bg-gray-800 rounded" />
+                    <div className="h-3.5 w-2/3 bg-gray-800/60 rounded" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-800/60">
+                  <div className="h-3 w-20 bg-gray-800/60 rounded" />
+                  <div className="h-4 w-4 bg-gray-800 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : memories.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-800 bg-[#13151f]/50 p-12 text-center">

@@ -181,14 +181,18 @@ export default function ClientsPage() {
             </thead>
             <tbody className="divide-y divide-gray-800/60">
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-400">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#8b5cf6] border-t-transparent" />
-                      <span>Loading clients...</span>
-                    </div>
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="px-5 py-4">
+                      <div className="h-4 w-32 bg-gray-800 rounded mb-1.5" />
+                      <div className="h-3 w-20 bg-gray-800/60 rounded" />
+                    </td>
+                    <td className="px-5 py-4"><div className="h-4 w-24 bg-gray-800 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-28 bg-gray-800 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-20 bg-gray-800 rounded" /></td>
+                    <td className="px-5 py-4 text-right"><div className="h-4 w-12 bg-gray-800 rounded ml-auto" /></td>
+                  </tr>
+                ))
               ) : clients.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center">

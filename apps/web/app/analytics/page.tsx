@@ -231,6 +231,24 @@ export default function AnalyticsPage() {
 
         {/* 4 Top KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 backdrop-blur h-32 animate-pulse flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="h-3 w-20 bg-slate-800 rounded" />
+                  <div className="h-8 w-8 bg-slate-800/80 rounded-lg" />
+                </div>
+                <div>
+                  <div className="h-6 w-28 bg-slate-800 rounded mb-1.5" />
+                  <div className="h-3 w-36 bg-slate-800/60 rounded" />
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
           {/* Total Tokens */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 backdrop-blur shadow-sm relative overflow-hidden group hover:border-cyan-500/40 transition-colors">
             <div className="flex items-center justify-between">
@@ -321,6 +339,8 @@ export default function AnalyticsPage() {
               <span className="text-purple-400 font-mono">Parallel Async</span>
             </div>
           </div>
+            </>
+          )}
         </div>
 
         {/* Charts Grid */}
