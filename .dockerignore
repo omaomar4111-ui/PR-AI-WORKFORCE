@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# Dependencies & Virtualenvs
+node_modules
+.venv
+venv
+ENV/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Next.js Build Outputs & Caches
+.next
+out/
+build/
+dist/
+
+# Environment files and Secrets (NEVER bake secrets into images)
+.env*
+NEW_SECRETS*
+*.pem
+*.key
+
+# Backups & Local Artifacts
+backups/
+*.dump
+*.sha256
+.lighthouseci/
+scratch/
+.system_generated/
+*.log
