@@ -71,7 +71,7 @@ def prune_old_backups(backup_dir: Path, retention_days: int = 7) -> int:
     cutoff = now - (retention_days * 86400)
     pruned_count = 0
 
-    for file_path in backup_dir.glob("supabase_backup_*"):
+    for file_path in backup_dir.glob("db_*"):
         if file_path.is_file():
             if file_path.stat().st_mtime < cutoff:
                 try:
@@ -204,13 +204,12 @@ def main():
     print(f"  Backup Tool     : {'Native pg_dump CLI' if has_pg_dump else 'Python Database Dumper (fallback)'}")
     print("-" * 75)
 
+    archive_name = f"db_{timestamp}.dump.gz"
+    output_path = backup_dir / archive_name
+
     if has_pg_dump:
-        archive_name = f"supabase_backup_{timestamp}.dump"
-        output_path = backup_dir / archive_name
         success = dump_with_pg_dump(db_url, output_path)
     else:
-        archive_name = f"supabase_backup_{timestamp}.json.gz"
-        output_path = backup_dir / archive_name
         success = dump_with_python_fallback(db_url, output_path)
 
     if not success:

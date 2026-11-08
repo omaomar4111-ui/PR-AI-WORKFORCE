@@ -54,5 +54,7 @@ apps/api/storage/deliverables/*.json
 !apps/api/storage/deliverables/.gitkeep
 
 # Database Backups & Dumps
+backups/*.dump.gz
+backups/*.sha256
 backups/*
 !backups/.gitkeep
