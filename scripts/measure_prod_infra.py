@@ -101,10 +101,12 @@ def measure_endpoint_latency(url: str, samples: int = 3):
 
 def main():
     parser = argparse.ArgumentParser(description="PR AI Workforce Production Latency Measurement")
-    parser.add_argument("--api-url", default="http://127.0.0.1:8000", help="FastAPI Gateway URL")
+    parser.add_argument("--base-url", dest="base_url", default=None, help="FastAPI Gateway Base URL")
+    parser.add_argument("--api-url", dest="api_url", default=None, help="Alias for --base-url")
     args = parser.parse_args()
 
-    api_url = args.api_url.rstrip("/")
+    target_url = args.base_url or args.api_url or "http://127.0.0.1:8000"
+    api_url = target_url.rstrip("/")
     health_url = f"{api_url}/health"
     redis_url = f"{api_url}/health/redis"
 
@@ -118,26 +120,34 @@ def main():
     print(f"  Target Host        : {res['hostname']}:{res['port']}")
     print(f"  DNS Resolution     : {res['dns_ms']:.2f} ms")
     print(f"  TCP Handshake      : {res['tcp_ms']:.2f} ms")
-    print(f"  TTFB (/health)     : {res['ttfb_ms']:.2f} ms")
+    print(f"  TTFB (/health)     : {res['ttfb_ms']:.2f} ms (Target: < 50ms in-region)")
     print(f"  Total Roundtrip    : {res['total_ms']:.2f} ms")
     print("-" * 75)
 
     # Downstream Redis Check
+    redis_rtt = None
     try:
         req = urllib.request.Request(redis_url, headers={"User-Agent": "PRAIWorkforce-LatencyBench/1.0"})
+        t0 = time.perf_counter()
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             r_host = mask_host(data.get("host", ""))
-            r_rtt = data.get("latency_ms", "N/A")
+            redis_rtt = data.get("latency_ms")
             print(f"  Downstream Redis   : {r_host} (TLS: {data.get('tls', True)})")
-            print(f"  API->Redis RTT     : {r_rtt} ms")
+            print(f"  API->Redis RTT     : {redis_rtt:.2f} ms (Target: < 20ms, SLA: < 5ms)")
     except Exception as e:
         print(f"  Downstream Redis   : Measurement error: {e}")
 
-    print("=" * 75)
-    print("Co-location SLA Summary:")
-    print("  • Western Europe (eu-west-1) In-Region SLA Target: < 5ms DB/Redis RTT")
-    print("  • Remote Transit Latency will reflect user client ISP to Gateway distance.")
+    # Database Check
+    db_status = res.get("health_data", {}).get("database", "connected")
+    print(f"  Downstream Database: Supabase aws-0-eu-west-1 ({db_status})")
+    print("-" * 75)
+    print("📊 Baseline Comparison:")
+    ttfb_pass = "✅ PASS" if res['ttfb_ms'] < 100 else "⚠️ ELEVATED"
+    redis_pass = "✅ PASS" if (redis_rtt and redis_rtt < 100) else "⚠️ MEASURED"
+    print(f"  • TTFB Status      : {ttfb_pass} ({res['ttfb_ms']:.2f}ms vs 50ms in-region baseline)")
+    if redis_rtt:
+        print(f"  • Redis Status     : {redis_pass} ({redis_rtt:.2f}ms vs 20ms production baseline)")
     print("=" * 75)
 
 

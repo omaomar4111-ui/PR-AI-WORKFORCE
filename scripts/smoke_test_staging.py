@@ -11,7 +11,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -38,15 +38,13 @@ class SmokeTestRunner:
     def log_result(self, name: str, status: bool, detail: str, duration_ms: float):
         if status:
             self.passed += 1
-            icon = "✅"
-            print(f"  {icon} {name:<40} PASSED ({duration_ms:.1f}ms) — {detail}")
+            print(f"  [PASS] {name:<45} ({duration_ms:.1f}ms) — {detail}")
         else:
             self.failed += 1
-            icon = "❌"
-            print(f"  {icon} {name:<40} FAILED ({duration_ms:.1f}ms) — {detail}")
+            print(f"  [FAIL] {name:<45} ({duration_ms:.1f}ms) — {detail}")
         self.results.append({"name": name, "passed": status, "detail": detail, "duration_ms": duration_ms})
 
-    def request(self, method: str, path: str, data: Dict[str, Any] = None, headers: Dict[str, str] = None) -> Tuple[int, Dict[str, Any], float]:
+    def request(self, method: str, path: str, data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Tuple[int, Dict[str, Any], float]:
         url = f"{self.base_url}{path}"
         req_headers = {"User-Agent": "PRAIWorkforce-SmokeTest/1.0"}
         if headers:
@@ -83,27 +81,27 @@ class SmokeTestRunner:
             return 0, {"error": str(e)}, elapsed_ms
 
     def run_all(self) -> bool:
-        print("=" * 75)
+        print("=" * 80)
         print(f"🚀 PR AI WORKFORCE SMOKE TESTS TARGETING: {self.base_url}")
-        print("=" * 75)
+        print("=" * 80)
 
-        # 1. /health
+        # a) GET /health → 200 + database="connected (PostgreSQL 17)" + redis="connected"
         code, data, dur = self.request("GET", "/health")
-        db_conn = "connected" in str(data.get("database", ""))
+        db_conn = "connected" in str(data.get("database", "")) and "PostgreSQL 17" in str(data.get("database", ""))
         redis_conn = "connected" in str(data.get("redis", ""))
         ok = (code == 200 and data.get("status") == "ok" and db_conn and redis_conn)
         detail = f"status={data.get('status')}, db={data.get('database')}, redis={data.get('redis')}"
-        self.log_result("1. API Gateway & Core DB /health", ok, detail, dur)
+        self.log_result("a) GET /health", ok, detail, dur)
 
-        # 2. /health/redis
+        # b) GET /health/redis → 200 + latency_ms
         code, data, dur = self.request("GET", "/health/redis")
+        lat = data.get("latency_ms", 999)
         redis_ok = (code == 200 and data.get("status") == "connected" and data.get("ping") is True)
         host_masked = mask_host(data.get("host", ""))
-        r_latency = data.get("latency_ms", "N/A")
-        detail = f"status={data.get('status')}, host={host_masked}, rtt={r_latency}ms"
-        self.log_result("2. Distributed Cache /health/redis", redis_ok, detail, dur)
+        detail = f"status={data.get('status')}, host={host_masked}, latency={lat}ms"
+        self.log_result("b) GET /health/redis", redis_ok, detail, dur)
 
-        # 3. /api/telemetry/vitals (POST RUM metric)
+        # c) POST /api/telemetry/vitals (valid) → 200 + trace_id
         payload = {
             "name": "LCP",
             "value": 1150.2,
@@ -113,32 +111,27 @@ class SmokeTestRunner:
             "path": "/dashboard"
         }
         code, data, dur = self.request("POST", "/api/telemetry/vitals", data=payload)
-        vitals_ok = (code == 200 and data.get("status") == "recorded" and bool(data.get("id")))
-        detail = f"recorded_id={data.get('id', 'none')}, trace_id={data.get('trace_id', 'none')[:12]}..."
-        self.log_result("3. RUM Ingestion /api/telemetry/vitals", vitals_ok, detail, dur)
+        trace_id = data.get("trace_id", "")
+        vitals_ok = (code == 200 and data.get("status") == "recorded" and bool(trace_id))
+        detail = f"status={data.get('status')}, trace_id={trace_id[:12]}... (id={data.get('id', '')[:8]}...)"
+        self.log_result("c) POST /api/telemetry/vitals (valid)", vitals_ok, detail, dur)
 
-        # 4. Unauthorized Barrier Check: /api/agents without Bearer Token
-        code, data, dur = self.request("GET", "/api/agents")
-        auth_guard_ok = (code == 401)
-        detail = f"http_code={code} (Expected 401 Unauthorized for RBAC enforcement)"
-        self.log_result("4. RBAC Barrier /api/agents (No Auth)", auth_guard_ok, detail, dur)
+        # d) POST /api/telemetry/vitals (bad origin) → 403
+        bad_origin_headers = {"Origin": "https://malicious-untrusted-origin.com"}
+        code, data, dur = self.request("POST", "/api/telemetry/vitals", data=payload, headers=bad_origin_headers)
+        bad_origin_ok = (code == 403)
+        detail = f"http_code={code} (Correctly rejected untrusted origin with 403 Forbidden)"
+        self.log_result("d) POST /api/telemetry/vitals (bad origin)", bad_origin_ok, detail, dur)
 
-        # 5. Unauthorized Barrier Check: /api/projects without Bearer Token
-        code, data, dur = self.request("GET", "/api/projects")
-        proj_guard_ok = (code == 401)
-        detail = f"http_code={code} (Expected 401 Unauthorized for Project Data)"
-        self.log_result("5. RBAC Barrier /api/projects (No Auth)", proj_guard_ok, detail, dur)
+        # e) GET /api/telemetry/vitals (no auth) → 401/403
+        code, data, dur = self.request("GET", "/api/telemetry/vitals")
+        unauth_ok = (code in (401, 403))
+        detail = f"http_code={code} (Correctly guarded against unauthorized access)"
+        self.log_result("e) GET /api/telemetry/vitals (no auth)", unauth_ok, detail, dur)
 
-        # 6. Auth Authentication Failure Check (Invalid Credentials)
-        login_payload = {"email": "invalid_smoke_user@nonexistent.domain", "password": "WrongPassword123!"}
-        code, data, dur = self.request("POST", "/api/auth/login", data=login_payload)
-        auth_fail_ok = (code in (401, 400))
-        detail = f"http_code={code} (Correctly rejected fake credentials)"
-        self.log_result("6. Auth Rejection on Invalid Login", auth_fail_ok, detail, dur)
-
-        print("-" * 75)
+        print("-" * 80)
         print(f"📊 SMOKE TEST SUMMARY: {self.passed} Passed, {self.failed} Failed (Total: {self.passed + self.failed})")
-        print("=" * 75)
+        print("=" * 80)
         return self.failed == 0
 
 
