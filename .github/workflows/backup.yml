@@ -1,0 +1,69 @@
+# -----------------------------------------------------------------------------
+# PR AI WORKFORCE — Automated Supabase Database Backup Workflow
+#
+# STATUS: ⏳ Pending User Action
+# REQUIRED:
+#   1. Push this repository to GitHub.
+#   2. In GitHub: Settings -> Secrets and variables -> Actions -> New repository secret.
+#   3. Name: SUPABASE_DB_URL
+#   4. Value: postgresql://postgres.[ref]:[PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres
+# -----------------------------------------------------------------------------
+
+name: Supabase Database Backup & Integrity Verification
+
+on:
+  schedule:
+    # Runs automatically every 24 hours at 02:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: 'Days to retain backups in artifacts (default: 7)'
+        required: false
+        default: '7'
+
+permissions:
+  contents: read
+
+jobs:
+  database_backup:
+    name: Supabase Backup & Integrity Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install PostgreSQL Client & Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          pip install sqlalchemy psycopg2-binary
+
+      - name: Execute Supabase Database Backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "❌ Error: Secret SUPABASE_DB_URL is not configured in GitHub Repository Secrets!"
+            echo "Please configure it following docs/ROTATION_GUIDE.md and docs/DR_RUNBOOK.md."
+            exit 1
+          fi
+          python scripts/backup_supabase.py --retention-days ${{ github.event.inputs.retention_days || '7' }}
+
+      - name: Upload Backup Archive as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-database-backup-${{ github.run_id }}
+          path: |
+            backups/*.dump
+            backups/*.json.gz
+            backups/*.sha256
+          retention-days: 7
+          if-no-files-found: error
