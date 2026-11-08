@@ -892,7 +892,7 @@ async def dashboard_stats(
 ):
     org_id = current_user.get("organization_id", "global")
     user_id = current_user.get("id", "default")
-    cache_key = f"cache:dashboard:stats:{org_id}:{user_id}"
+    cache_key = f"app:prod:dashboard:stats:{org_id}:{user_id}"
 
     cached_data = await cache_get(cache_key)
     if cached_data is not None:
@@ -942,7 +942,7 @@ async def get_agents(
     current_user: Dict[str, Any] = Depends(require_role(["owner", "admin", "member"]))
 ):
     """Returns the registry of specialized AI agents with Redis caching, Cache-Control and ETag headers."""
-    cache_key = "cache:agents:all"
+    cache_key = "app:prod:agents:all"
     cached_data = await cache_get(cache_key)
     if cached_data is not None:
         result = cached_data

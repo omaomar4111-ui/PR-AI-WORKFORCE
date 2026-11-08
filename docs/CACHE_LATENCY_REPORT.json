@@ -1,0 +1,16 @@
+{
+  "GET /api/agents": {
+    "cold_p95_ms": 1025.07,
+    "warm_p95_ms": 1967.38,
+    "cold_avg_ms": 765.92,
+    "warm_avg_ms": 951.66,
+    "improvement_pct": -91.93
+  },
+  "GET /api/dashboard/stats": {
+    "cold_p95_ms": 1010.18,
+    "warm_p95_ms": 790.43,
+    "cold_avg_ms": 691.65,
+    "warm_avg_ms": 558.98,
+    "improvement_pct": 21.75
+  }
+}

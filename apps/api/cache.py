@@ -226,12 +226,18 @@ async def invalidate_dashboard_cache(org_id: Optional[str] = None) -> int:
     or across all tenants if org_id is not specified.
     """
     if org_id:
-        count = await cache_delete_pattern(f"cache:dashboard:stats:{org_id}:*")
+        count = await cache_delete_pattern(f"app:prod:dashboard:stats:{org_id}:*")
+        count += await cache_delete_pattern("app:prod:dashboard:stats:global:*")
+        count += await cache_delete_pattern(f"cache:dashboard:stats:{org_id}:*")
         count += await cache_delete_pattern("cache:dashboard:stats:global:*")
         return count
-    return await cache_delete_pattern("cache:dashboard:stats:*")
+    count = await cache_delete_pattern("app:prod:dashboard:stats:*")
+    count += await cache_delete_pattern("cache:dashboard:stats:*")
+    return count
 
 
 async def invalidate_agents_cache() -> int:
     """Invalidate all cached agent registries and profiles."""
-    return await cache_delete_pattern("cache:agents:*")
+    count = await cache_delete_pattern("app:prod:agents:*")
+    count += await cache_delete_pattern("cache:agents:*")
+    return count
