@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import AppShell from "@/components/AppShell";
+import { useToast, ToastContainer } from "@/components/Toast";
 import { useI18n } from "@/lib/i18n";
 import {
   Agent,
@@ -34,6 +35,7 @@ const AgentExecutionModal = dynamic(
 
 export default function VirtualOfficePage() {
   const { isAr } = useI18n();
+  const { toasts, showError, showSuccess, removeToast } = useToast();
 
   // Core Data State
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -218,9 +220,13 @@ export default function VirtualOfficePage() {
             [agentId]: previousStatus,
           }));
         }
+        showError(
+          `Status Update Failed for ${agentId}`,
+          `${err?.message || "Network request failed"}. Reverted to '${previousStatus?.status || "idle"}'.`
+        );
       }
     },
-    [statuses]
+    [statuses, showError]
   );
 
   // Metric counts
@@ -327,6 +333,8 @@ export default function VirtualOfficePage() {
           }}
         />
       )}
+
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </AppShell>
   );
 }

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import AppShell from "@/components/AppShell";
+import { useToast, ToastContainer } from "@/components/Toast";
 import { useI18n } from "@/lib/i18n";
 import {
   ApprovalRequest,
@@ -31,6 +32,7 @@ import {
 
 export default function ApprovalsPage() {
   const { isAr, t } = useI18n();
+  const { toasts, showError, showSuccess, removeToast } = useToast();
 
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,10 +116,14 @@ export default function ApprovalsPage() {
     try {
       await approveRequest(id);
       await loadApprovals();
+      showSuccess("Approved", "Action approved successfully.");
     } catch (err: any) {
       // Rollback to snapshot on failure
       setApprovals(previousApprovals);
-      alert(err.message || "Approval failed. Reverting changes.");
+      showError(
+        "Approval Failed — Rolled Back",
+        err.message || "Failed to reach server. Your changes have been restored."
+      );
     } finally {
       setActionLoadingId(null);
     }
@@ -146,10 +152,14 @@ export default function ApprovalsPage() {
     try {
       await rejectRequest(id, reason);
       await loadApprovals();
+      showSuccess("Rejected", "Action rejected successfully.");
     } catch (err: any) {
       // Rollback to snapshot on failure
       setApprovals(previousApprovals);
-      alert(err.message || "Rejection failed. Reverting changes.");
+      showError(
+        "Rejection Failed — Rolled Back",
+        err.message || "Failed to reach server. Your changes have been restored."
+      );
     } finally {
       setActionLoadingId(null);
     }
@@ -189,10 +199,14 @@ export default function ApprovalsPage() {
       try {
         await editAndApproveRequest(targetId, parsed, editNotes);
         await loadApprovals();
+        showSuccess("Saved & Approved", "Payload updated and approved.");
       } catch (err: any) {
         // Rollback on failure
         setApprovals(previousApprovals);
-        alert(err.message || "Save & Approve failed. Reverting changes.");
+        showError(
+          "Update Failed — Rolled Back",
+          err.message || "Failed to save & approve. Changes were reverted."
+        );
       }
     } catch (err: any) {
       setJsonError("Invalid JSON: " + err.message);
@@ -500,6 +514,8 @@ export default function ApprovalsPage() {
           </div>
         )}
       </div>
+
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </AppShell>
   );
 }
