@@ -6,8 +6,28 @@ import time
 from typing import Optional, Dict, Any
 from config import settings
 
-def create_jwt_token(payload: Dict[str, Any], expires_in: int = 86400 * 7) -> str:
-    """Generates an HMAC-SHA256 signed JWT token."""
+def validate_password_strength(password: str) -> None:
+    """
+    Enforces strong password policy:
+    - Minimum 8 characters
+    - At least one uppercase letter (A-Z)
+    - At least one lowercase letter (a-z)
+    - At least one numeric digit (0-9)
+    """
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+    if not any(c.isupper() for c in password):
+        raise ValueError("Password must contain at least one uppercase letter")
+    if not any(c.islower() for c in password):
+        raise ValueError("Password must contain at least one lowercase letter")
+    if not any(c.isdigit() for c in password):
+        raise ValueError("Password must contain at least one numeric digit")
+
+
+def create_jwt_token(payload: Dict[str, Any], expires_in: Optional[int] = None) -> str:
+    """Generates an HMAC-SHA256 signed JWT access token (defaults to config.ACCESS_TOKEN_EXPIRE_SECONDS)."""
+    if expires_in is None:
+        expires_in = getattr(settings, "ACCESS_TOKEN_EXPIRE_SECONDS", 900)
     now = int(time.time())
     header = {"alg": "HS256", "typ": "JWT"}
     payload_copy = {**payload, "iat": now, "exp": now + expires_in}

@@ -45,7 +45,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         limit: Optional[int] = None
         category = "general"
 
-        if path.startswith("/api/auth/login"):
+        if path.startswith("/api/auth/login") or path.startswith("/api/auth/register"):
             limit = 5
             category = "auth"
         elif "/execute" in path:

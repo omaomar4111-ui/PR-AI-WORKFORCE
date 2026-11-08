@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     
     REDIS_URL: str = "redis://localhost:6379/0"
     
+    # Token Expiration Hardening
+    ACCESS_TOKEN_EXPIRE_SECONDS: int = 900  # 15 minutes
+    REFRESH_TOKEN_EXPIRE_SECONDS: int = 86400 * 7  # 7 days
+    
     # OpenTelemetry Observability Configuration
     OTEL_EXPORTER: str = "console"
     OTEL_SAMPLING_RATE: float = 1.0

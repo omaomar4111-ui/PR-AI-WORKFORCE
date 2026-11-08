@@ -94,7 +94,7 @@ from database import (
     record_web_vital_db,
     list_web_vitals_db,
 )
-from auth import create_jwt_token, get_current_user, require_role, require_org_member
+from auth import create_jwt_token, get_current_user, require_role, require_org_member, validate_password_strength
 from middleware import RateLimitMiddleware
 from agents.registry import get_agent, list_agents, get_all_agents_dict
 from memory.service import (
@@ -634,6 +634,10 @@ def login(req: LoginRequest):
 
 @app.post("/api/auth/register", response_model=AuthResponse)
 def register(req: RegisterRequest):
+    try:
+        validate_password_strength(req.password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     try:
         user = create_user(
             email=req.email,
