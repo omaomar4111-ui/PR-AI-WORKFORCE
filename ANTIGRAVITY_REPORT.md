@@ -1308,7 +1308,9 @@ Phase 5.1 + 5.2 CLOSED.
 
 ---
 
-Phase 5.1.5 → 5.5 CLOSED. Ready for manual handoff. See docs/MANUAL_HANDOFF.md for user actions. Awaiting: rotation + Railway deploy + GitHub push. Then: final smoke test + production launch.
+Phase 5.3.1 → 5.5 CLOSED. Rotation deferred to pre-launch.
+Ready for manual Railway + GitHub setup.
+See docs/MANUAL_HANDOFF.md.
 
 
 
