@@ -1308,9 +1308,50 @@ Phase 5.1 + 5.2 CLOSED.
 
 ---
 
-Phase 5.3.1 → 5.5 CLOSED. Rotation deferred to pre-launch.
-Ready for manual Railway + GitHub setup.
-See docs/MANUAL_HANDOFF.md.
+## Phase: 2.2, 2.3, 2.4 — DATA CACHING & PAGINATION CLOSURE
+## Status: ✅
+## Timestamp: 2026-11-08 09:00
+
+### 1. Goal
+إغلاق البنود المتبقية في Phase 2 (Backend & Data Layer) بالترتيب الصارم:
+- **2.2 — Cache Layer:** استخدام `redis.asyncio` وتطبيق نمط Cache-Aside على `GET /api/agents` (مفتاح: `app:prod:agents:all`, TTL: 300s) و `GET /api/dashboard/stats` (TTL: 60s) مع قياس p95 Before/After.
+- **2.3 — Invalidation Strategy:** مسح الكاش فوراً عند أي عملية إنشاء/تعديل/حذف على الـ Agents أو بيانات الـ Dashboard مع إضافة اختبار freshness يثبت التحديث الفوري وعدم بقاء بيانات قديمة لمدة 5 دقائق.
+- **2.4 — Pagination:** تطبيق skip و limit (الافتراضي 20، الأقصى 100) على `/api/tasks`، `/api/deliverables`، `/api/workflows`، `/api/memory` مع ضمان التوافق 100% مع الـ Frontend.
+
+### 2. What Changed
+1. **Cache Layer (apps/api/cache.py & apps/api/main.py):**
+   - اعتماد مفتاح `app:prod:agents:all` بـ TTL 300 ثانية مع ETag و Cache-Control.
+   - كاش إحصائيات لوحة التحكم بـ TTL 60 ثانية.
+   - تحديث دوال الإبطال `invalidate_agents_cache()` و `invalidate_dashboard_cache()` لدعم وتطهير بادئة `app:prod:*` و `cache:*`.
+   - قياس p95 Before (Cold MISS) و After (Warm HIT) وتوثيق النتائج في `docs/CACHE_LATENCY_REPORT.json`.
+2. **Freshness Invalidation Suite (apps/api/tests/test_freshness_invalidation.py):**
+   - إنشاء ملف اختبار جديد تماماً يثبت أن تعديل حالة الوكيل أو إضافة/تعديل/حذف العميل أو المشروع أو المهمة يبطل الكاش فوراً ويحدث الاستجابة فورياً بدون انتظار 5 دقائق.
+3. **Pagination & Frontend Integration (apps/api/main.py & apps/web/lib/api.ts):**
+   - تأكيد عمل المعاملات `skip` (ge=0) و `limit` (default=20, max=100) في المسارات الأربعة.
+   - تحديث دوال العميل في الـ Frontend (`fetchTasks`, `fetchDeliverables`, `fetchWorkflows`, `fetchMemories`) لدعم تمرير معاملات الـ pagination والتعامل المرن مع شكل الـ response الجديد بأمان تام (`Array.isArray(data) ? data : data.<items> || []`).
+   - إنشاء اختبارات التحقق `apps/api/tests/test_pagination_endpoints.py` (4 اختبارات).
+   - نجاح بناء الفرونت إند `npm run build` بنسبة 100% لكافة المسارات الـ 18.
+
+### 3. Numerical Measurements (Before / After Cache Latency)
+| Endpoint | Cold / MISS (p95) | Warm / HIT (p95) | Cold (Avg) | Warm (Avg) | p95 Improvement |
+|---|---|---|---|---|---|
+| **GET /api/dashboard/stats** | 1010.18 ms | 790.43 ms | 691.65 ms | 558.98 ms | **21.75% faster** |
+| **GET /api/agents (Conditional ETag)** | 972.85 ms | < 2.00 ms (304) | 775.07 ms | 1.80 ms | **> 99.7% faster** |
+
+### 4. ما تم اختباره (Tested & Verified)
+- نجاح كامل مجموعة اختبارات الـ pytest البالغة **93 اختباراً** (74 اختبار قديم دون أي تعديل نهائياً + 13 اختباراً أمنياً + 2 اختبارات freshness invalidation + 4 اختبارات pagination).
+- نجاح بناء Next.js الإنتاجي بالكامل (`npm run build`) وتوليد المسارات الـ 18 وحزمة standalone بنجاح.
+
+### 5. ما تم التحقق منه آلياً (Automated Verification)
+- التحقق من رفض أي قيمة `limit > 100` برمز الخطأ `422 Unprocessable Entity` عبر Pydantic/FastAPI validation.
+- فحص اتساق التراجع وتفريغ الكاش في Redis الحقيقي (Upstash TLS).
+
+### 6. ما لم يتم اختباره (Unchecked / Pending Manual User Action)
+- تدوير كلمات المرور الفعلية على Supabase و Upstash المؤجل لمرحلة Pre-Launch.
+
+---
+
+Phase 2.2, 2.3, 2.4 & Phase 5.3.1 → 5.5 CLOSED. Ready for manual Railway + GitHub setup. See docs/MANUAL_HANDOFF.md.
 
 
 
