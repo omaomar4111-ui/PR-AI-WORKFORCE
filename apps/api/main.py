@@ -518,7 +518,8 @@ async def record_web_vital(request: Request):
     origin = request.headers.get("origin")
     if origin:
         allowed = [o.rstrip("/") for o in settings.API_CORS_ORIGINS]
-        if origin.rstrip("/") not in allowed and not settings.DEBUG and "localhost" not in origin:
+        is_dev_localhost = settings.DEBUG and "localhost" in origin
+        if origin.rstrip("/") not in allowed and not is_dev_localhost:
             raise HTTPException(status_code=403, detail="Forbidden origin for telemetry ingestion.")
 
     # 3. Parse JSON & reject any PII fields

@@ -45,6 +45,13 @@ def create_jwt_token(payload: Dict[str, Any], expires_in: Optional[int] = None) 
     return f"{header_b64}.{payload_b64}.{sig_b64}"
 
 
+def create_refresh_token(payload: Dict[str, Any], expires_in: Optional[int] = None) -> str:
+    """Generates an HMAC-SHA256 signed JWT refresh token (defaults to config.REFRESH_TOKEN_EXPIRE_SECONDS: 7 days)."""
+    if expires_in is None:
+        expires_in = getattr(settings, "REFRESH_TOKEN_EXPIRE_SECONDS", 86400 * 7)
+    return create_jwt_token({**payload, "token_type": "refresh"}, expires_in=expires_in)
+
+
 def verify_jwt_token(token: str) -> Optional[Dict[str, Any]]:
     """Verifies JWT signature and expiry. Returns decoded claims dict if valid."""
     try:
