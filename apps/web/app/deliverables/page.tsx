@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
@@ -153,6 +154,22 @@ export default function DeliverablesPage() {
     );
   });
 
+  // Virtualization for high-volume deliverables table
+  const deliverablesContainerRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => deliverablesContainerRef.current,
+    estimateSize: () => 64,
+    overscan: 10,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const paddingBottom =
+    virtualRows.length > 0
+      ? totalSize - virtualRows[virtualRows.length - 1].end
+      : 0;
+
   return (
     <AppShell>
       {/* Header */}
@@ -289,9 +306,9 @@ export default function DeliverablesPage() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-gray-800 bg-[#12141e] shadow-xl">
-          <div className="overflow-x-auto">
+          <div ref={deliverablesContainerRef} className="max-h-[640px] overflow-auto">
             <table className="w-full text-left text-xs text-gray-300">
-              <thead className="border-b border-gray-800 bg-[#161824] uppercase text-[10px] font-bold tracking-wider text-gray-400">
+              <thead className="sticky top-0 z-10 border-b border-gray-800 bg-[#161824] uppercase text-[10px] font-bold tracking-wider text-gray-400 shadow-sm">
                 <tr>
                   <th className="px-5 py-3.5">{t("deliverables.col_title")}</th>
                   <th className="px-4 py-3.5">Version</th>
@@ -304,9 +321,17 @@ export default function DeliverablesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/60 font-medium">
-                {filtered.map((d) => (
-                  <tr
-                    key={d.id}
+                {paddingTop > 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ height: `${paddingTop}px` }} />
+                  </tr>
+                )}
+                {virtualRows.map((virtualRow) => {
+                  const d = filtered[virtualRow.index];
+                  if (!d) return null;
+                  return (
+                    <tr
+                      key={d.id}
                     data-testid="deliverable-row"
                     className="hover:bg-[#181a28] transition group cursor-pointer"
                     onClick={() => setActiveDeliverable(d)}
@@ -426,7 +451,13 @@ export default function DeliverablesPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
+                {paddingBottom > 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ height: `${paddingBottom}px` }} />
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

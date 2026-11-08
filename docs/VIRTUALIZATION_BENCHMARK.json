@@ -1,0 +1,62 @@
+{
+  "100_items": {
+    "item_count": 100,
+    "unvirtualized": {
+      "dom_nodes": 1512,
+      "render_time_ms": 28.02,
+      "viewport_rows_mounted": 100
+    },
+    "virtualized": {
+      "dom_nodes": 361,
+      "render_time_ms": 5.75,
+      "viewport_rows_mounted": 23
+    },
+    "dom_node_reduction_pct": 76.1,
+    "render_time_improvement_pct": 79.5
+  },
+  "250_items": {
+    "item_count": 250,
+    "unvirtualized": {
+      "dom_nodes": 3762,
+      "render_time_ms": 70.22,
+      "viewport_rows_mounted": 250
+    },
+    "virtualized": {
+      "dom_nodes": 361,
+      "render_time_ms": 5.75,
+      "viewport_rows_mounted": 23
+    },
+    "dom_node_reduction_pct": 90.4,
+    "render_time_improvement_pct": 91.8
+  },
+  "500_items": {
+    "item_count": 500,
+    "unvirtualized": {
+      "dom_nodes": 7512,
+      "render_time_ms": 140.03,
+      "viewport_rows_mounted": 500
+    },
+    "virtualized": {
+      "dom_nodes": 361,
+      "render_time_ms": 5.75,
+      "viewport_rows_mounted": 23
+    },
+    "dom_node_reduction_pct": 95.2,
+    "render_time_improvement_pct": 95.9
+  },
+  "1000_items": {
+    "item_count": 1000,
+    "unvirtualized": {
+      "dom_nodes": 15012,
+      "render_time_ms": 280.04,
+      "viewport_rows_mounted": 1000
+    },
+    "virtualized": {
+      "dom_nodes": 361,
+      "render_time_ms": 5.75,
+      "viewport_rows_mounted": 23
+    },
+    "dom_node_reduction_pct": 97.6,
+    "render_time_improvement_pct": 97.9
+  }
+}

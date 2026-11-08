@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
@@ -279,6 +280,22 @@ export default function TasksPage() {
     return true;
   });
 
+  // Virtualization for high-volume tasks table (windowing when >100 records)
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: filteredTasks.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const paddingBottom =
+    virtualRows.length > 0
+      ? totalSize - virtualRows[virtualRows.length - 1].end
+      : 0;
+
   return (
     <AppShell>
       {/* Page Header */}
@@ -515,12 +532,12 @@ export default function TasksPage() {
         </div>
       )}
 
-      {/* ── TABLE VIEW ─────────────────────────────────────────────────── */}
+      {/* ── TABLE VIEW (Virtualized) ─────────────────────────────────── */}
       {viewMode === "table" && (
         <div className="overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] shadow-sm">
-          <div className="overflow-x-auto">
+          <div ref={tableContainerRef} className="max-h-[640px] overflow-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-gray-800 bg-[#161824] text-[11px] uppercase tracking-wider text-gray-400">
+              <thead className="sticky top-0 z-10 border-b border-gray-800 bg-[#161824] text-[11px] uppercase tracking-wider text-gray-400 shadow-sm">
                 <tr>
                   <th className="px-5 py-3.5">{t("task_modal.title")}</th>
                   <th className="px-5 py-3.5">{t("task_modal.project")}</th>
@@ -539,60 +556,76 @@ export default function TasksPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredTasks.map((task) => (
-                    <tr
-                      key={task.id}
-                      onClick={() => openTaskDetail(task.id)}
-                      className="cursor-pointer transition hover:bg-[#181a26]"
-                    >
-                      <td className="px-5 py-3.5 font-bold text-white hover:text-[#a78bfa]">
-                        {task.title}
-                      </td>
-                      <td className="px-5 py-3.5 text-gray-300">{task.project_name}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="rounded bg-[#8b5cf6]/10 px-2 py-0.5 text-[10px] font-bold text-[#c4b5fd] uppercase">
-                          {task.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                            task.priority === "urgent"
-                              ? "text-red-400 bg-red-500/10"
-                              : task.priority === "high"
-                              ? "text-amber-400 bg-amber-500/10"
-                              : "text-gray-300 bg-gray-800"
-                          }`}
+                  <>
+                    {paddingTop > 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ height: `${paddingTop}px` }} />
+                      </tr>
+                    )}
+                    {virtualRows.map((virtualRow) => {
+                      const task = filteredTasks[virtualRow.index];
+                      if (!task) return null;
+                      return (
+                        <tr
+                          key={task.id}
+                          onClick={() => openTaskDetail(task.id)}
+                          className="cursor-pointer transition hover:bg-[#181a26]"
                         >
-                          {task.priority}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-16 rounded-full bg-gray-800 overflow-hidden">
-                            <div
-                              className="h-full bg-[#8b5cf6]"
-                              style={{ width: `${task.progress_percentage}%` }}
-                            />
-                          </div>
-                          <span className="font-mono text-[10px] text-gray-400">
-                            {task.progress_percentage}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-gray-300">
-                        {task.assigned_user_name || "—"}
-                      </td>
-                      <td className="px-5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleDeleteTask(task.id, task.title)}
-                          className="rounded-lg p-1 text-red-400 hover:bg-red-500/20"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                          <td className="px-5 py-3.5 font-bold text-white hover:text-[#a78bfa]">
+                            {task.title}
+                          </td>
+                          <td className="px-5 py-3.5 text-gray-300">{task.project_name}</td>
+                          <td className="px-5 py-3.5">
+                            <span className="rounded bg-[#8b5cf6]/10 px-2 py-0.5 text-[10px] font-bold text-[#c4b5fd] uppercase">
+                              {task.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                                task.priority === "urgent"
+                                  ? "text-red-400 bg-red-500/10"
+                                  : task.priority === "high"
+                                  ? "text-amber-400 bg-amber-500/10"
+                                  : "text-gray-300 bg-gray-800"
+                              }`}
+                            >
+                              {task.priority}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 w-16 rounded-full bg-gray-800 overflow-hidden">
+                                <div
+                                  className="h-full bg-[#8b5cf6]"
+                                  style={{ width: `${task.progress_percentage}%` }}
+                                />
+                              </div>
+                              <span className="font-mono text-[10px] text-gray-400">
+                                {task.progress_percentage}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 text-gray-300">
+                            {task.assigned_user_name || "—"}
+                          </td>
+                          <td className="px-5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => handleDeleteTask(task.id, task.title)}
+                              className="rounded-lg p-1 text-red-400 hover:bg-red-500/20"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {paddingBottom > 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ height: `${paddingBottom}px` }} />
+                      </tr>
+                    )}
+                  </>
                 )}
               </tbody>
             </table>
