@@ -582,19 +582,23 @@ export async function fetchTasks(params?: {
   status?: string;
   priority?: string;
   assigned_to?: string;
+  skip?: number;
+  limit?: number;
 }): Promise<Task[]> {
   const url = new URL(`${API_BASE_URL}/api/tasks`);
   if (params?.project_id) url.searchParams.set("project_id", params.project_id);
   if (params?.status) url.searchParams.set("status", params.status);
   if (params?.priority) url.searchParams.set("priority", params.priority);
   if (params?.assigned_to) url.searchParams.set("assigned_to", params.assigned_to);
+  if (params?.skip !== undefined) url.searchParams.set("skip", params.skip.toString());
+  if (params?.limit !== undefined) url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load tasks");
   const data = await res.json();
-  return data.tasks;
+  return Array.isArray(data) ? data : (data.tasks || []);
 }
 
 export async function fetchTask(taskId: string): Promise<Task> {
@@ -778,6 +782,8 @@ export async function fetchDeliverables(params?: {
   agent_id?: string;
   task_id?: string;
   type?: string;
+  skip?: number;
+  limit?: number;
 }): Promise<Deliverable[]> {
   const url = new URL(`${API_BASE_URL}/api/deliverables`);
   if (params?.project_id) url.searchParams.set("project_id", params.project_id);
@@ -785,13 +791,15 @@ export async function fetchDeliverables(params?: {
   if (params?.agent_id) url.searchParams.set("agent_id", params.agent_id);
   if (params?.task_id) url.searchParams.set("task_id", params.task_id);
   if (params?.type) url.searchParams.set("type", params.type);
+  if (params?.skip !== undefined) url.searchParams.set("skip", params.skip.toString());
+  if (params?.limit !== undefined) url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load deliverables");
   const data = await res.json();
-  return data.deliverables;
+  return Array.isArray(data) ? data : (data.deliverables || []);
 }
 
 export async function fetchDeliverable(deliverableId: string): Promise<Deliverable> {
@@ -833,16 +841,22 @@ export async function fetchDeliverableVersions(deliverableId: string): Promise<D
 }
 
 // ── Milestone 5: Workflows API ──────────────────────────────────────────────
-export async function fetchWorkflows(params?: { project_id?: string }): Promise<Workflow[]> {
+export async function fetchWorkflows(params?: {
+  project_id?: string;
+  skip?: number;
+  limit?: number;
+}): Promise<Workflow[]> {
   const url = new URL(`${API_BASE_URL}/api/workflows`);
   if (params?.project_id) url.searchParams.set("project_id", params.project_id);
+  if (params?.skip !== undefined) url.searchParams.set("skip", params.skip.toString());
+  if (params?.limit !== undefined) url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load workflows");
   const data = await res.json();
-  return data.workflows;
+  return Array.isArray(data) ? data : (data.workflows || []);
 }
 
 export async function fetchWorkflow(workflowId: string): Promise<Workflow> {
@@ -906,19 +920,21 @@ export async function cancelWorkflow(workflowId: string): Promise<void> {
 export async function fetchMemories(params?: {
   type?: string;
   reference_id?: string;
+  skip?: number;
   limit?: number;
 }): Promise<Memory[]> {
   const url = new URL(`${API_BASE_URL}/api/memories`);
   if (params?.type) url.searchParams.set("type", params.type);
   if (params?.reference_id) url.searchParams.set("reference_id", params.reference_id);
-  if (params?.limit) url.searchParams.set("limit", params.limit.toString());
+  if (params?.skip !== undefined) url.searchParams.set("skip", params.skip.toString());
+  if (params?.limit !== undefined) url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load memories");
   const data = await res.json();
-  return data.memories;
+  return Array.isArray(data) ? data : (data.memories || []);
 }
 
 export async function searchMemories(
