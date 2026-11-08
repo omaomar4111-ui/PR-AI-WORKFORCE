@@ -4,7 +4,16 @@ This guide explains how to deploy the **PR AI WORKFORCE** platform on [Railway](
 
 ---
 
-## 🏗️ 1. Architecture Overview on Railway
+## 📋 1. Prerequisites
+Before beginning the Railway deployment, ensure you have:
+1. An active account on [Railway](https://railway.app).
+2. The GitHub repository `PR-AI-WORKFORCE` created and pushed as a private repository.
+3. Access to your Supabase PostgreSQL connection string and Upstash Redis URL.
+4. Cryptographic secrets (`APP_SECRET`, `JWT_SECRET`) from `.env.production`.
+
+---
+
+## 🏗️ 2. Architecture Overview on Railway
 
 The application is deployed as **two independent containerized services** connected within a single Railway project:
 
