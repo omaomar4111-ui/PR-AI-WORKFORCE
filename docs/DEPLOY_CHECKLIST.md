@@ -4,6 +4,21 @@ This checklist must be reviewed and executed before, during, and after any produ
 
 ---
 
+## 🎯 Master Production Deployment Checklist
+
+- [ ] Railway project created
+- [ ] Backend env vars set
+- [ ] Frontend env vars set
+- [ ] Backend deployed
+- [ ] Frontend deployed
+- [ ] smoke_test_staging.py PASSED
+- [ ] measure_prod_infra.py → Redis < 20ms, DB < 10ms
+- [ ] Lighthouse on /dashboard >= 90
+- [ ] GitHub push + workflows activated
+- [ ] ⏳ Pre-Launch: rotation (ROTATION_GUIDE.md)
+
+---
+
 ## 🚦 Phase 1: Pre-Deployment Verification (Gate 1)
 
 All criteria in this section must be satisfied before promoting code to production:
