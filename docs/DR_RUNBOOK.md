@@ -40,7 +40,7 @@ flowchart TD
 
 ## 🛠️ 3. Failure Scenarios & Restoration Runbooks
 
-### Scenario A: Database Corruption or Accidental Data Loss
+### Scenario 1: DB Corruption (Database Restore Steps)
 
 **Symptoms:** Table dropped, database corrupted, or unrecoverable bad data mutation.
 
@@ -48,18 +48,18 @@ flowchart TD
 1. Navigate to the GitHub repository: **Actions** → **Supabase Database Backup & Integrity Verification**.
 2. Select the latest successful run and download the `supabase-database-backup-<run_id>` artifact.
    *(Or locate the latest backup in local `backups/` directory).*
-3. Extract the `.dump` or `.json.gz` file and the corresponding `.sha256` file.
+3. Extract the `db_<TIMESTAMP>.dump.gz` file and the corresponding `.sha256` file.
 
 #### Step 2: Verify Cryptographic Integrity
 ```bash
 # Verify checksum matches exactly
-sha256sum -c supabase_backup_<TIMESTAMP>.dump.sha256
-# Expected output: supabase_backup_<TIMESTAMP>.dump: OK
+sha256sum -c db_<TIMESTAMP>.dump.gz.sha256
+# Expected output: db_<TIMESTAMP>.dump.gz: OK
 ```
 > ⚠️ **DO NOT ATTEMPT RESTORATION** if the checksum verification fails. Retrieve the previous day's backup.
 
 #### Step 3: Execute Restoration
-- **Using Native `pg_restore` (for `.dump` binary archives):**
+- **Using Native `pg_restore`:**
   ```bash
   export PGPASSWORD="<SUPABASE_DB_PASSWORD>"
   pg_restore -h aws-0-eu-west-1.pooler.supabase.com \
@@ -70,10 +70,8 @@ sha256sum -c supabase_backup_<TIMESTAMP>.dump.sha256
              --if-exists \
              --no-owner \
              --no-privileges \
-             backups/supabase_backup_<TIMESTAMP>.dump
+             backups/db_<TIMESTAMP>.dump.gz
   ```
-- **Using Direct Database Client:**
-  If restoring a JSON snapshot, execute table restores using the automated restoration script.
 
 #### Step 4: Run Post-Restoration Verifications
 ```bash
@@ -86,14 +84,15 @@ python scripts/smoke_test_staging.py --base-url http://127.0.0.1:8000
 
 ---
 
-### Scenario B: Secret Leakage or Compromised Credentials
+### Scenario 2: Secrets Leaked (Emergency Rotation Protocol)
 
 **Symptoms:** Credentials detected in public commit, unauthorized login spikes, or token exposure.
 
+Follow the complete rotation guide in [docs/ROTATION_GUIDE.md](ROTATION_GUIDE.md).
+
 #### Step 1: Immediate Containment
-1. Follow [docs/ROTATION_GUIDE.md](ROTATION_GUIDE.md) immediately.
-2. In Supabase Dashboard: Reset database password immediately (**Project Settings** → **Database** → **Database Password** → **Reset password**).
-3. In Upstash Console: Rotate REST API / Redis Token (**Database** → **Details** → **Rotate Token**).
+1. In Supabase Dashboard: Reset database password immediately (**Project Settings** → **Database** → **Database Password** → **Reset password**).
+2. In Upstash Console: Rotate REST API / Redis Token (**Database** → **Details** → **Rotate Token**).
 
 #### Step 2: Generate Fresh Application Keys
 ```bash
@@ -114,21 +113,24 @@ Update environment variables in the Railway console and trigger a deployment. Ve
 
 ---
 
-### Scenario C: Upstash Redis Degradation or Outage
+### Scenario 3: Redis Down (Fail-Open Behavior & Fallback)
 
-**Symptoms:** `/health/redis` returns non-200, rate limiting errors, session cache misses.
+**Symptoms:** `/health/redis` returns non-200, Upstash connection timeout.
 
-#### Emergency Action:
+#### Fail-Open System Behavior:
+1. **Rate Limiting:** The FastAPI `RateLimitMiddleware` automatically fails-open and falls back gracefully to in-memory sliding window cache (`_MEMORY_RATE_LIMITS`) so that legitimate user traffic is **never blocked** during a Redis outage.
+2. **Read Caches:** Data queries on `/api/agents` and `/api/dashboard/stats` bypass the cache layer and fetch directly from Supabase PostgreSQL, ensuring continuous service operation.
+
+#### Recovery & Restoration:
 1. Check Upstash status at [status.upstash.com](https://status.upstash.com).
-2. If temporary regional outage in `eu-west-1`:
-   - FastAPI rate limiter falls back gracefully to in-memory windowing or bypasses without blocking critical user traffic.
+2. If temporary regional outage in `eu-west-1`: Fail-open behavior handles traffic seamlessly until Upstash recovers.
 3. If persistent failure (> 15 minutes):
    - Provision backup Redis instance on Upstash in secondary European region (`europe-west4`).
    - Update `REDIS_URL` in Railway environment variables and redeploy API service.
 
 ---
 
-### Scenario D: Cloud PaaS (Railway) European Region Outage
+### Scenario 4: Cloud PaaS (Railway) Region Outage
 
 **Symptoms:** Railway gateway unreachable, 502/503 Cloudflare gateway timeouts.
 
