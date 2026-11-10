@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import AppShell from "@/components/AppShell";
 import { useToast, ToastContainer } from "@/components/Toast";
 import { useI18n } from "@/lib/i18n";
@@ -228,15 +228,20 @@ export default function VirtualOfficePage() {
     [statuses, showError]
   );
 
-  // Metric counts
+  // Metric counts (Memoized to prevent object scans on unrelated state changes)
   const totalAgents = agents.length;
-  const workingCount = Object.values(statuses).filter(
-    (s) => s.status === "working"
-  ).length;
-  const blockedCount = Object.values(statuses).filter(
-    (s) => s.status === "blocked"
-  ).length;
-  const idleCount = Math.max(0, totalAgents - workingCount - blockedCount);
+  const workingCount = useMemo(
+    () => Object.values(statuses).filter((s) => s.status === "working").length,
+    [statuses]
+  );
+  const blockedCount = useMemo(
+    () => Object.values(statuses).filter((s) => s.status === "blocked").length,
+    [statuses]
+  );
+  const idleCount = useMemo(
+    () => Math.max(0, totalAgents - workingCount - blockedCount),
+    [totalAgents, workingCount, blockedCount]
+  );
 
   // Filter agents by status and search
   const matchesAgentFilter = useCallback(

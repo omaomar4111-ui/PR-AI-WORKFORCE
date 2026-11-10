@@ -15,6 +15,38 @@ export interface DepartmentRoomProps {
   onSelectAgent: (agent: Agent) => void;
 }
 
+function areDepartmentRoomPropsEqual(
+  prevProps: DepartmentRoomProps,
+  nextProps: DepartmentRoomProps
+): boolean {
+  if (prevProps.deptKey !== nextProps.deptKey) return false;
+  if (prevProps.isAr !== nextProps.isAr) return false;
+  if (prevProps.onSelectAgent !== nextProps.onSelectAgent) return false;
+  if (prevProps.deptAgents !== nextProps.deptAgents) return false;
+
+  // Check if visibleAgents count or members changed
+  if (prevProps.visibleAgents.length !== nextProps.visibleAgents.length) {
+    return false;
+  }
+  for (let i = 0; i < prevProps.visibleAgents.length; i++) {
+    if (prevProps.visibleAgents[i].id !== nextProps.visibleAgents[i].id) {
+      return false;
+    }
+  }
+
+  // Check if any agent in THIS department had a status change
+  for (const agent of prevProps.deptAgents) {
+    const prevStatus = prevProps.statuses[agent.id];
+    const nextStatus = nextProps.statuses[agent.id];
+    if (prevStatus !== nextStatus) {
+      return false; // Status of an agent in this department changed -> re-render
+    }
+  }
+
+  // No agent in this department changed status, and filtered list is identical -> skip re-render
+  return true;
+}
+
 export const DepartmentRoom = React.memo(
   function DepartmentRoom({
     deptKey,
@@ -105,7 +137,8 @@ export const DepartmentRoom = React.memo(
         )}
       </div>
     );
-  }
+  },
+  areDepartmentRoomPropsEqual
 );
 
 export const DepartmentStudio = DepartmentRoom;

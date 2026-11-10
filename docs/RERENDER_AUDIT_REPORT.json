@@ -1,0 +1,44 @@
+{
+  "scenario_1_status_update": {
+    "description": "Single agent status change via WebSocket or manual simulation",
+    "before": {
+      "page_renders": 1,
+      "header_renders": 1,
+      "controls_renders": 1,
+      "floor_plan_renders": 1,
+      "room_renders": 8,
+      "avatar_renders": 38,
+      "total_renders": 49
+    },
+    "after": {
+      "page_renders": 1,
+      "header_renders": 1,
+      "controls_renders": 1,
+      "floor_plan_renders": 1,
+      "room_renders": 1,
+      "avatar_renders": 1,
+      "total_renders": 6
+    },
+    "room_render_reduction_pct": 87.5,
+    "avatar_render_reduction_pct": 97.4,
+    "total_render_reduction_pct": 87.8
+  },
+  "scenario_2_drawer_toggle": {
+    "description": "Agent Drawer opened or closed without status change",
+    "before": {
+      "page_renders": 1,
+      "drawer_renders": 1,
+      "room_renders": 8,
+      "avatar_renders": 38,
+      "total_renders": 48
+    },
+    "after": {
+      "page_renders": 1,
+      "drawer_renders": 1,
+      "room_renders": 0,
+      "avatar_renders": 0,
+      "total_renders": 2
+    },
+    "total_render_reduction_pct": 95.8
+  }
+}
