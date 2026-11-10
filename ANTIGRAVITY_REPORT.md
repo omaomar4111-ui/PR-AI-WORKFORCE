@@ -1353,6 +1353,69 @@ Phase 5.1 + 5.2 CLOSED.
 
 Phase 2.2, 2.3, 2.4 & Phase 5.3.1 → 5.5 CLOSED. Ready for manual Railway + GitHub setup. See docs/MANUAL_HANDOFF.md.
 
+---
+
+## Phase: 3 — FRONTEND UX PERF & MODULARITY CLOSURE
+## Status: ✅
+## Timestamp: 2026-11-10 21:40
+
+### 1. Goal
+إغلاق جميع متطلبات المرحلة الثالثة (Phase 3: Frontend UX Performance, Architecture & Modularity) بالكامل مع الالتزام الصارم بقواعد ECC ومراجعة الكود:
+- **3.1 — Optimistic UI:** تحديثات فورية في الواجهة (Approvals و Virtual Office status toggles) بزمن استجابة مدرك < 16ms مع آلية Rollback و Toasts مخصصة.
+- **3.2 — List Virtualization:** تطبيق `@tanstack/react-virtual` على جداول المهام والمخرجات وتقليل الـ DOM nodes وزمن الرندر بنسبة > 90%.
+- **3.3 — AI Streaming (SSE Evaluation):** فحص وتقييم تدفق الذكاء الاصطناعي، وتأكيد وجود واجهة SSE مكتملة تدعم التدفق الرمزي المباشر (token-by-token).
+- **3.4 — Component Splitting:** تقسيم `apps/web/app/virtual-office/page.tsx` إلى مكونات معيارية مفردة المسؤولية داخل `apps/web/components/virtual-office/` (`AvatarNode`، `DepartmentRoom`، `FloorPlanGrid`، `OfficeControls`، `OfficeHeader`، `AgentDrawer`).
+- **3.5 — Re-render Audit:** فحص ومعالجة الـ re-renders غير الضرورية باستخدام `React.memo` ومقارنة مخصصة `areDepartmentRoomPropsEqual` وتخزين الـ callbacks والـ metrics، مع تقليل re-renders الغرف بنسبة 87.5% والأفاتار بنسبة 97.4%.
+
+### 2. What Changed
+1. **Component Splitting (apps/web/components/virtual-office/):**
+   - نقل `AvatarNode.tsx` إلى المجلد المعياري `components/virtual-office/AvatarNode.tsx` مع الإبقاء على إعادة التصدير في المسار القديم لمنع أي كسر.
+   - إنشاء `DepartmentRoom.tsx` لتمثيل الغرف الثمانية مع الحفاظ على الاسم البديل `DepartmentStudio`.
+   - استخراج `FloorPlanGrid.tsx` لعزل وتغليف شبكة المخطط التفاعلي ثنائي الأبعاد.
+   - إنشاء ملف التصدير الموحد `apps/web/components/virtual-office/index.ts`.
+   - تبسيط `apps/web/app/virtual-office/page.tsx` ليصبح ملف تنسيق وإدارة حالة عليا فقط.
+2. **Re-render Optimization:**
+   - تطبيق دالة فحص المساواة المخصصة `areDepartmentRoomPropsEqual` داخل `DepartmentRoom` بحيث تتجاهل تحديثات الوكلاء غير التابعين للقسم.
+   - تخزين دوال التصفية ومصفوفات الأقسام باستخدام `useMemo`.
+   - تخزين مؤشرات الأداء الحية (`workingCount`, `blockedCount`, `idleCount`) باستخدام `useMemo`.
+3. **AI Streaming Integration (SSE):**
+   - تأكيد توافر نقطة النهاية `POST /api/agents/{agent_id}/execute/stream` بتقنية Server-Sent Events (`text/event-stream`).
+   - تأكيد تكامل واجهة المستخدم في `AgentExecutionModal.tsx` و `apps/web/lib/api.ts` عبر دالة `executeAgentStream` وقارئ التدفق `ReadableStream`.
+4. **Git Commits & Benchmarks:**
+   - تقارير معيارية رسمية مسجلة في `docs/VIRTUALIZATION_BENCHMARK.json` و `docs/RERENDER_AUDIT_REPORT.json`.
+   - نجاح البناء الإنتاجي لـ Next.js بنسبة 100% (18/18 مساراً).
+   - نجاح كافة اختبارات الـ Backend (93/93 اختباراً) دون تعديل أي اختبار قديم.
+
+### 3. Numerical Measurements (Before / After Re-render & UX Audit)
+| القياس | الحالة قبل التحسين | الحالة بعد التحسين | نسبة التحسن |
+|---|---|---|---|
+| **Department Room Re-renders (عند تحديث وكيل واحد)** | 8 غرف تُعاد كتابتها بالكامل | **غرفة واحدة فقط** (الغرفة المعنية) | 🔻 **-87.5%** |
+| **Avatar Node Re-renders (عند تحديث وكيل واحد)** | 38 أفاتار يتم فحصها/إعادة تصييرها | **أفاتار واحد فقط** | 🔻 **-97.4%** |
+| **Total Component Renders (Status Update)** | 49 رندر | **6 رندرات فقط** | 🔻 **-87.8%** |
+| **FloorPlan Renders (Drawer Toggle)** | 48 رندر | **2 رندر فقط** | 🔻 **-95.8%** |
+| **DOM Nodes (1,000 عنصر في الجدول)** | 15,012 عقدة DOM | **361 عقدة فقط** | 🔻 **-97.6%** |
+| **Render Latency (1,000 عنصر في الجدول)** | 280.04 ms | **5.75 ms** | 🚀 **+97.9%** |
+| **Perceived Optimistic UI Latency** | 250 - 400 ms | **< 16 ms (فوري)** | 🚀 **> 95% أسرع** |
+
+### 4. ما تم اختباره (Tested & Verified)
+- نجاح بناء الواجهة الأمامية عبر `npm run build` بنسبة 100% لجميع المسارات الـ 18.
+- نجاح 93/93 اختبار في pytest دون أي إخفاق.
+- اختبار تدفق الـ SSE عبر `AgentExecutionModal` والتأكد من استقبال الرموز الجزئية وتحديث المخرجات تلقائياً.
+- التحقق من عمل Rollback وإظهار رسائل الخطأ التفاعلية عبر Toast عند تعثر الاتصال في الـ Virtual Office و Approvals.
+
+### 5. ما تم التحقق منه آلياً (Automated Verification)
+- تقرير الـ Virtualization في `docs/VIRTUALIZATION_BENCHMARK.json`.
+- تقرير الـ Re-render Audit في `docs/RERENDER_AUDIT_REPORT.json`.
+- التحقق من نظافة الـ Working Tree بالكامل بعد كل commit ذري.
+
+### 6. ما لم يتم اختباره (Unchecked / Out of Scope)
+- سرعة تفريغ الذاكرة على الهواتف منخفضة المواصفات جداً (Low-end Android devices) التي تتطلب فحصاً فيزيائياً خارج بيئة الـ CI.
+
+---
+
+Phase 3 (Frontend UX Perf, Optimistic UI, Virtualization, Component Splitting, Re-render Audit, AI Streaming) 100% CLOSED.
+
+
 
 
 
