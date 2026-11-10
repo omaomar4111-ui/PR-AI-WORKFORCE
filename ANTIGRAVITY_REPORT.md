@@ -1424,3 +1424,57 @@ Phase 3 (Frontend UX Perf, Optimistic UI, Virtualization, Component Splitting, R
 
 
 
+
+
+---
+
+## 🛠️ Code Quality & Governance Hardening Suite (ECC Full + MCPs + The Bulwark + DLC + Pre-commit)
+
+### 1. Overview & Objective
+Activation of an enterprise-grade Code Quality and Governance infrastructure for the **PR-AI-WORKFORCE** operating system, built directly on top of the native Antigravity and Everything Claude Code (ECC) framework without modifying application code (`apps/web`, `apps/api`).
+
+### 2. Implemented Components
+
+#### 2.1 ECC Universal Profile Upgrade (Minimal → Full)
+- **Tooling:** `npx ecc-universal@2.2.3 install --profile full --target antigravity`
+- **Output:** 707 discrete operations executed; added comprehensive skillsets and agents to `.agents/`.
+- **Specialized Roles Verified:** `code-reviewer.md`, `security-reviewer.md`, `tdd-guide.md`, `architect.md`, `performance-optimizer.md`.
+
+#### 2.2 SonarQube MCP
+- **Status:** Skipped per explicit user decision (external server dependency).
+
+#### 2.3 pyscn MCP — Python Code Quality & Health Metrics
+- **Package:** `pyscn-mcp` v1.0.0 via `uvx`
+- **Configuration:** Registered in project `mcp_config.json` and Antigravity `settings.json`.
+- **Backend Baseline Scan (`apps/api`):**
+  - **Overall Health Score:** **86 / 100 (Grade: B)**
+  - **Cyclomatic Complexity:** 90 / 100 (avg 3.2 across codebase; identified 8 high-complexity functions in `om_samah.py` and `database.py`)
+  - **Dead Code:** 100 / 100 (0 dead functions/classes detected)
+  - **Duplication:** 65 / 100 (21.5% structural duplication in fallback mock generators in `llm_adapter.py`)
+  - **Class Coupling (CBO):** 100 / 100 (avg 1.5)
+  - **Cohesion (LCOM):** 100 / 100
+
+#### 2.4 Judges Panel MCP (`@kevinrabun/judges` v3.129.9)
+- **Package:** `@kevinrabun/judges` installed globally via npm.
+- **Configuration:** Registered in project `mcp_config.json` and Antigravity `settings.json`.
+- **Capability:** 45 automated judges utilizing AST analysis for AI-generated code reviews across security, API contracts, backwards compatibility, concurrency, and cost effectiveness.
+
+#### 2.5 The Bulwark SDLC Framework (`@qball-inc/the-bulwark` v1.3.0)
+- **Integration:** 15 custom agents imported into `.agents/agents/` and 30 governance skills into `.agents/skills/`.
+- **Key Agents:** `bulwark-fix-validator.md`, `bulwark-implementer.md`, `bulwark-issue-analyzer.md`, `bulwark-standards-reviewer.md`, `plan-creation-architect.md`, `product-ideation-strategist.md`.
+
+#### 2.6 DLC Plugin (from `rube-de/cc-skills`)
+- **Integration:** Extracted and added into `.agents/skills/` and `.agents/scripts/dlc/`.
+- **Skills Available:** `dlc`, `babysit`, `git-ops`, `perf`, `pr-check`, `pr-validity`, `quality`, `security`, `test`, `update-review-checklist`.
+
+#### 2.7 Pre-commit Hooks Suite (`.pre-commit-config.yaml`)
+- **Engine:** `pre-commit` v4.7.0 installed with git hook active at `.git/hooks/pre-commit`.
+- **Configured Hooks:**
+  1. `ruff` (astral-sh/ruff-pre-commit v0.9.9) for backend Python linting.
+  2. `prettier` (local system hook with `npx prettier --check`) for frontend formatting checks.
+  3. `eslint` (local system hook with `npx eslint` supported by root `eslint.config.mjs`) for frontend linting.
+- **Verification:** Ran `pre-commit run --all-files`; ESLint passed cleanly with 0 errors, Prettier flagged 12 files for future atomic styling passes, Ruff reported 51 style/import warnings without modifying source code.
+
+### 3. Verification & Test Integrity
+- **Regression Testing:** `npm run test:backend` executed: **93/93 passed (100%)** in 110.44s.
+- **Zero Application Modifications:** Working tree clean for all application code in `apps/web` and `apps/api`.

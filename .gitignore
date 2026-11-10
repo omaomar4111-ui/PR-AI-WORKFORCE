@@ -58,3 +58,6 @@ backups/*.dump.gz
 backups/*.sha256
 backups/*
 !backups/.gitkeep
+
+# pyscn analysis reports & cache
+.pyscn/

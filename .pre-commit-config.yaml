@@ -1,0 +1,32 @@
+# See https://pre-commit.com for more information
+# Pre-commit configuration for PR-AI-WORKFORCE
+
+repos:
+  # 1. Backend Linting (Python - FastAPI)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.9
+    hooks:
+      - id: ruff
+        name: ruff (backend linter)
+        files: ^apps/api/
+        args: [--output-format=concise]
+
+  # 2. Frontend Formatting (Prettier)
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (code formatter check)
+        entry: npx prettier --check
+        language: system
+        types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
+        files: ^apps/web/
+
+  # 3. Frontend Linting (ESLint)
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (frontend linter)
+        entry: npx eslint
+        language: system
+        types_or: [javascript, jsx, ts, tsx]
+        files: ^apps/web/

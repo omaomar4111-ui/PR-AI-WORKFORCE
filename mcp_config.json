@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "pyscn": {
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "uvx",
+        "pyscn-mcp"
+      ],
+      "description": "Python Code Quality & Metrics MCP Server (Complexity, Clones, Coupling, Dead Code, Health Score)"
+    },
+    "judges": {
+      "command": "node",
+      "args": [
+        "C:/Users/DELL/AppData/Local/hermes/node/node_modules/@kevinrabun/judges/dist/index.js"
+      ],
+      "description": "Judges Panel MCP - 45 automated judges evaluating security, cost, and quality with AST"
+    }
+  }
+}
