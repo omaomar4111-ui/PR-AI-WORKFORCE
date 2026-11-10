@@ -29,7 +29,7 @@ export const OfficeControls = React.memo(function OfficeControls({
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Status Filter Buttons */}
       <div className="flex flex-wrap items-center gap-2">
-        {(["all", "working", "blocked", "idle"] as const).map((filterKey) => {
+        {(["all", "working", "blocked", "idle"] as const).map(filterKey => {
           const isSelected = statusFilter === filterKey;
           return (
             <button
@@ -44,10 +44,10 @@ export const OfficeControls = React.memo(function OfficeControls({
               {filterKey === "all"
                 ? `${t("virtual_office.status_all")} (${totalAgents})`
                 : filterKey === "working"
-                ? `🟡 ${t("virtual_office.status_working")} (${workingCount})`
-                : filterKey === "blocked"
-                ? `🔴 ${t("virtual_office.status_blocked")} (${blockedCount})`
-                : `🟢 ${t("virtual_office.status_idle")} (${idleCount})`}
+                  ? `🟡 ${t("virtual_office.status_working")} (${workingCount})`
+                  : filterKey === "blocked"
+                    ? `🔴 ${t("virtual_office.status_blocked")} (${blockedCount})`
+                    : `🟢 ${t("virtual_office.status_idle")} (${idleCount})`}
             </button>
           );
         })}
@@ -60,7 +60,7 @@ export const OfficeControls = React.memo(function OfficeControls({
           type="text"
           data-testid="virtual-office-search"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={e => setSearchQuery(e.target.value)}
           placeholder={t("virtual_office.search_placeholder")}
           className="w-full rounded-xl border border-gray-800 bg-[#13151f] py-2 pl-9 pr-8 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] rtl:pl-8 rtl:pr-9"
         />

@@ -26,7 +26,7 @@ export const FloorPlanGrid = React.memo(function FloorPlanGrid({
   const deptAgentsMap = useMemo(() => {
     const map: Record<string, Agent[]> = {};
     for (const deptKey of ORDERED_DEPARTMENTS) {
-      map[deptKey] = agents.filter((a) => a.department === deptKey);
+      map[deptKey] = agents.filter(a => a.department === deptKey);
     }
     return map;
   }, [agents]);
@@ -41,7 +41,7 @@ export const FloorPlanGrid = React.memo(function FloorPlanGrid({
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      {ORDERED_DEPARTMENTS.map((deptKey) => {
+      {ORDERED_DEPARTMENTS.map(deptKey => {
         const deptAgents = deptAgentsMap[deptKey] || [];
         const visibleAgents = deptAgents.filter(matchesAgentFilter);
 

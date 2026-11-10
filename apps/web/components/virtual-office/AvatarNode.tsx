@@ -30,8 +30,8 @@ export const AvatarNode = React.memo(function AvatarNode({
         isWorking
           ? "border-amber-500/60 bg-amber-500/10 shadow-amber-500/10"
           : isBlocked
-          ? "border-rose-500/60 bg-rose-500/10 shadow-rose-500/10"
-          : "border-gray-800 bg-[#161826]/70 hover:border-[#8b5cf6]/50 hover:bg-[#1a1d2e]"
+            ? "border-rose-500/60 bg-rose-500/10 shadow-rose-500/10"
+            : "border-gray-800 bg-[#161826]/70 hover:border-[#8b5cf6]/50 hover:bg-[#1a1d2e]"
       }`}
     >
       {/* Status Beacon Top Corner */}
@@ -54,8 +54,8 @@ export const AvatarNode = React.memo(function AvatarNode({
           isWorking
             ? "border-amber-400 bg-amber-500/20 text-amber-300"
             : isBlocked
-            ? "border-rose-400 bg-rose-500/20 text-rose-300"
-            : "border-[#8b5cf6]/40 bg-[#8b5cf6]/15 text-[#c4b5fd]"
+              ? "border-rose-400 bg-rose-500/20 text-rose-300"
+              : "border-[#8b5cf6]/40 bg-[#8b5cf6]/15 text-[#c4b5fd]"
         }`}
       >
         <IconComponent className="h-5 w-5" />

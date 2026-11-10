@@ -87,8 +87,8 @@ export const AgentDrawer = React.memo(function AgentDrawer({
                   curSt === "working"
                     ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                     : curSt === "blocked"
-                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                      : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                 }`}
               >
                 <span
@@ -96,8 +96,8 @@ export const AgentDrawer = React.memo(function AgentDrawer({
                     curSt === "working"
                       ? "bg-amber-400 animate-ping"
                       : curSt === "blocked"
-                      ? "bg-rose-400"
-                      : "bg-emerald-400"
+                        ? "bg-rose-400"
+                        : "bg-emerald-400"
                   }`}
                 />
                 <span className="capitalize">{curSt}</span>
@@ -175,7 +175,7 @@ export const AgentDrawer = React.memo(function AgentDrawer({
               </span>
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {selectedAgent.tools.map((tool) => (
+              {selectedAgent.tools.map(tool => (
                 <span
                   key={tool}
                   className="rounded bg-[#11131c] border border-gray-800 px-2 py-0.5 text-[10px] font-mono text-gray-300"
@@ -211,7 +211,7 @@ export const AgentDrawer = React.memo(function AgentDrawer({
               </p>
             ) : (
               <div className="space-y-2">
-                {agentDeliverables.map((del) => (
+                {agentDeliverables.map(del => (
                   <div
                     key={del.id}
                     className="rounded-lg border border-gray-800/80 bg-[#11131c] p-2.5 flex items-center justify-between"

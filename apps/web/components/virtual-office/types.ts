@@ -28,7 +28,10 @@ import {
   Lock,
 } from "lucide-react";
 
-export const AGENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+export const AGENT_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   // Research & Strategy
   "dr-ibrahim": Brain,
   "data-analyst": BarChart3,

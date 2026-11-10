@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -45,12 +51,42 @@ import {
   WS_BASE_URL,
 } from "@/lib/api";
 
-const KANBAN_COLUMNS: { id: string; status: TaskStatus; labelKey: string; color: string }[] = [
-  { id: "pending", status: "pending", labelKey: "tasks.col_pending", color: "border-gray-700 bg-gray-800/20" },
-  { id: "assigned", status: "assigned", labelKey: "tasks.col_assigned", color: "border-blue-500/30 bg-blue-500/10" },
-  { id: "in_progress", status: "in_progress", labelKey: "tasks.col_in_progress", color: "border-[#8b5cf6]/40 bg-[#8b5cf6]/10" },
-  { id: "review", status: "review", labelKey: "tasks.col_review", color: "border-amber-500/30 bg-amber-500/10" },
-  { id: "completed", status: "completed", labelKey: "tasks.col_completed", color: "border-emerald-500/30 bg-emerald-500/10" },
+const KANBAN_COLUMNS: {
+  id: string;
+  status: TaskStatus;
+  labelKey: string;
+  color: string;
+}[] = [
+  {
+    id: "pending",
+    status: "pending",
+    labelKey: "tasks.col_pending",
+    color: "border-gray-700 bg-gray-800/20",
+  },
+  {
+    id: "assigned",
+    status: "assigned",
+    labelKey: "tasks.col_assigned",
+    color: "border-blue-500/30 bg-blue-500/10",
+  },
+  {
+    id: "in_progress",
+    status: "in_progress",
+    labelKey: "tasks.col_in_progress",
+    color: "border-[#8b5cf6]/40 bg-[#8b5cf6]/10",
+  },
+  {
+    id: "review",
+    status: "review",
+    labelKey: "tasks.col_review",
+    color: "border-amber-500/30 bg-amber-500/10",
+  },
+  {
+    id: "completed",
+    status: "completed",
+    labelKey: "tasks.col_completed",
+    color: "border-emerald-500/30 bg-emerald-500/10",
+  },
 ];
 
 export default function TasksPage() {
@@ -93,7 +129,7 @@ export default function TasksPage() {
 
   const currentUser = getStoredUser();
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [tasksData, projectsData, usersData] = await Promise.all([
         fetchTasks({
@@ -114,11 +150,17 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedProject, selectedPriority, projectId]);
 
   useEffect(() => {
     loadData();
-  }, [selectedProject, selectedPriority]);
+  }, [loadData]);
+
+  // Keep a ref to activeTask to avoid re-subscribing and dropping WS connection on modal toggle
+  const activeTaskRef = useRef<Task | null>(null);
+  useEffect(() => {
+    activeTaskRef.current = activeTask;
+  }, [activeTask]);
 
   // WebSocket Setup
   useEffect(() => {
@@ -136,12 +178,20 @@ export default function TasksPage() {
           console.log("⚡ Live WebSocket Tasks connected");
         };
 
-        ws.onmessage = (event) => {
+        ws.onmessage = event => {
           try {
             const data = JSON.parse(event.data);
-            if (data.type === "task_created" || data.type === "task_updated" || data.type === "task_deleted") {
+            if (
+              data.type === "task_created" ||
+              data.type === "task_updated" ||
+              data.type === "task_deleted"
+            ) {
               loadData();
-              if (activeTask && data.task && data.task.id === activeTask.id) {
+              if (
+                activeTaskRef.current &&
+                data.task &&
+                data.task.id === activeTaskRef.current.id
+              ) {
                 setActiveTask(data.task);
               }
             }
@@ -169,7 +219,7 @@ export default function TasksPage() {
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (wsRef.current) wsRef.current.close();
     };
-  }, [activeTask]);
+  }, [loadData]);
 
   // Handle Drag & Drop
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -179,7 +229,7 @@ export default function TasksPage() {
 
   const handleDrop = async (newStatus: TaskStatus) => {
     if (!draggingTaskId) return;
-    const task = tasks.find((t) => t.id === draggingTaskId);
+    const task = tasks.find(t => t.id === draggingTaskId);
     if (!task || task.status === newStatus) {
       setDraggingTaskId(null);
       setDragOverCol(null);
@@ -187,8 +237,8 @@ export default function TasksPage() {
     }
 
     // Optimistic UI update
-    setTasks((prev) =>
-      prev.map((t) => (t.id === draggingTaskId ? { ...t, status: newStatus } : t))
+    setTasks(prev =>
+      prev.map(t => (t.id === draggingTaskId ? { ...t, status: newStatus } : t))
     );
 
     try {
@@ -270,15 +320,41 @@ export default function TasksPage() {
     }
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    if (debouncedSearch) {
-      const term = debouncedSearch.toLowerCase();
+  const filteredTasks = useMemo(() => {
+    if (!debouncedSearch) return tasks;
+    const term = debouncedSearch.toLowerCase();
+    return tasks.filter(task => {
       const matchTitle = task.title.toLowerCase().includes(term);
       const matchProject = task.project_name?.toLowerCase().includes(term);
-      if (!matchTitle && !matchProject) return false;
+      return matchTitle || matchProject;
+    });
+  }, [tasks, debouncedSearch]);
+
+  const kanbanTasksByColumn = useMemo(() => {
+    const map: Record<string, Task[]> = {
+      pending: [],
+      assigned: [],
+      in_progress: [],
+      review: [],
+      completed: [],
+    };
+    for (const t of filteredTasks) {
+      if (t.status === "pending" || t.status === "planning") {
+        map.pending.push(t);
+      } else if (t.status === "assigned") {
+        map.assigned.push(t);
+      } else if (t.status === "in_progress") {
+        map.in_progress.push(t);
+      } else if (t.status === "review" || t.status === "needs_approval") {
+        map.review.push(t);
+      } else if (t.status === "completed") {
+        map.completed.push(t);
+      } else {
+        map.pending.push(t);
+      }
     }
-    return true;
-  });
+    return map;
+  }, [filteredTasks]);
 
   // Virtualization for high-volume tasks table (windowing when >100 records)
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -314,13 +390,15 @@ export default function TasksPage() {
                   : "bg-gray-800 text-gray-400 border border-gray-700"
               }`}
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${wsConnected ? "bg-emerald-400 animate-pulse" : "bg-gray-500"}`} />
-              <span>{wsConnected ? t("tasks.live_sync") : "Connecting..."}</span>
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${wsConnected ? "bg-emerald-400 animate-pulse" : "bg-gray-500"}`}
+              />
+              <span>
+                {wsConnected ? t("tasks.live_sync") : "Connecting..."}
+              </span>
             </div>
           </div>
-          <p className="mt-1 text-xs text-gray-400">
-            {t("tasks.subtitle")}
-          </p>
+          <p className="mt-1 text-xs text-gray-400">{t("tasks.subtitle")}</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -366,14 +444,16 @@ export default function TasksPage() {
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-gray-800 bg-[#13151f] p-3 text-xs">
         <div className="flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-[#8b5cf6]" />
-          <span className="font-semibold text-gray-300">{t("tasks.filter_project")}</span>
+          <span className="font-semibold text-gray-300">
+            {t("tasks.filter_project")}
+          </span>
           <select
             value={selectedProject}
-            onChange={(e) => setSelectedProject(e.target.value)}
+            onChange={e => setSelectedProject(e.target.value)}
             className="rounded-lg border border-gray-800 bg-[#181a26] px-2.5 py-1.5 text-white focus:outline-none"
           >
             <option value="">{t("tasks.all_projects")}</option>
-            {projects.map((p) => (
+            {projects.map(p => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
@@ -382,10 +462,12 @@ export default function TasksPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-gray-300">{t("tasks.filter_priority")}</span>
+          <span className="font-semibold text-gray-300">
+            {t("tasks.filter_priority")}
+          </span>
           <select
             value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
+            onChange={e => setSelectedPriority(e.target.value)}
             className="rounded-lg border border-gray-800 bg-[#181a26] px-2.5 py-1.5 text-white focus:outline-none"
           >
             <option value="">{t("tasks.all_priorities")}</option>
@@ -400,7 +482,7 @@ export default function TasksPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
             placeholder={isAr ? "بحث في المهام..." : "Search tasks..."}
             className="rounded-lg border border-gray-800 bg-[#181a26] px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none"
           />
@@ -416,24 +498,19 @@ export default function TasksPage() {
           </p>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {KANBAN_COLUMNS.map((col) => {
-              const colTasks = filteredTasks.filter((t) => {
-                if (col.status === "pending") return t.status === "pending" || t.status === "planning";
-                if (col.status === "review") return t.status === "review" || t.status === "needs_approval";
-                return t.status === col.status;
-              });
-
+            {KANBAN_COLUMNS.map(col => {
+              const colTasks = kanbanTasksByColumn[col.status] || [];
               const isOver = dragOverCol === col.id;
 
               return (
                 <div
                   key={col.id}
-                  onDragOver={(e) => {
+                  onDragOver={e => {
                     e.preventDefault();
                     setDragOverCol(col.id);
                   }}
                   onDragLeave={() => setDragOverCol(null)}
-                  onDrop={(e) => {
+                  onDrop={e => {
                     e.preventDefault();
                     handleDrop(col.status);
                   }}
@@ -460,11 +537,11 @@ export default function TasksPage() {
                         {isAr ? "فارغ" : "Empty"}
                       </div>
                     ) : (
-                      colTasks.map((task) => (
+                      colTasks.map(task => (
                         <div
                           key={task.id}
                           draggable
-                          onDragStart={(e) => handleDragStart(e, task.id)}
+                          onDragStart={e => handleDragStart(e, task.id)}
                           onClick={() => openTaskDetail(task.id)}
                           className="group relative cursor-grab rounded-xl border border-gray-800 bg-[#181a26] p-3 shadow transition-all hover:border-[#8b5cf6]/60 hover:shadow-lg active:cursor-grabbing"
                         >
@@ -475,8 +552,8 @@ export default function TasksPage() {
                                 task.priority === "urgent"
                                   ? "bg-red-500/20 text-red-400 border border-red-500/30"
                                   : task.priority === "high"
-                                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                                  : "bg-gray-700/40 text-gray-300"
+                                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                    : "bg-gray-700/40 text-gray-300"
                               }`}
                             >
                               {task.priority}
@@ -495,12 +572,16 @@ export default function TasksPage() {
                           <div className="mt-3">
                             <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
                               <span>{t("task_modal.progress")}</span>
-                              <span className="font-bold text-[#a78bfa]">{task.progress_percentage}%</span>
+                              <span className="font-bold text-[#a78bfa]">
+                                {task.progress_percentage}%
+                              </span>
                             </div>
                             <div className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
                               <div
                                 className="h-full bg-gradient-to-r from-[#8b5cf6] to-indigo-500 transition-all duration-300"
-                                style={{ width: `${task.progress_percentage}%` }}
+                                style={{
+                                  width: `${task.progress_percentage}%`,
+                                }}
                               />
                             </div>
                           </div>
@@ -545,7 +626,9 @@ export default function TasksPage() {
                   <th className="px-5 py-3.5">{t("task_modal.priority")}</th>
                   <th className="px-5 py-3.5">{t("task_modal.progress")}</th>
                   <th className="px-5 py-3.5">{t("task_modal.assigned_to")}</th>
-                  <th className="px-5 py-3.5 text-right">{t("clients.col_actions")}</th>
+                  <th className="px-5 py-3.5 text-right">
+                    {t("clients.col_actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/60">
@@ -562,7 +645,7 @@ export default function TasksPage() {
                         <td colSpan={7} style={{ height: `${paddingTop}px` }} />
                       </tr>
                     )}
-                    {virtualRows.map((virtualRow) => {
+                    {virtualRows.map(virtualRow => {
                       const task = filteredTasks[virtualRow.index];
                       if (!task) return null;
                       return (
@@ -574,7 +657,9 @@ export default function TasksPage() {
                           <td className="px-5 py-3.5 font-bold text-white hover:text-[#a78bfa]">
                             {task.title}
                           </td>
-                          <td className="px-5 py-3.5 text-gray-300">{task.project_name}</td>
+                          <td className="px-5 py-3.5 text-gray-300">
+                            {task.project_name}
+                          </td>
                           <td className="px-5 py-3.5">
                             <span className="rounded bg-[#8b5cf6]/10 px-2 py-0.5 text-[10px] font-bold text-[#c4b5fd] uppercase">
                               {task.status}
@@ -586,8 +671,8 @@ export default function TasksPage() {
                                 task.priority === "urgent"
                                   ? "text-red-400 bg-red-500/10"
                                   : task.priority === "high"
-                                  ? "text-amber-400 bg-amber-500/10"
-                                  : "text-gray-300 bg-gray-800"
+                                    ? "text-amber-400 bg-amber-500/10"
+                                    : "text-gray-300 bg-gray-800"
                               }`}
                             >
                               {task.priority}
@@ -598,7 +683,9 @@ export default function TasksPage() {
                               <div className="h-1.5 w-16 rounded-full bg-gray-800 overflow-hidden">
                                 <div
                                   className="h-full bg-[#8b5cf6]"
-                                  style={{ width: `${task.progress_percentage}%` }}
+                                  style={{
+                                    width: `${task.progress_percentage}%`,
+                                  }}
                                 />
                               </div>
                               <span className="font-mono text-[10px] text-gray-400">
@@ -609,9 +696,14 @@ export default function TasksPage() {
                           <td className="px-5 py-3.5 text-gray-300">
                             {task.assigned_user_name || "—"}
                           </td>
-                          <td className="px-5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                          <td
+                            className="px-5 py-3.5 text-right"
+                            onClick={e => e.stopPropagation()}
+                          >
                             <button
-                              onClick={() => handleDeleteTask(task.id, task.title)}
+                              onClick={() =>
+                                handleDeleteTask(task.id, task.title)
+                              }
                               className="rounded-lg p-1 text-red-400 hover:bg-red-500/20"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -622,7 +714,10 @@ export default function TasksPage() {
                     })}
                     {paddingBottom > 0 && (
                       <tr>
-                        <td colSpan={7} style={{ height: `${paddingBottom}px` }} />
+                        <td
+                          colSpan={7}
+                          style={{ height: `${paddingBottom}px` }}
+                        />
                       </tr>
                     )}
                   </>
@@ -658,10 +753,10 @@ export default function TasksPage() {
                 <select
                   required
                   value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
+                  onChange={e => setProjectId(e.target.value)}
                   className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                 >
-                  {projects.map((p) => (
+                  {projects.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
@@ -678,7 +773,7 @@ export default function TasksPage() {
                   type="text"
                   required
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={e => setTitle(e.target.value)}
                   placeholder="e.g. Conduct Competitor PR Media Audit"
                   className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                 />
@@ -692,7 +787,7 @@ export default function TasksPage() {
                 <textarea
                   rows={3}
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={e => setDescription(e.target.value)}
                   placeholder="Task instructions, deliverables, quality criteria..."
                   className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                 />
@@ -706,14 +801,18 @@ export default function TasksPage() {
                   </label>
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
+                    onChange={e => setStatus(e.target.value as any)}
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                   >
                     <option value="pending">{t("tasks.col_pending")}</option>
                     <option value="assigned">{t("tasks.col_assigned")}</option>
-                    <option value="in_progress">{t("tasks.col_in_progress")}</option>
+                    <option value="in_progress">
+                      {t("tasks.col_in_progress")}
+                    </option>
                     <option value="review">{t("tasks.col_review")}</option>
-                    <option value="completed">{t("tasks.col_completed")}</option>
+                    <option value="completed">
+                      {t("tasks.col_completed")}
+                    </option>
                   </select>
                 </div>
 
@@ -723,13 +822,19 @@ export default function TasksPage() {
                   </label>
                   <select
                     value={priority}
-                    onChange={(e) => setPriority(e.target.value as any)}
+                    onChange={e => setPriority(e.target.value as any)}
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                   >
                     <option value="low">{t("task_modal.priority_low")}</option>
-                    <option value="medium">{t("task_modal.priority_medium")}</option>
-                    <option value="high">{t("task_modal.priority_high")}</option>
-                    <option value="urgent">{t("task_modal.priority_urgent")}</option>
+                    <option value="medium">
+                      {t("task_modal.priority_medium")}
+                    </option>
+                    <option value="high">
+                      {t("task_modal.priority_high")}
+                    </option>
+                    <option value="urgent">
+                      {t("task_modal.priority_urgent")}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -742,11 +847,11 @@ export default function TasksPage() {
                   </label>
                   <select
                     value={assignedTo}
-                    onChange={(e) => setAssignedTo(e.target.value)}
+                    onChange={e => setAssignedTo(e.target.value)}
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                   >
                     <option value="">{t("task_modal.unassigned")}</option>
-                    {users.map((u) => (
+                    {users.map(u => (
                       <option key={u.id} value={u.id}>
                         {u.full_name || u.email}
                       </option>
@@ -761,7 +866,7 @@ export default function TasksPage() {
                   <input
                     type="date"
                     value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
+                    onChange={e => setDueDate(e.target.value)}
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                   />
                 </div>
@@ -776,13 +881,16 @@ export default function TasksPage() {
                   <select
                     multiple
                     value={dependencies}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+                    onChange={e => {
+                      const selected = Array.from(
+                        e.target.selectedOptions,
+                        option => option.value
+                      );
                       setDependencies(selected);
                     }}
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] p-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none h-20"
                   >
-                    {tasks.map((t) => (
+                    {tasks.map(t => (
                       <option key={t.id} value={t.id}>
                         {t.title} ({t.status})
                       </option>
@@ -819,7 +927,9 @@ export default function TasksPage() {
           <div className="relative w-full max-w-2xl rounded-2xl border border-gray-800 bg-[#13151f] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-gray-800">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-400">{activeTask.project_name} /</span>
+                <span className="text-xs font-bold text-gray-400">
+                  {activeTask.project_name} /
+                </span>
                 <span className="rounded bg-[#8b5cf6]/20 px-2 py-0.5 text-[10px] font-bold text-[#c4b5fd] uppercase">
                   {activeTask.priority}
                 </span>
@@ -836,9 +946,14 @@ export default function TasksPage() {
             <div className="mt-4 space-y-5">
               {/* Title & Description */}
               <div>
-                <h2 className="text-lg font-bold text-white sm:text-xl">{activeTask.title}</h2>
+                <h2 className="text-lg font-bold text-white sm:text-xl">
+                  {activeTask.title}
+                </h2>
                 <p className="mt-2 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
-                  {activeTask.description || (isAr ? "لا توجد تفاصيل إضافية." : "No description provided.")}
+                  {activeTask.description ||
+                    (isAr
+                      ? "لا توجد تفاصيل إضافية."
+                      : "No description provided.")}
                 </p>
               </div>
 
@@ -852,7 +967,9 @@ export default function TasksPage() {
                     <select
                       data-testid="detail-status-select"
                       value={activeTask.status}
-                      onChange={(e) => handleStatusChangeInDetail(e.target.value as any)}
+                      onChange={e =>
+                        handleStatusChangeInDetail(e.target.value as any)
+                      }
                       className="rounded-lg border border-gray-800 bg-[#13151f] px-3 py-1.5 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                     >
                       <option value="pending">⏳ Pending (0%)</option>
@@ -860,13 +977,17 @@ export default function TasksPage() {
                       <option value="assigned">👤 Assigned (20%)</option>
                       <option value="in_progress">⚡ In Progress (50%)</option>
                       <option value="review">🔍 Review (80%)</option>
-                      <option value="needs_approval">🛡️ Needs Approval (90%)</option>
+                      <option value="needs_approval">
+                        🛡️ Needs Approval (90%)
+                      </option>
                       <option value="completed">✅ Completed (100%)</option>
                     </select>
                   </div>
 
                   <div className="sm:text-right">
-                    <span className="text-xs text-gray-400">{t("task_modal.progress")}: </span>
+                    <span className="text-xs text-gray-400">
+                      {t("task_modal.progress")}:{" "}
+                    </span>
                     <span className="text-lg font-black text-[#a78bfa]">
                       {activeTask.progress_percentage}%
                     </span>
@@ -882,14 +1003,17 @@ export default function TasksPage() {
 
               {/* Event Timeline (Audit Trail) */}
               <div>
-                <h3 data-testid="audit-timeline" className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
+                <h3
+                  data-testid="audit-timeline"
+                  className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5"
+                >
                   <History className="h-3.5 w-3.5 text-[#8b5cf6]" />
                   <span>{t("task_modal.timeline")}</span>
                 </h3>
 
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {activeTask.events?.length ? (
-                    activeTask.events.map((evt) => (
+                    activeTask.events.map(evt => (
                       <div
                         key={evt.id}
                         className="flex items-start gap-3 rounded-lg border border-gray-800/80 bg-[#181a26]/70 p-2.5 text-xs"
@@ -902,14 +1026,21 @@ export default function TasksPage() {
                               : evt.event_type}
                           </p>
                           <span className="text-[10px] text-gray-500 font-mono">
-                            {new Date(evt.timestamp).toLocaleTimeString(isAr ? "ar-EG" : "en-US")} •{" "}
-                            {new Date(evt.timestamp).toLocaleDateString(isAr ? "ar-EG" : "en-US")}
+                            {new Date(evt.timestamp).toLocaleTimeString(
+                              isAr ? "ar-EG" : "en-US"
+                            )}{" "}
+                            •{" "}
+                            {new Date(evt.timestamp).toLocaleDateString(
+                              isAr ? "ar-EG" : "en-US"
+                            )}
                           </span>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-gray-500">No events logged yet.</p>
+                    <p className="text-xs text-gray-500">
+                      No events logged yet.
+                    </p>
                   )}
                 </div>
               </div>
@@ -917,7 +1048,9 @@ export default function TasksPage() {
               {/* Footer Actions */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-800">
                 <button
-                  onClick={() => handleDeleteTask(activeTask.id, activeTask.title)}
+                  onClick={() =>
+                    handleDeleteTask(activeTask.id, activeTask.title)
+                  }
                   className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/20"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

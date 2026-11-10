@@ -1,7 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import AppShell from "@/components/AppShell";
 import { useToast, ToastContainer } from "@/components/Toast";
 import { useI18n } from "@/lib/i18n";
@@ -77,7 +83,7 @@ export default function VirtualOfficePage() {
         setDeliverables(deliverablesData);
 
         const statusMap: Record<string, AgentStatus> = {};
-        statusesData.forEach((s) => {
+        statusesData.forEach(s => {
           statusMap[s.agent_id] = s;
         });
         setStatuses(statusMap);
@@ -106,18 +112,21 @@ export default function VirtualOfficePage() {
           setWsConnected(true);
         };
 
-        socket.onmessage = (event) => {
+        socket.onmessage = event => {
           try {
             const data = JSON.parse(event.data);
-            if (data.type === "initial_status" && Array.isArray(data.statuses)) {
+            if (
+              data.type === "initial_status" &&
+              Array.isArray(data.statuses)
+            ) {
               const map: Record<string, AgentStatus> = {};
               data.statuses.forEach((s: AgentStatus) => {
                 map[s.agent_id] = s;
               });
-              setStatuses((prev) => ({ ...prev, ...map }));
+              setStatuses(prev => ({ ...prev, ...map }));
             } else if (data.type === "agent_status_updated" && data.agent) {
               const updated: AgentStatus = data.agent;
-              setStatuses((prev) => ({
+              setStatuses(prev => ({
                 ...prev,
                 [updated.agent_id]: updated,
               }));
@@ -178,20 +187,17 @@ export default function VirtualOfficePage() {
 
   // Quick Manual Status Simulation with Optimistic UI & Rollback
   const handleSimulateStatus = useCallback(
-    async (
-      agentId: string,
-      targetStatus: "idle" | "working" | "blocked"
-    ) => {
+    async (agentId: string, targetStatus: "idle" | "working" | "blocked") => {
       const previousStatus = statuses[agentId];
       const taskDescription =
         targetStatus === "working"
           ? "Live real-time operational simulation task"
           : targetStatus === "blocked"
-          ? "Awaiting human review & approval sign-off"
-          : undefined;
+            ? "Awaiting human review & approval sign-off"
+            : undefined;
 
       // 1. Optimistic Update: immediately update UI state with zero perceived latency (< 16ms)
-      setStatuses((prev) => {
+      setStatuses(prev => {
         const current = prev[agentId];
         if (!current) return prev;
         return {
@@ -214,7 +220,7 @@ export default function VirtualOfficePage() {
       } catch (err: any) {
         console.error("Failed to update status manually (rolling back):", err);
         if (previousStatus) {
-          setStatuses((prev) => ({
+          setStatuses(prev => ({
             ...prev,
             [agentId]: previousStatus,
           }));
@@ -231,11 +237,11 @@ export default function VirtualOfficePage() {
   // Metric counts (Memoized to prevent object scans on unrelated state changes)
   const totalAgents = agents.length;
   const workingCount = useMemo(
-    () => Object.values(statuses).filter((s) => s.status === "working").length,
+    () => Object.values(statuses).filter(s => s.status === "working").length,
     [statuses]
   );
   const blockedCount = useMemo(
-    () => Object.values(statuses).filter((s) => s.status === "blocked").length,
+    () => Object.values(statuses).filter(s => s.status === "blocked").length,
     [statuses]
   );
   const idleCount = useMemo(
@@ -247,7 +253,8 @@ export default function VirtualOfficePage() {
   const matchesAgentFilter = useCallback(
     (agent: Agent): boolean => {
       const currentStatus = statuses[agent.id]?.status || "idle";
-      if (statusFilter !== "all" && currentStatus !== statusFilter) return false;
+      if (statusFilter !== "all" && currentStatus !== statusFilter)
+        return false;
 
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
@@ -304,7 +311,7 @@ export default function VirtualOfficePage() {
           agentDeliverables={agentDeliverables}
           loadingDeliverables={loadingDeliverables}
           onSimulateStatus={handleSimulateStatus}
-          onOpenExecution={(agent) => setExecutingAgent(agent)}
+          onOpenExecution={agent => setExecutingAgent(agent)}
         />
       )}
 
@@ -315,9 +322,9 @@ export default function VirtualOfficePage() {
           onClose={() => setExecutingAgent(null)}
           projects={projects}
           agentIcons={AGENT_ICONS}
-          onExecutionSuccess={(newDeliverable) => {
-            setDeliverables((prev) => [newDeliverable, ...prev]);
-            setAgentDeliverables((prev) => [newDeliverable, ...prev]);
+          onExecutionSuccess={newDeliverable => {
+            setDeliverables(prev => [newDeliverable, ...prev]);
+            setAgentDeliverables(prev => [newDeliverable, ...prev]);
           }}
         />
       )}
