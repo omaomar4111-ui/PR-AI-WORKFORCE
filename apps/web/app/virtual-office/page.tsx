@@ -18,14 +18,13 @@ import {
   getWsBaseUrl,
 } from "@/lib/api";
 
-import { OfficeHeader } from "@/components/virtual-office/OfficeHeader";
-import { OfficeControls } from "@/components/virtual-office/OfficeControls";
-import { DepartmentStudio } from "@/components/virtual-office/DepartmentStudio";
-import { AgentDrawer } from "@/components/virtual-office/AgentDrawer";
 import {
-  ORDERED_DEPARTMENTS,
+  OfficeHeader,
+  OfficeControls,
+  FloorPlanGrid,
+  AgentDrawer,
   AGENT_ICONS,
-} from "@/components/virtual-office/types";
+} from "@/components/virtual-office";
 
 // Dynamically Code-Split Execution Console Modal for lean initial bundle
 const AgentExecutionModal = dynamic(
@@ -281,31 +280,15 @@ export default function VirtualOfficePage() {
         idleCount={idleCount}
       />
 
-      {/* ── 2D Interactive Floor Plan: 8 Department Studios ── */}
-      {loading ? (
-        <div className="flex h-96 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8b5cf6] border-t-transparent" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {ORDERED_DEPARTMENTS.map((deptKey) => {
-            const deptAgents = agents.filter((a) => a.department === deptKey);
-            const visibleAgents = deptAgents.filter(matchesAgentFilter);
-
-            return (
-              <DepartmentStudio
-                key={deptKey}
-                deptKey={deptKey}
-                deptAgents={deptAgents}
-                visibleAgents={visibleAgents}
-                statuses={statuses}
-                isAr={isAr}
-                onSelectAgent={handleSelectAgent}
-              />
-            );
-          })}
-        </div>
-      )}
+      {/* ── 2D Interactive Floor Plan: 8 Department Rooms ── */}
+      <FloorPlanGrid
+        loading={loading}
+        agents={agents}
+        statuses={statuses}
+        isAr={isAr}
+        matchesAgentFilter={matchesAgentFilter}
+        onSelectAgent={handleSelectAgent}
+      />
 
       {/* ── Agent Profile Side Drawer Component ── */}
       {selectedAgent && (
