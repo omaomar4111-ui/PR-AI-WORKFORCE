@@ -30,8 +30,8 @@ export function WebVitalsReporter() {
         payload
       );
 
-      // Ingest into telemetry endpoint using navigator.sendBeacon (non-blocking)
-      const endpoint = "/api/telemetry/vitals";
+      // Ingest into telemetry metrics endpoint using navigator.sendBeacon (non-blocking)
+      const endpoint = "/api/metrics";
       const body = JSON.stringify(payload);
 
       if (typeof navigator !== "undefined" && navigator.sendBeacon) {

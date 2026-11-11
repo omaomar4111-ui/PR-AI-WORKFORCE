@@ -1,0 +1,7 @@
+# Ruff configuration for PR-AI-WORKFORCE
+line-length = 120
+target-version = "py311"
+
+[lint]
+# Ignore module-level import placement and unused import warnings for FastAPI decoupled routes
+ignore = ["E402", "F401", "F841", "E741"]

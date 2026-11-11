@@ -492,6 +492,7 @@ class WebVitalTelemetry(BaseModel):
     timestamp: Optional[int] = None
 
 
+@app.post("/api/metrics")
 @app.post("/api/telemetry/vitals")
 async def record_web_vital(request: Request):
     """
@@ -505,6 +506,7 @@ async def record_web_vital(request: Request):
     - CORS origin validation
     - Structured JSON logging with trace_id correlation
     - Supabase/PostgreSQL database persistence (web_vitals table)
+    - Redis caching for high-speed live monitoring
     """
     # 1. Body size verification
     raw_body = await request.body()
@@ -581,6 +583,23 @@ async def record_web_vital(request: Request):
     vital_dict["trace_id"] = trace_id_hex
     saved_record = record_web_vital_db(vital_dict)
 
+    # 8. Fast Redis cache entry for latest live operational monitoring
+    try:
+        await cache_set(
+            f"rum:metric:{metric.name.lower()}:latest",
+            {
+                "id": saved_record["id"],
+                "metric": metric.name,
+                "value": metric.value,
+                "rating": metric.rating,
+                "route_template": route_template,
+                "timestamp": log_payload["timestamp"],
+            },
+            ttl=86400
+        )
+    except Exception as re:
+        logger.debug(f"[Redis RUM Cache] Skipped caching metric: {re}")
+
     return {
         "status": "recorded",
         "id": saved_record["id"],
@@ -592,6 +611,7 @@ async def record_web_vital(request: Request):
     }
 
 
+@app.get("/api/metrics")
 @app.get("/api/telemetry/vitals")
 def get_web_vitals(
     limit: int = Query(50, ge=1, le=200),
