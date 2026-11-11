@@ -227,10 +227,10 @@ def generate_domain_fallback(
         topic = task_input.get("topic", "New PR Initiative")
         tone = task_input.get("tone", "Authoritative")
         return {
-            "headline": f"Revolutionizing Agency Media: The Autonomous PR Workforce Has Arrived",
-            "subheadline": f"How specialized AI employee orchestration is redefining narrative speed and precision across the Middle East.",
+            "headline": "Revolutionizing Agency Media: The Autonomous PR Workforce Has Arrived",
+            "subheadline": "How specialized AI employee orchestration is redefining narrative speed and precision across the Middle East.",
             "hook": "What if an entire 38-agent PR agency could draft, vet, translate, and launch a multi-market media blitz before your second morning coffee?",
-            "body_copy": f"CAIRO & DUBAI — In an unprecedented leap for modern communications, PR Agency today announced the deployment of its autonomous workforce operating system. Designed to eliminate operational friction and elevate creative strategy, the platform coordinates specialized artificial intelligence employees under human executive governance. From real-time crisis intelligence to immaculate bilingual press crafting, the future of strategic storytelling is no longer coming—it is already running.",
+            "body_copy": "CAIRO & DUBAI — In an unprecedented leap for modern communications, PR Agency today announced the deployment of its autonomous workforce operating system. Designed to eliminate operational friction and elevate creative strategy, the platform coordinates specialized artificial intelligence employees under human executive governance. From real-time crisis intelligence to immaculate bilingual press crafting, the future of strategic storytelling is no longer coming—it is already running.",
             "call_to_action": "Discover the autonomous communications revolution. Request an executive briefing today at pragency.eg.",
             "hashtags": ["#PRAgency", "#AutonomousWorkforce", "#AICommunications", "#MediaIntelligence", "#CairoTech"],
             "word_count": 142,
@@ -317,7 +317,7 @@ def generate_domain_fallback(
                     "day": 4,
                     "touchpoint_channel": "LinkedIn Direct Message",
                     "subject": "Follow up on media operations benchmark",
-                    "email_body": f"Thought you would find this useful: here is our 1-page benchmark on how AI workforce orchestration cuts enterprise PR retainer waste by 40%."
+                    "email_body": "Thought you would find this useful: here is our 1-page benchmark on how AI workforce orchestration cuts enterprise PR retainer waste by 40%."
                 }
             ],
             "objection_rebuttals": [
@@ -327,7 +327,7 @@ def generate_domain_fallback(
                     "pivot_rebuttal": "Our 38 agents are governed by human directors (Fawzyia for design, Ragaa for strategy), ensuring 100% human-in-the-loop sign-off before anything goes live."
                 }
             ],
-            "close_strategy": f"Anchor the proposal on retainer ROI savings, offer a 14-day proof-of-concept pilot with zero cancellation penalty.",
+            "close_strategy": "Anchor the proposal on retainer ROI savings, offer a 14-day proof-of-concept pilot with zero cancellation penalty.",
             "quality_score": 96
         }
 

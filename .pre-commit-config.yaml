@@ -20,6 +20,7 @@ repos:
         language: system
         types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
         files: ^apps/web/
+        exclude: ^apps/web/public/
 
   # 3. Frontend Linting (ESLint)
   - repo: local
@@ -30,3 +31,4 @@ repos:
         language: system
         types_or: [javascript, jsx, ts, tsx]
         files: ^apps/web/
+        exclude: ^apps/web/public/

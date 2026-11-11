@@ -1,0 +1,5 @@
+node_modules
+.next
+.pytest_cache
+apps/web/public/sw.js
+apps/web/public/workbox-*.js

@@ -15,7 +15,14 @@ import {
   X,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { Agent, Project, Deliverable, executeAgent, executeAgentStream } from "@/lib/api";
+import {
+  Agent,
+  Project,
+  Deliverable,
+  executeAgent,
+  executeAgentStream,
+} from "@/lib/api";
+import DeliverableFormattedViewer from "@/components/DeliverableFormattedViewer";
 
 interface AgentExecutionModalProps {
   agent: Agent;
@@ -81,16 +88,16 @@ export default function AgentExecutionModal({
           input: parsedInput,
         },
         (token: string) => {
-          setStreamedText((prev) => prev + token);
+          setStreamedText(prev => prev + token);
         },
-        (result) => {
+        result => {
           setExecResult(result);
           if (onExecutionSuccess && result.deliverable) {
             onExecutionSuccess(result.deliverable);
           }
           setExecuting(false);
         },
-        (err) => {
+        err => {
           console.error("Streaming execution error:", err);
           setExecError(err.message || "Streaming failed. Server error.");
           setExecuting(false);
@@ -107,7 +114,7 @@ export default function AgentExecutionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-2xl border border-gray-800 bg-[#12141e] p-6 shadow-2xl">
+      <div className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-2xl border border-gray-800 bg-[#12141e] p-6 shadow-2xl">
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-4 border-b border-gray-800">
           <div className="flex items-center gap-3">
@@ -116,7 +123,9 @@ export default function AgentExecutionModal({
             </div>
             <div>
               <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <span>{isAr && agent.name_ar ? agent.name_ar : agent.name}</span>
+                <span>
+                  {isAr && agent.name_ar ? agent.name_ar : agent.name}
+                </span>
                 <span className="rounded bg-[#8b5cf6]/20 px-2 py-0.5 text-[10px] font-bold text-[#a78bfa] uppercase">
                   {agent.department}
                 </span>
@@ -152,11 +161,11 @@ export default function AgentExecutionModal({
                 </label>
                 <select
                   value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  onChange={e => setSelectedProjectId(e.target.value)}
                   className="w-full rounded-lg border border-gray-800 bg-[#13151f] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                 >
                   <option value="">-- General Agency Task --</option>
-                  {projects.map((p) => (
+                  {projects.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
@@ -172,7 +181,7 @@ export default function AgentExecutionModal({
                 <input
                   type="text"
                   value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
+                  onChange={e => setTaskTitle(e.target.value)}
                   className="w-full rounded-lg border border-gray-800 bg-[#13151f] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                 />
               </div>
@@ -195,7 +204,7 @@ export default function AgentExecutionModal({
                 <textarea
                   rows={8}
                   value={inputJsonText}
-                  onChange={(e) => setInputJsonText(e.target.value)}
+                  onChange={e => setInputJsonText(e.target.value)}
                   className="w-full font-mono text-xs rounded-lg border border-gray-800 bg-[#0f1118] p-3 text-emerald-400 focus:border-[#8b5cf6] focus:outline-none"
                 />
               </div>
@@ -275,7 +284,11 @@ export default function AgentExecutionModal({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400">
                     <Sparkles className="h-4 w-4 animate-spin text-[#8b5cf6]" />
-                    <span>{isAr ? "جارٍ توليد المخرج بالذكاء الاصطناعي (تدفق مباشر SSE)..." : "Streaming AI Output in Real-Time (SSE)..."}</span>
+                    <span>
+                      {isAr
+                        ? "جارٍ توليد المخرج بالذكاء الاصطناعي (تدفق مباشر SSE)..."
+                        : "Streaming AI Output in Real-Time (SSE)..."}
+                    </span>
                   </div>
                   <pre
                     data-testid="streaming-output-preview"
@@ -293,24 +306,41 @@ export default function AgentExecutionModal({
                       {execResult.deliverable.title}
                     </div>
                     <div className="flex items-center gap-3 text-[11px] text-gray-400">
-                      <span>Status: <strong className="text-emerald-400">{execResult.deliverable.status}</strong></span>
+                      <span>
+                        Status:{" "}
+                        <strong className="text-emerald-400">
+                          {execResult.deliverable.status}
+                        </strong>
+                      </span>
                       <span>•</span>
-                      <span>Agent: <strong className="text-[#a78bfa]">{agent.name}</strong></span>
+                      <span>
+                        Agent:{" "}
+                        <strong className="text-[#a78bfa]">{agent.name}</strong>
+                      </span>
                     </div>
                   </div>
 
-                  {/* Structured JSON Output Viewer */}
-                  <div>
-                    <span className="text-xs font-semibold text-gray-400 mb-1 block">
-                      Structured JSON Deliverable Output:
-                    </span>
-                    <pre
-                      data-testid="deliverable-json-output"
-                      className="max-h-[340px] overflow-auto rounded-lg border border-gray-800 bg-[#0d0e14] p-3 text-[11px] font-mono text-cyan-300"
-                    >
-                      {JSON.stringify(execResult.output, null, 2)}
-                    </pre>
-                  </div>
+                  {/* Formatted Deliverable Output Viewer */}
+                  <DeliverableFormattedViewer
+                    content={execResult.output}
+                    deliverable={execResult.deliverable}
+                    agentName={agent.name}
+                    agentRole={agent.role}
+                    qualityScore={execResult.deliverable.quality_score}
+                    onDownloadJson={() => {
+                      const blob = new Blob(
+                        [JSON.stringify(execResult.output, null, 2)],
+                        {
+                          type: "application/json",
+                        }
+                      );
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${agent.id}-deliverable.json`;
+                      a.click();
+                    }}
+                  />
                 </div>
               ) : (
                 <div className="flex h-64 flex-col items-center justify-center text-center text-gray-500">
@@ -336,9 +366,12 @@ export default function AgentExecutionModal({
 
                 <button
                   onClick={() => {
-                    const blob = new Blob([JSON.stringify(execResult.output, null, 2)], {
-                      type: "application/json",
-                    });
+                    const blob = new Blob(
+                      [JSON.stringify(execResult.output, null, 2)],
+                      {
+                        type: "application/json",
+                      }
+                    );
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;

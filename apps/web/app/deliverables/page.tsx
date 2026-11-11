@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
+import DeliverableFormattedViewer from "@/components/DeliverableFormattedViewer";
 import { useI18n } from "@/lib/i18n";
 import {
   Deliverable,
@@ -54,7 +55,8 @@ export default function DeliverablesPage() {
   const [selectedType, setSelectedType] = useState<string>("all");
 
   // Inspect Modal
-  const [activeDeliverable, setActiveDeliverable] = useState<Deliverable | null>(null);
+  const [activeDeliverable, setActiveDeliverable] =
+    useState<Deliverable | null>(null);
 
   // Version History Modal
   const [historyTarget, setHistoryTarget] = useState<Deliverable | null>(null);
@@ -111,7 +113,9 @@ export default function DeliverablesPage() {
     setForkTarget(d);
     const nextVer = (d.version || 1) + 1;
     setNewVersionTitle(`${d.title} (v${nextVer})`);
-    setNewVersionContent(d.raw_content || JSON.stringify(d.content_json, null, 2));
+    setNewVersionContent(
+      d.raw_content || JSON.stringify(d.content_json, null, 2)
+    );
   };
 
   const handleSaveNewVersion = async (e: React.FormEvent) => {
@@ -134,7 +138,7 @@ export default function DeliverablesPage() {
         quality_score: Math.min(100, (forkTarget.quality_score || 95) + 2),
       });
 
-      setDeliverables((prev) => [created, ...prev]);
+      setDeliverables(prev => [created, ...prev]);
       setForkTarget(null);
     } catch (err: any) {
       alert(err.message || "Failed to create new version");
@@ -143,7 +147,7 @@ export default function DeliverablesPage() {
     }
   };
 
-  const filtered = deliverables.filter((d) => {
+  const filtered = deliverables.filter(d => {
     if (!debouncedSearch) return true;
     const term = debouncedSearch.toLowerCase();
     return (
@@ -208,7 +212,7 @@ export default function DeliverablesPage() {
               type="text"
               data-testid="search-deliverables"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={e => setSearch(e.target.value)}
               placeholder="Search deliverables, agents, clients..."
               className="w-full rounded-xl border border-gray-800 bg-[#161824] py-2 ps-9 pe-3 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
             />
@@ -222,11 +226,11 @@ export default function DeliverablesPage() {
             <select
               value={selectedClient}
               data-testid="filter-client"
-              onChange={(e) => setSelectedClient(e.target.value)}
+              onChange={e => setSelectedClient(e.target.value)}
               className="w-full rounded-xl border border-gray-800 bg-[#161824] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
             >
               <option value="all">{t("deliverables.filter_all")}</option>
-              {clients.map((c) => (
+              {clients.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -242,11 +246,11 @@ export default function DeliverablesPage() {
             <select
               value={selectedAgent}
               data-testid="filter-agent"
-              onChange={(e) => setSelectedAgent(e.target.value)}
+              onChange={e => setSelectedAgent(e.target.value)}
               className="w-full rounded-xl border border-gray-800 bg-[#161824] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
             >
               <option value="all">{t("deliverables.filter_all")}</option>
-              {agents.map((a) => (
+              {agents.map(a => (
                 <option key={a.id} value={a.id}>
                   {a.name}
                 </option>
@@ -262,7 +266,7 @@ export default function DeliverablesPage() {
             <select
               value={selectedType}
               data-testid="filter-type"
-              onChange={(e) => setSelectedType(e.target.value)}
+              onChange={e => setSelectedType(e.target.value)}
               className="w-full rounded-xl border border-gray-800 bg-[#161824] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
             >
               <option value="all">{t("deliverables.filter_all")}</option>
@@ -284,7 +288,10 @@ export default function DeliverablesPage() {
           </div>
           <div className="divide-y divide-gray-800/60 p-2 space-y-2">
             {Array.from({ length: 6 }).map((_, idx) => (
-              <div key={idx} className="flex items-center justify-between px-4 py-3 animate-pulse">
+              <div
+                key={idx}
+                className="flex items-center justify-between px-4 py-3 animate-pulse"
+              >
                 <div className="space-y-1.5 flex-1 max-w-sm">
                   <div className="h-4 w-48 bg-gray-800 rounded" />
                   <div className="h-3 w-28 bg-gray-800/60 rounded" />
@@ -299,23 +306,33 @@ export default function DeliverablesPage() {
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-800 bg-[#12141e]/50 p-12 text-center">
           <Sparkles className="mx-auto h-12 w-12 text-gray-600" />
-          <h3 className="mt-4 text-base font-bold text-white">{t("deliverables.empty")}</h3>
+          <h3 className="mt-4 text-base font-bold text-white">
+            {t("deliverables.empty")}
+          </h3>
           <p className="mt-1 text-xs text-gray-400">
-            Execute any of the 8 agents or an Om Samah workflow to generate verified client deliverables.
+            Execute any of the 8 agents or an Om Samah workflow to generate
+            verified client deliverables.
           </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-gray-800 bg-[#12141e] shadow-xl">
-          <div ref={deliverablesContainerRef} className="max-h-[640px] overflow-auto">
+          <div
+            ref={deliverablesContainerRef}
+            className="max-h-[640px] overflow-auto"
+          >
             <table className="w-full text-left text-xs text-gray-300">
               <thead className="sticky top-0 z-10 border-b border-gray-800 bg-[#161824] uppercase text-[10px] font-bold tracking-wider text-gray-400 shadow-sm">
                 <tr>
                   <th className="px-5 py-3.5">{t("deliverables.col_title")}</th>
                   <th className="px-4 py-3.5">Version</th>
                   <th className="px-5 py-3.5">{t("deliverables.col_agent")}</th>
-                  <th className="px-5 py-3.5">{t("deliverables.col_project")}</th>
+                  <th className="px-5 py-3.5">
+                    {t("deliverables.col_project")}
+                  </th>
                   <th className="px-4 py-3.5">{t("deliverables.col_score")}</th>
-                  <th className="px-4 py-3.5">{t("deliverables.col_status")}</th>
+                  <th className="px-4 py-3.5">
+                    {t("deliverables.col_status")}
+                  </th>
                   <th className="px-4 py-3.5">{t("deliverables.col_date")}</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
@@ -326,131 +343,137 @@ export default function DeliverablesPage() {
                     <td colSpan={8} style={{ height: `${paddingTop}px` }} />
                   </tr>
                 )}
-                {virtualRows.map((virtualRow) => {
+                {virtualRows.map(virtualRow => {
                   const d = filtered[virtualRow.index];
                   if (!d) return null;
                   return (
                     <tr
                       key={d.id}
-                    data-testid="deliverable-row"
-                    className="hover:bg-[#181a28] transition group cursor-pointer"
-                    onClick={() => setActiveDeliverable(d)}
-                  >
-                    {/* Title */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <FileCode className="h-4 w-4 text-[#8b5cf6] shrink-0" />
-                        <div>
-                          <p className="font-bold text-white group-hover:text-[#c4b5fd] transition line-clamp-1">
-                            {d.title}
-                          </p>
-                          <span className="text-[10px] text-gray-500 font-mono">
-                            {d.file_type.toUpperCase()} • ID: {d.id.slice(0, 8)}
-                          </span>
+                      data-testid="deliverable-row"
+                      className="hover:bg-[#181a28] transition group cursor-pointer"
+                      onClick={() => setActiveDeliverable(d)}
+                    >
+                      {/* Title */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <FileCode className="h-4 w-4 text-[#8b5cf6] shrink-0" />
+                          <div>
+                            <p className="font-bold text-white group-hover:text-[#c4b5fd] transition line-clamp-1">
+                              {d.title}
+                            </p>
+                            <span className="text-[10px] text-gray-500 font-mono">
+                              {d.file_type.toUpperCase()} • ID:{" "}
+                              {d.id.slice(0, 8)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Version Badge */}
-                    <td className="px-4 py-4">
-                      <span
-                        data-testid="deliverable-version-badge"
-                        className="inline-flex items-center gap-1 rounded-full bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 px-2.5 py-0.5 text-[11px] font-extrabold text-[#c4b5fd]"
+                      {/* Version Badge */}
+                      <td className="px-4 py-4">
+                        <span
+                          data-testid="deliverable-version-badge"
+                          className="inline-flex items-center gap-1 rounded-full bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 px-2.5 py-0.5 text-[11px] font-extrabold text-[#c4b5fd]"
+                        >
+                          <GitBranch className="h-3 w-3" />
+                          <span>v{d.version || 1}</span>
+                        </span>
+                      </td>
+
+                      {/* Agent */}
+                      <td className="px-5 py-4">
+                        <span className="inline-flex items-center gap-1.5 rounded-md bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 text-xs text-[#c4b5fd]">
+                          <Bot className="h-3 w-3" />
+                          <span>{d.agent_name}</span>
+                        </span>
+                      </td>
+
+                      {/* Project & Client */}
+                      <td className="px-5 py-4 text-gray-400">
+                        <div>
+                          <p className="text-white text-xs font-semibold">
+                            {d.project_name || "Internal Operating System"}
+                          </p>
+                          {d.client_name && (
+                            <span className="text-[10px] text-emerald-400 font-medium">
+                              {d.client_name}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Quality Score */}
+                      <td className="px-4 py-4">
+                        <span className="inline-flex items-center gap-1 font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-xs">
+                          <CheckCircle2 className="h-3 w-3" />
+                          <span>{d.quality_score}/100</span>
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-4">
+                        <span className="rounded bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-400">
+                          {d.status}
+                        </span>
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-4 py-4 text-gray-400 text-[11px]">
+                        {d.created_at
+                          ? d.created_at.slice(0, 16).replace("T", " ")
+                          : "—"}
+                      </td>
+
+                      {/* Actions */}
+                      <td
+                        className="px-5 py-4 text-right"
+                        onClick={e => e.stopPropagation()}
                       >
-                        <GitBranch className="h-3 w-3" />
-                        <span>v{d.version || 1}</span>
-                      </span>
-                    </td>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* New Version Button */}
+                          <button
+                            onClick={() => handleOpenNewVersion(d)}
+                            data-testid="create-new-version-btn"
+                            className="inline-flex items-center gap-1 rounded-lg border border-[#8b5cf6]/40 bg-[#8b5cf6]/15 px-2 py-1 text-[11px] font-bold text-[#c4b5fd] hover:bg-[#8b5cf6] hover:text-white transition"
+                            title="Fork new version"
+                          >
+                            <Plus className="h-3 w-3" />
+                            <span>v{(d.version || 1) + 1}</span>
+                          </button>
 
-                    {/* Agent */}
-                    <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-1.5 rounded-md bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 text-xs text-[#c4b5fd]">
-                        <Bot className="h-3 w-3" />
-                        <span>{d.agent_name}</span>
-                      </span>
-                    </td>
+                          {/* View Versions */}
+                          <button
+                            onClick={() => handleOpenVersions(d)}
+                            data-testid="view-versions-btn"
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
+                            title="View Version History"
+                          >
+                            <History className="h-4 w-4" />
+                          </button>
 
-                    {/* Project & Client */}
-                    <td className="px-5 py-4 text-gray-400">
-                      <div>
-                        <p className="text-white text-xs font-semibold">
-                          {d.project_name || "Internal Operating System"}
-                        </p>
-                        {d.client_name && (
-                          <span className="text-[10px] text-emerald-400 font-medium">
-                            {d.client_name}
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                          {/* Inspect JSON */}
+                          <button
+                            onClick={() => setActiveDeliverable(d)}
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
+                            title="Inspect JSON"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
 
-                    {/* Quality Score */}
-                    <td className="px-4 py-4">
-                      <span className="inline-flex items-center gap-1 font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-xs">
-                        <CheckCircle2 className="h-3 w-3" />
-                        <span>{d.quality_score}/100</span>
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-4">
-                      <span className="rounded bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-400">
-                        {d.status}
-                      </span>
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-4 py-4 text-gray-400 text-[11px]">
-                      {d.created_at ? d.created_at.slice(0, 16).replace("T", " ") : "—"}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* New Version Button */}
-                        <button
-                          onClick={() => handleOpenNewVersion(d)}
-                          data-testid="create-new-version-btn"
-                          className="inline-flex items-center gap-1 rounded-lg border border-[#8b5cf6]/40 bg-[#8b5cf6]/15 px-2 py-1 text-[11px] font-bold text-[#c4b5fd] hover:bg-[#8b5cf6] hover:text-white transition"
-                          title="Fork new version"
-                        >
-                          <Plus className="h-3 w-3" />
-                          <span>v{(d.version || 1) + 1}</span>
-                        </button>
-
-                        {/* View Versions */}
-                        <button
-                          onClick={() => handleOpenVersions(d)}
-                          data-testid="view-versions-btn"
-                          className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
-                          title="View Version History"
-                        >
-                          <History className="h-4 w-4" />
-                        </button>
-
-                        {/* Inspect JSON */}
-                        <button
-                          onClick={() => setActiveDeliverable(d)}
-                          className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
-                          title="Inspect JSON"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-
-                        {/* Download File */}
-                        <a
-                          href={d.file_url}
-                          download
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
-                          title="Download"
-                        >
-                          <Download className="h-4 w-4" />
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
+                          {/* Download File */}
+                          <a
+                            href={d.file_url}
+                            download
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
+                            title="Download"
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
                 {paddingBottom > 0 && (
@@ -481,7 +504,10 @@ export default function DeliverablesPage() {
                     {t("deliverables.modal_version_title")}
                   </h3>
                   <p className="mt-0.5 text-xs text-gray-400">
-                    Lineage for: <strong className="text-white">{historyTarget.title}</strong>
+                    Lineage for:{" "}
+                    <strong className="text-white">
+                      {historyTarget.title}
+                    </strong>
                   </p>
                 </div>
               </div>
@@ -495,9 +521,11 @@ export default function DeliverablesPage() {
 
             <div className="mt-5 space-y-3">
               {loadingVersions ? (
-                <div className="py-8 text-center text-xs text-gray-400">Loading versions...</div>
+                <div className="py-8 text-center text-xs text-gray-400">
+                  Loading versions...
+                </div>
               ) : (
-                lineageVersions.map((ver) => (
+                lineageVersions.map(ver => (
                   <div
                     key={ver.id}
                     data-testid="version-lineage-item"
@@ -508,9 +536,12 @@ export default function DeliverablesPage() {
                         v{ver.version || 1}
                       </span>
                       <div>
-                        <h4 className="text-xs font-bold text-white">{ver.title}</h4>
+                        <h4 className="text-xs font-bold text-white">
+                          {ver.title}
+                        </h4>
                         <p className="text-[10px] text-gray-400">
-                          By {ver.agent_name} • {ver.created_at?.slice(0, 16).replace("T", " ")}
+                          By {ver.agent_name} •{" "}
+                          {ver.created_at?.slice(0, 16).replace("T", " ")}
                         </p>
                       </div>
                     </div>
@@ -563,7 +594,9 @@ export default function DeliverablesPage() {
                     {t("deliverables.modal_new_version_title")}
                   </h3>
                   <p className="mt-0.5 text-xs text-gray-400">
-                    Parent: <strong className="text-white">{forkTarget.title}</strong> (v{forkTarget.version || 1})
+                    Parent:{" "}
+                    <strong className="text-white">{forkTarget.title}</strong>{" "}
+                    (v{forkTarget.version || 1})
                   </p>
                 </div>
               </div>
@@ -584,7 +617,7 @@ export default function DeliverablesPage() {
                   type="text"
                   data-testid="new-version-title-input"
                   value={newVersionTitle}
-                  onChange={(e) => setNewVersionTitle(e.target.value)}
+                  onChange={e => setNewVersionTitle(e.target.value)}
                   className="mt-1.5 w-full rounded-xl border border-gray-800 bg-[#161824] px-3.5 py-2.5 text-sm text-white focus:border-[#8b5cf6] focus:outline-none"
                   required
                 />
@@ -598,7 +631,7 @@ export default function DeliverablesPage() {
                   rows={6}
                   data-testid="new-version-content-input"
                   value={newVersionContent}
-                  onChange={(e) => setNewVersionContent(e.target.value)}
+                  onChange={e => setNewVersionContent(e.target.value)}
                   className="mt-1.5 w-full font-mono text-xs rounded-xl border border-gray-800 bg-[#161824] p-3 text-gray-200 focus:border-[#8b5cf6] focus:outline-none"
                   required
                 />
@@ -634,7 +667,7 @@ export default function DeliverablesPage() {
       {/* ── INSPECT DELIVERABLE MODAL ─────────────────────────────────────── */}
       {activeDeliverable && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-800 bg-[#12141e] p-6 shadow-2xl">
+          <div className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-2xl border border-gray-800 bg-[#12141e] p-6 shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-800">
               <div>
@@ -649,8 +682,7 @@ export default function DeliverablesPage() {
                   Produced by{" "}
                   <span className="font-semibold text-[#c4b5fd]">
                     {activeDeliverable.agent_name}
-                  </span>{" "}
-                  • Score: {activeDeliverable.quality_score}/100
+                  </span>
                 </p>
               </div>
               <button
@@ -663,11 +695,23 @@ export default function DeliverablesPage() {
 
             {/* Content Display */}
             <div className="mt-4">
-              <div className="rounded-xl border border-gray-800 bg-[#0e1017] p-4 max-h-[500px] overflow-y-auto text-xs font-mono text-gray-200">
-                <pre className="whitespace-pre-wrap break-all">
-                  {JSON.stringify(activeDeliverable.content_json, null, 2)}
-                </pre>
-              </div>
+              <DeliverableFormattedViewer
+                content={activeDeliverable.content_json}
+                deliverable={activeDeliverable}
+                agentName={activeDeliverable.agent_name}
+                qualityScore={activeDeliverable.quality_score}
+                onDownloadJson={() => {
+                  const blob = new Blob(
+                    [JSON.stringify(activeDeliverable.content_json, null, 2)],
+                    { type: "application/json" }
+                  );
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${activeDeliverable.id}.json`;
+                  a.click();
+                }}
+              />
 
               {/* Modal Footer */}
               <div className="mt-4 flex items-center justify-between pt-3 border-t border-gray-800">
