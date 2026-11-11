@@ -61,3 +61,6 @@ backups/*
 
 # pyscn analysis reports & cache
 .pyscn/
+
+# Vercel CLI cache
+.vercel/

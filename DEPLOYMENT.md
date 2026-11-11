@@ -4,6 +4,41 @@ This guide provides end-to-end instructions for deploying, scaling, and maintain
 
 ---
 
+## 🌐 Live Production Deployments & Endpoints
+
+| Component | Provider / Platform | Production URL | Status | Healthcheck / Probe |
+| :--- | :--- | :--- | :---: | :--- |
+| **Frontend Web App** | Vercel (Global Edge Network) | [https://web-2d1.vercel.app](https://web-2d1.vercel.app) | 🟢 Live | `GET /login` (HTTP 200) |
+| **Alternate Production Domain** | Vercel | [https://web-ashen-one-76.vercel.app](https://web-ashen-one-76.vercel.app) | 🟢 Live | `GET /login` (HTTP 200) |
+| **Backend API Gateway** | Railway | [https://api-production-07121d2e.up.railway.app](https://api-production-07121d2e.up.railway.app) | 🟢 Live | `GET /health` (HTTP 200) |
+| **PostgreSQL Database** | Supabase (AWS eu-west-1) | Connected via PgBouncer | 🟢 Live | Pooled Connection (Port 6543) |
+| **Redis Cache & Rate Limiting** | Upstash Redis | Connected via TLS (`rediss://`) | 🟢 Live | `PING` / Cache-Aside Active |
+
+### 🔁 Future Redeployment Instructions
+
+#### 1. Redeploy Backend to Railway:
+```bash
+# From apps/api directory:
+cd apps/api
+railway up --detach -y
+```
+
+#### 2. Redeploy Frontend to Vercel:
+```bash
+# From apps/web directory:
+cd apps/web
+npx vercel --prod --yes
+```
+
+#### 3. Run Live E2E Smoke Test:
+```bash
+# From root directory:
+node tests/e2e_live_smoke.cjs
+```
+
+
+---
+
 ## 🏗️ 1. Architecture Overview
 
 ```mermaid

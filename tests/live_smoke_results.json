@@ -1,0 +1,28 @@
+{
+  "frontendUrl": "https://web-2d1.vercel.app",
+  "backendUrl": "https://api-production-07121d2e.up.railway.app",
+  "timestamp": "2026-11-11T17:58:16.562Z",
+  "tests": [
+    {
+      "name": "Login Page Render",
+      "status": "PASSED",
+      "httpStatus": 200
+    },
+    {
+      "name": "Authentication & Redirect",
+      "status": "PASSED",
+      "currentUrl": "https://web-2d1.vercel.app/dashboard"
+    },
+    {
+      "name": "Dashboard CORS & Live Data",
+      "status": "PASSED",
+      "verified": true
+    },
+    {
+      "name": "Agents Roster & Registry",
+      "status": "PASSED",
+      "count": 4
+    }
+  ],
+  "allPassed": true
+}
