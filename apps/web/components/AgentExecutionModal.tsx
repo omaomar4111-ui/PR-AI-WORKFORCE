@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Sliders,
@@ -13,15 +13,13 @@ import {
   Download,
   Bot,
   X,
+  Code,
+  FileText,
+  Palette,
+  Wand2,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import {
-  Agent,
-  Project,
-  Deliverable,
-  executeAgent,
-  executeAgentStream,
-} from "@/lib/api";
+import { Agent, Project, Deliverable, executeAgentStream } from "@/lib/api";
 import DeliverableFormattedViewer from "@/components/DeliverableFormattedViewer";
 
 interface AgentExecutionModalProps {
@@ -45,6 +43,17 @@ export default function AgentExecutionModal({
     projects.length > 0 ? projects[0].id : ""
   );
   const [taskTitle, setTaskTitle] = useState(`${agent.name} - ${agent.role}`);
+
+  // Mode toggle: Creative Brief vs Advanced Raw JSON
+  const [inputMode, setInputMode] = useState<"brief" | "json">("brief");
+
+  // Creative Brief Form fields
+  const [briefText, setBriefText] = useState("");
+  const [clientOrProject, setClientOrProject] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [toneOfVoice, setToneOfVoice] = useState("Luxury");
+  const [visualStyle, setVisualStyle] = useState("");
+
   const [inputJsonText, setInputJsonText] = useState(
     agent.sample_input ? JSON.stringify(agent.sample_input, null, 2) : "{}"
   );
@@ -56,22 +65,129 @@ export default function AgentExecutionModal({
   const [execError, setExecError] = useState<string | null>(null);
   const [streamedText, setStreamedText] = useState<string>("");
 
-  const handleLoadSample = () => {
+  // Helper to load rich sample brief based on agent role
+  const loadDefaultSample = () => {
+    if (
+      agent.department === "creative" ||
+      /designer|design|هوية|تصميم/i.test(agent.role)
+    ) {
+      setBriefText(
+        isAr
+          ? "تصميم هوية بصرية فاخرة وشعار أيقوني متكامل لعلامة تجارية متخصصة في العطور الشرقية المعاصرة مع ألوان ملكية ولمسات ذهبية."
+          : "Design a luxury visual identity and iconic brand logo for a contemporary Arabian perfumery with royal navy and gold accents."
+      );
+      setClientOrProject(isAr ? "نخبة العود / Elite Oud" : "Elite Oud Luxury");
+      setTargetAudience(
+        isAr
+          ? "عشاق العطور الراقية والشباب في الخليج (22-45 سنة)"
+          : "Luxury perfume connoisseurs and young professionals (22-45)"
+      );
+      setToneOfVoice("Luxury");
+      setVisualStyle(
+        isAr
+          ? "أزرق ملكي داكن #0A192F، ذهبي لامع #D4AF37، وخط عربي كوفي معاصر"
+          : "Royal Navy #0A192F, Gold #D4AF37, Minimalist Arabic Typography"
+      );
+    } else if (/script|video|سيناريو/i.test(agent.role)) {
+      setBriefText(
+        isAr
+          ? "كتابة سكريبت إعلاني فيروسي مدته 30 ثانية لمنصة ذكاء اصطناعي تقدم أتمتة شاملة لفرق التسويق والمحتوى."
+          : "Write a high-converting 30-second viral ad script for an AI platform providing marketing automation for creative teams."
+      );
+      setClientOrProject("PR AI WORKFORCE");
+      setTargetAudience(
+        isAr
+          ? "مؤسسو الشركات الناشئة، ومدراء التسويق، وصناع المحتوى"
+          : "Founders, CMOs, and digital marketing leaders"
+      );
+      setToneOfVoice("Bold & Viral");
+      setVisualStyle(
+        isAr
+          ? "سينمائي سريع، سايبربانك أسود ونيون أرجواني"
+          : "Cinematic fast-paced, Cyberpunk Obsidian & Neon Purple"
+      );
+    } else {
+      const sampleGoal =
+        agent.sample_input?.campaign_goal ||
+        agent.sample_input?.brief ||
+        agent.sample_input?.topic;
+      setBriefText(
+        sampleGoal ||
+          (isAr
+            ? `تنفيذ مهمة ${agent.role} باحترافية عالية متوافقة مع أهداف المشروع.`
+            : `Execute high-level ${agent.role} deliverable matching industry benchmarks.`)
+      );
+      setClientOrProject(
+        agent.sample_input?.client_name ||
+          agent.sample_input?.project_name ||
+          "PR-AI-Enterprise"
+      );
+      setTargetAudience(
+        agent.sample_input?.target_audience ||
+          "Industry decision makers and B2B customers"
+      );
+      setToneOfVoice("Formal");
+      setVisualStyle(
+        agent.sample_input?.colors || "Professional Modern Slate & Violet"
+      );
+    }
+
     if (agent.sample_input) {
       setInputJsonText(JSON.stringify(agent.sample_input, null, 2));
-      setExecError(null);
     }
+    setExecError(null);
+  };
+
+  useEffect(() => {
+    loadDefaultSample();
+  }, [agent.id]);
+
+  const handleLoadSample = () => {
+    loadDefaultSample();
   };
 
   const handleRunAgent = async (e: React.FormEvent) => {
     e.preventDefault();
 
     let parsedInput: Record<string, any>;
-    try {
-      parsedInput = JSON.parse(inputJsonText);
-    } catch {
-      setExecError("Invalid JSON input syntax. Please verify JSON format.");
-      return;
+    if (inputMode === "json") {
+      try {
+        parsedInput = JSON.parse(inputJsonText);
+      } catch {
+        setExecError(
+          isAr
+            ? "صيغة JSON غير صحيحة. يرجى مراجعة الكود."
+            : "Invalid JSON input syntax. Please verify JSON format."
+        );
+        return;
+      }
+    } else {
+      // Compile from Creative Brief Form
+      parsedInput = {
+        brief: briefText.trim() || taskTitle,
+        task_brief: briefText.trim() || taskTitle,
+        client_name: clientOrProject.trim() || "General Client",
+        project_name: clientOrProject.trim() || "General Project",
+        target_audience: targetAudience.trim() || "General Audience",
+        tone: toneOfVoice,
+        tone_of_voice: toneOfVoice,
+        colors: visualStyle.trim() || "Modern Brand Palette",
+        campaign_goal: briefText.trim() || "Brand Awareness & Performance",
+        ...(agent.sample_input || {}),
+        // Overwrite essential fields from user input
+        ...(clientOrProject.trim()
+          ? {
+              client_name: clientOrProject.trim(),
+              brand_name: clientOrProject.trim(),
+            }
+          : {}),
+        ...(briefText.trim()
+          ? {
+              brief: briefText.trim(),
+              campaign_goal: briefText.trim(),
+            }
+          : {}),
+      };
     }
 
     try {
@@ -186,28 +302,163 @@ export default function AgentExecutionModal({
                 />
               </div>
 
-              {/* JSON Input Area */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-gray-300">
-                    {t("agents.input_brief")}
-                  </label>
+              {/* Mode Toggle & Sample Loader */}
+              <div className="flex items-center justify-between mb-3 border-b border-gray-800 pb-2">
+                <div className="flex items-center gap-1 bg-[#12141e] p-1 rounded-lg border border-gray-800">
                   <button
                     type="button"
-                    onClick={handleLoadSample}
-                    className="text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] flex items-center gap-1"
+                    onClick={() => setInputMode("brief")}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                      inputMode === "brief"
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-gray-400 hover:text-white"
+                    }`}
                   >
-                    <RefreshCw className="h-3 w-3" />
-                    {t("agents.load_sample")}
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>{isAr ? "البريف الإبداعي" : "Creative Brief"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("json")}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                      inputMode === "json"
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <Code className="h-3.5 w-3.5" />
+                    <span>{isAr ? "كود JSON" : "Raw JSON"}</span>
                   </button>
                 </div>
-                <textarea
-                  rows={8}
-                  value={inputJsonText}
-                  onChange={e => setInputJsonText(e.target.value)}
-                  className="w-full font-mono text-xs rounded-lg border border-gray-800 bg-[#0f1118] p-3 text-emerald-400 focus:border-[#8b5cf6] focus:outline-none"
-                />
+
+                <button
+                  type="button"
+                  onClick={handleLoadSample}
+                  className="text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] flex items-center gap-1"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  <span>{t("agents.load_sample")}</span>
+                </button>
               </div>
+
+              {/* Form Views */}
+              {inputMode === "brief" ? (
+                <div className="space-y-3">
+                  {/* Brief Text Area */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">
+                      {isAr
+                        ? "البريف والمخرجات المطلوبة (Task Brief)"
+                        : "Task Brief & Deliverable Requirements"}
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={briefText}
+                      onChange={e => setBriefText(e.target.value)}
+                      placeholder={
+                        isAr
+                          ? "اكتب تفاصيل طلبك هنا باللغة الطبيعية..."
+                          : "Describe the task, objectives, and deliverables..."
+                      }
+                      className="w-full text-xs rounded-lg border border-gray-800 bg-[#12141f] p-2.5 text-gray-100 focus:border-[#8b5cf6] focus:outline-none placeholder-gray-600"
+                    />
+                  </div>
+
+                  {/* Project / Brand & Audience Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1">
+                        {isAr ? "اسم العلامة / العميل" : "Brand / Client Name"}
+                      </label>
+                      <input
+                        type="text"
+                        value={clientOrProject}
+                        onChange={e => setClientOrProject(e.target.value)}
+                        placeholder="e.g. Elite Brand"
+                        className="w-full rounded-lg border border-gray-800 bg-[#12141f] px-2.5 py-1.5 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1">
+                        {isAr ? "الجمهور المستهدف" : "Target Audience"}
+                      </label>
+                      <input
+                        type="text"
+                        value={targetAudience}
+                        onChange={e => setTargetAudience(e.target.value)}
+                        placeholder="e.g. GCC Youth (20-35)"
+                        className="w-full rounded-lg border border-gray-800 bg-[#12141f] px-2.5 py-1.5 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tone of Voice & Style / Colors Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1">
+                        {isAr ? "نبرة الصوت (Tone)" : "Tone of Voice"}
+                      </label>
+                      <select
+                        value={toneOfVoice}
+                        onChange={e => setToneOfVoice(e.target.value)}
+                        className="w-full rounded-lg border border-gray-800 bg-[#12141f] px-2 py-1.5 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
+                      >
+                        <option value="Luxury">
+                          {isAr ? "Luxury (فاخر وراقٍ)" : "Luxury / Premium"}
+                        </option>
+                        <option value="Bold & Viral">
+                          {isAr
+                            ? "Bold & Viral (جريء وفيروسي)"
+                            : "Bold & Viral"}
+                        </option>
+                        <option value="Formal">
+                          {isAr ? "Formal (رسمي ومؤسسي)" : "Formal / Corporate"}
+                        </option>
+                        <option value="Friendly">
+                          {isAr
+                            ? "Friendly (ودود وجذاب)"
+                            : "Friendly / Approachable"}
+                        </option>
+                        <option value="Authoritative">
+                          {isAr
+                            ? "Authoritative (تقني وموثوق)"
+                            : "Authoritative & Expert"}
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-400 mb-1">
+                        {isAr ? "الستايل البصري / الألوان" : "Style & Palette"}
+                      </label>
+                      <input
+                        type="text"
+                        value={visualStyle}
+                        onChange={e => setVisualStyle(e.target.value)}
+                        placeholder="e.g. Royal Navy & Gold"
+                        className="w-full rounded-lg border border-gray-800 bg-[#12141f] px-2.5 py-1.5 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Raw JSON Area */
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-300">
+                      {isAr ? "كود JSON المباشر" : "Direct JSON Payload"}
+                    </label>
+                  </div>
+                  <textarea
+                    rows={8}
+                    value={inputJsonText}
+                    onChange={e => setInputJsonText(e.target.value)}
+                    className="w-full font-mono text-xs rounded-lg border border-gray-800 bg-[#0f1118] p-3 text-emerald-400 focus:border-[#8b5cf6] focus:outline-none"
+                  />
+                </div>
+              )}
 
               {/* Execute Button */}
               <div className="mt-4">
