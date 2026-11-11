@@ -1813,10 +1813,13 @@ async def edit_and_approve_endpoint(
 
 # ── Milestone 7: Integration Hub Endpoints ────────────────────────────────────
 @app.get("/api/integrations")
-def list_integrations_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+def list_integrations_endpoint(
+    include_extended: bool = Query(False, description="Include extended connectors like Slack, GitHub, Notion"),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
     """Lists all external tool integrations with real live connection status."""
     org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
-    providers = list_supported_providers()
+    providers = list_supported_providers(include_extended=include_extended)
     items = []
     for p in providers:
         adapter = get_integration_adapter(p["provider"], org_id)

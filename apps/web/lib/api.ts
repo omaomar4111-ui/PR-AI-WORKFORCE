@@ -1286,8 +1286,7 @@ export interface Integration {
   name: string;
   name_ar?: string;
   description?: string;
-  category:
-    "storage" | "docs" | "email" | "sheets" | "marketing" | "social" | "media";
+  category: string;
   required_scopes?: string[];
   scopes?: string[];
   status: "connected" | "disconnected" | "error" | "requires_api_access";
@@ -1364,10 +1363,15 @@ export async function editAndApproveRequest(
   return data.approval;
 }
 
-export async function fetchIntegrations(): Promise<Integration[]> {
-  const res = await customFetch(`${API_BASE_URL}/api/integrations`, {
-    headers: authHeaders(),
-  });
+export async function fetchIntegrations(
+  includeExtended: boolean = true
+): Promise<Integration[]> {
+  const res = await customFetch(
+    `${API_BASE_URL}/api/integrations?include_extended=${includeExtended}`,
+    {
+      headers: authHeaders(),
+    }
+  );
   if (!res.ok) throw new Error("Failed to load integrations");
   const data = await res.json();
   return data.integrations;
@@ -1392,9 +1396,9 @@ export async function connectIntegration(
 
 export async function disconnectIntegration(provider: string): Promise<any> {
   const res = await customFetch(
-    `${API_BASE_URL}/api/integrations/${provider}/disconnect`,
+    `${API_BASE_URL}/api/integrations/${provider}`,
     {
-      method: "POST",
+      method: "DELETE",
       headers: authHeaders(),
     }
   );

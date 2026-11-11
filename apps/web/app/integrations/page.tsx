@@ -30,6 +30,9 @@ import {
   Video,
   Activity,
   Check,
+  MessageSquare,
+  Github,
+  BookOpen,
 } from "lucide-react";
 
 export default function IntegrationsPage() {
@@ -38,8 +41,14 @@ export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [actionLoadingProvider, setActionLoadingProvider] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<{ provider: string; success: boolean; message: string } | null>(null);
+  const [actionLoadingProvider, setActionLoadingProvider] = useState<
+    string | null
+  >(null);
+  const [testResult, setTestResult] = useState<{
+    provider: string;
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   // Connect modal
   const [modalProvider, setModalProvider] = useState<Integration | null>(null);
@@ -63,12 +72,23 @@ export default function IntegrationsPage() {
   const handleOpenConnect = (item: Integration) => {
     setModalProvider(item);
     // Provide sensible default template
-    if (item.provider === "google_drive" || item.provider === "google_docs" || item.provider === "gmail" || item.provider === "google_sheets") {
+    if (
+      item.provider === "google_drive" ||
+      item.provider === "google_docs" ||
+      item.provider === "gmail" ||
+      item.provider === "google_sheets"
+    ) {
       setConfigFields({ access_token: "", client_id: "" });
     } else if (item.provider === "meta_ads" || item.provider === "google_ads") {
       setConfigFields({ access_token: "", account_id: "" });
     } else if (item.provider === "instagram") {
       setConfigFields({ access_token: "", page_id: "" });
+    } else if (item.provider === "slack") {
+      setConfigFields({ bot_token: "", webhook_url: "" });
+    } else if (item.provider === "github") {
+      setConfigFields({ access_token: "", repository: "" });
+    } else if (item.provider === "notion") {
+      setConfigFields({ api_key: "", database_id: "" });
     } else {
       setConfigFields({ api_key: "", model: "default" });
     }
@@ -76,15 +96,36 @@ export default function IntegrationsPage() {
 
   const handleFillSandboxCredentials = () => {
     if (!modalProvider) return;
-    if (modalProvider.provider.startsWith("google_") || modalProvider.provider === "gmail") {
+    if (
+      modalProvider.provider.startsWith("google_") ||
+      modalProvider.provider === "gmail"
+    ) {
       setConfigFields({
         access_token: "ya29.sandbox_test_token_approved_rw",
         client_id: "sandbox_client_id.apps.googleusercontent.com",
       });
-    } else if (modalProvider.provider.includes("ads") || modalProvider.provider === "instagram") {
+    } else if (
+      modalProvider.provider.includes("ads") ||
+      modalProvider.provider === "instagram"
+    ) {
       setConfigFields({
         access_token: "EAAB_sandbox_user_token_marketing",
         account_id: "act_1234567890",
+      });
+    } else if (modalProvider.provider === "slack") {
+      setConfigFields({
+        bot_token: "xoxb-sandbox-slack-token-554433",
+        webhook_url: "https://hooks.slack.com/services/T00/B00/XXXX",
+      });
+    } else if (modalProvider.provider === "github") {
+      setConfigFields({
+        access_token: "ghp_sandbox_personal_token_xyz999",
+        repository: "pr-agency/campaigns",
+      });
+    } else if (modalProvider.provider === "notion") {
+      setConfigFields({
+        api_key: "secret_sandbox_notion_key_abc111",
+        database_id: "notion-db-pr-briefs",
       });
     } else {
       setConfigFields({
@@ -126,7 +167,10 @@ export default function IntegrationsPage() {
     setTestResult(null);
     try {
       const res = await testIntegration(provider);
-      const isSuccess = res.success !== undefined ? res.success : (res as any).status === "connected";
+      const isSuccess =
+        res.success !== undefined
+          ? res.success
+          : (res as any).status === "connected";
       setTestResult({
         provider,
         success: isSuccess,
@@ -160,6 +204,12 @@ export default function IntegrationsPage() {
         return <Search className="h-5 w-5 text-amber-400" />;
       case "instagram":
         return <Instagram className="h-5 w-5 text-pink-400" />;
+      case "slack":
+        return <MessageSquare className="h-5 w-5 text-emerald-400" />;
+      case "github":
+        return <Github className="h-5 w-5 text-gray-200" />;
+      case "notion":
+        return <BookOpen className="h-5 w-5 text-amber-200" />;
       case "image_gen":
         return <ImageIcon className="h-5 w-5 text-purple-400" />;
       case "video_gen":
@@ -202,16 +252,25 @@ export default function IntegrationsPage() {
     }
   };
 
-  const filteredIntegrations = integrations.filter((item) => {
+  const filteredIntegrations = integrations.filter(item => {
     if (filterCategory === "all") return true;
-    if (filterCategory === "storage") return ["storage", "docs", "email", "sheets"].includes(item.category);
-    if (filterCategory === "marketing") return item.category === "marketing";
-    if (filterCategory === "social") return item.category === "social";
-    if (filterCategory === "media") return item.category === "media";
+    const cat = (item.category || "").toLowerCase();
+    if (filterCategory === "storage")
+      return ["storage", "docs", "email", "sheets", "knowledge base"].includes(
+        cat
+      );
+    if (filterCategory === "marketing") return cat === "marketing";
+    if (filterCategory === "social")
+      return ["social", "communication"].includes(cat);
+    if (filterCategory === "media") return cat === "media";
+    if (filterCategory === "dev")
+      return ["development", "communication"].includes(cat);
     return true;
   });
 
-  const connectedCount = integrations.filter((i) => i.status === "connected").length;
+  const connectedCount = integrations.filter(
+    i => i.status === "connected"
+  ).length;
 
   return (
     <AppShell>
@@ -234,7 +293,10 @@ export default function IntegrationsPage() {
 
           <div className="flex items-center gap-2">
             <div className="rounded-lg border border-gray-800 bg-[#171923] px-3 py-1.5 text-xs text-gray-300">
-              <span className="font-bold text-emerald-400">{connectedCount}</span> / {integrations.length} {t("integrations.status_connected")}
+              <span className="font-bold text-emerald-400">
+                {connectedCount}
+              </span>{" "}
+              / {integrations.length} {t("integrations.status_connected")}
             </div>
           </div>
         </div>
@@ -256,9 +318,12 @@ export default function IntegrationsPage() {
               )}
               <div>
                 <p className="font-bold">
-                  Connection Test [{testResult.provider}]: {testResult.success ? "SUCCESS" : "FAILED"}
+                  Connection Test [{testResult.provider}]:{" "}
+                  {testResult.success ? "SUCCESS" : "FAILED"}
                 </p>
-                <p className="text-[11px] opacity-90 mt-0.5">{testResult.message}</p>
+                <p className="text-[11px] opacity-90 mt-0.5">
+                  {testResult.message}
+                </p>
               </div>
             </div>
             <button
@@ -278,7 +343,8 @@ export default function IntegrationsPage() {
             { id: "marketing", label: t("integrations.category_marketing") },
             { id: "social", label: t("integrations.category_social") },
             { id: "media", label: t("integrations.category_media") },
-          ].map((cat) => (
+            { id: "dev", label: isAr ? "البرمجة والتواصل" : "Dev & Chat" },
+          ].map(cat => (
             <button
               key={cat.id}
               onClick={() => setFilterCategory(cat.id)}
@@ -300,7 +366,7 @@ export default function IntegrationsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredIntegrations.map((item) => {
+            {filteredIntegrations.map(item => {
               const isConnected = item.status === "connected";
               const isTesting = actionLoadingProvider === item.provider;
 
@@ -332,7 +398,9 @@ export default function IntegrationsPage() {
 
                     {/* Description */}
                     <p className="text-xs text-gray-400 mt-3 line-clamp-2">
-                      {item.description || (isAr ? item.name_ar : item.name) || "External platform connector"}
+                      {item.description ||
+                        (isAr ? item.name_ar : item.name) ||
+                        "External platform connector"}
                     </p>
 
                     {/* Scopes */}
@@ -342,14 +410,16 @@ export default function IntegrationsPage() {
                         {t("integrations.scopes_label")}
                       </p>
                       <div className="flex flex-wrap gap-1">
-                        {(item.required_scopes || item.scopes || []).map((scope) => (
-                          <span
-                            key={scope}
-                            className="font-mono text-[10px] rounded bg-gray-800/60 border border-gray-700/60 px-1.5 py-0.5 text-gray-300"
-                          >
-                            {scope}
-                          </span>
-                        ))}
+                        {(item.required_scopes || item.scopes || []).map(
+                          scope => (
+                            <span
+                              key={scope}
+                              className="font-mono text-[10px] rounded bg-gray-800/60 border border-gray-700/60 px-1.5 py-0.5 text-gray-300"
+                            >
+                              {scope}
+                            </span>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
@@ -363,7 +433,9 @@ export default function IntegrationsPage() {
                           disabled={isTesting}
                           className="flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 text-xs font-semibold text-purple-300 transition disabled:opacity-50"
                         >
-                          <Activity className={`h-3.5 w-3.5 ${isTesting ? "animate-spin" : ""}`} />
+                          <Activity
+                            className={`h-3.5 w-3.5 ${isTesting ? "animate-spin" : ""}`}
+                          />
                           <span>{t("integrations.btn_test")}</span>
                         </button>
                         <button
@@ -414,7 +486,8 @@ export default function IntegrationsPage() {
 
               <div className="flex items-center justify-between bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
                 <div className="text-xs text-purple-300">
-                  <span className="font-bold">Sandbox Testing:</span> Auto-fill mock credentials to test without real production keys.
+                  <span className="font-bold">Sandbox Testing:</span> Auto-fill
+                  mock credentials to test without real production keys.
                 </div>
                 <button
                   type="button"
@@ -427,16 +500,23 @@ export default function IntegrationsPage() {
 
               {/* Dynamic form inputs */}
               <div className="space-y-3">
-                {Object.keys(configFields).map((fieldKey) => (
+                {Object.keys(configFields).map(fieldKey => (
                   <div key={fieldKey}>
                     <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
                       {fieldKey.replace("_", " ")}
                     </label>
                     <input
-                      type={fieldKey.includes("key") || fieldKey.includes("token") ? "password" : "text"}
+                      type={
+                        fieldKey.includes("key") || fieldKey.includes("token")
+                          ? "password"
+                          : "text"
+                      }
                       value={configFields[fieldKey] || ""}
-                      onChange={(e) =>
-                        setConfigFields({ ...configFields, [fieldKey]: e.target.value })
+                      onChange={e =>
+                        setConfigFields({
+                          ...configFields,
+                          [fieldKey]: e.target.value,
+                        })
                       }
                       placeholder={`Enter ${fieldKey.replace("_", " ")}`}
                       className="w-full text-xs rounded-xl border border-gray-800 bg-[#0d0e12] px-3.5 py-2.5 text-white focus:border-[#8b5cf6] focus:outline-none"
