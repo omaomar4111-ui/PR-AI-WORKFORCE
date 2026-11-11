@@ -1,7 +1,7 @@
 {
   "frontendUrl": "https://web-2d1.vercel.app",
   "backendUrl": "https://api-production-07121d2e.up.railway.app",
-  "timestamp": "2026-11-11T17:58:16.562Z",
+  "timestamp": "2026-11-11T22:48:26.558Z",
   "tests": [
     {
       "name": "Login Page Render",
@@ -22,6 +22,26 @@
       "name": "Agents Roster & Registry",
       "status": "PASSED",
       "count": 4
+    },
+    {
+      "name": "Settings Page",
+      "status": "PASSED",
+      "verified": true
+    },
+    {
+      "name": "Departments Page",
+      "status": "PASSED",
+      "verified": true
+    },
+    {
+      "name": "Workflow Builder Page",
+      "status": "PASSED",
+      "verified": true
+    },
+    {
+      "name": "Integrations Page",
+      "status": "PASSED",
+      "verified": true
     }
   ],
   "allPassed": true
