@@ -5,7 +5,8 @@
   "description": "PR AI WORKFORCE - Operating System",
   "scripts": {
     "test:backend": "cd apps/api && python -m pytest -v",
-    "test:e2e": "node tests/e2e_milestone_2.cjs"
+    "test:e2e": "node tests/e2e_milestone_2.cjs",
+    "test:lighthouse": "npm --prefix apps/web run test:lighthouse"
   },
   "devDependencies": {
     "playwright": "^1.64.1"
