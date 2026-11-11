@@ -45,7 +45,13 @@ export default function DashboardPage() {
     loadStats();
   }, [loadStats]);
 
-  const { totalClients, activeProjects, totalRetainer, isEmpty, formattedRetainer } = useMemo(() => {
+  const {
+    totalClients,
+    activeProjects,
+    totalRetainer,
+    isEmpty,
+    formattedRetainer,
+  } = useMemo(() => {
     const clients = stats?.total_clients ?? 0;
     const projects = stats?.active_projects ?? 0;
     const retainer = stats?.total_retainer ?? 0;
@@ -54,7 +60,9 @@ export default function DashboardPage() {
       activeProjects: projects,
       totalRetainer: retainer,
       isEmpty: clients === 0 && projects === 0,
-      formattedRetainer: retainer.toLocaleString("en-US", { minimumFractionDigits: 0 }),
+      formattedRetainer: retainer.toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+      }),
     };
   }, [stats]);
 
@@ -69,9 +77,9 @@ export default function DashboardPage() {
               <span className="h-2 w-2 animate-pulse rounded-full bg-[#8b5cf6]" />
               <span>{t("nav.command_center")} • Real-time Data</span>
             </div>
-            <h2 className="text-2xl font-black text-white sm:text-3xl">
+            <h1 className="text-2xl font-black text-white sm:text-3xl">
               {t("dash.welcome")}
-            </h2>
+            </h1>
             <p className="mt-2 text-xs sm:text-sm leading-relaxed text-gray-300">
               {t("dash.welcome_sub")}
             </p>
@@ -79,17 +87,23 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2 self-start md:self-center">
             <button
+              type="button"
               onClick={loadStats}
+              aria-label="تحديث الإحصائيات / Refresh dashboard data"
               className="flex items-center gap-1.5 rounded-lg border border-gray-800 bg-[#171923] px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
               <span className="hidden sm:inline">تحديث / Refresh</span>
             </button>
             <Link
               href="/clients"
+              aria-label="إضافة عميل جديد / Add new client"
               className="flex items-center gap-1.5 rounded-lg bg-[#8b5cf6] px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-[#8b5cf6]/20 hover:bg-[#7c3aed]"
             >
-              <PlusCircle className="h-4 w-4" />
+              <PlusCircle className="h-4 w-4" aria-hidden="true" />
               <span>{t("dash.add_client")}</span>
             </Link>
           </div>
@@ -116,13 +130,17 @@ export default function DashboardPage() {
             {/* Total Clients */}
             <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-400">{t("dash.total_clients")}</span>
+                <span className="text-xs font-medium text-gray-400">
+                  {t("dash.total_clients")}
+                </span>
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#8b5cf6]/10 text-[#a78bfa]">
                   <Users className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-white">{totalClients}</span>
+                <span className="text-3xl font-extrabold text-white">
+                  {totalClients}
+                </span>
                 <span className="text-xs text-gray-400">
                   {isAr ? "عميل مسجل" : "clients recorded"}
                 </span>
@@ -132,15 +150,21 @@ export default function DashboardPage() {
             {/* Active Projects */}
             <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-400">{t("dash.active_projects")}</span>
+                <span className="text-xs font-medium text-gray-400">
+                  {t("dash.active_projects")}
+                </span>
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
                   <FolderGit2 className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-white">{activeProjects}</span>
+                <span className="text-3xl font-extrabold text-white">
+                  {activeProjects}
+                </span>
                 <span className="text-xs text-gray-400">
-                  {isAr ? `من إجمالي ${stats?.total_projects ?? 0}` : `of ${stats?.total_projects ?? 0} total`}
+                  {isAr
+                    ? `من إجمالي ${stats?.total_projects ?? 0}`
+                    : `of ${stats?.total_projects ?? 0} total`}
                 </span>
               </div>
             </div>
@@ -148,7 +172,9 @@ export default function DashboardPage() {
             {/* Total Retainer Revenue */}
             <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-[#13151f] p-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-400">{t("dash.total_retainer")}</span>
+                <span className="text-xs font-medium text-gray-400">
+                  {t("dash.total_retainer")}
+                </span>
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
                   <DollarSign className="h-5 w-5" />
                 </div>
@@ -198,16 +224,21 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between pb-3 border-b border-gray-800">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-[#8b5cf6]" />
-                <h3 className="text-sm font-bold text-white">{t("dash.recent_clients")}</h3>
+                <h3 className="text-sm font-bold text-white">
+                  {t("dash.recent_clients")}
+                </h3>
               </div>
-              <Link href="/clients" className="text-xs text-[#a78bfa] hover:underline">
+              <Link
+                href="/clients"
+                className="text-xs text-[#a78bfa] hover:underline"
+              >
                 {t("dash.view_all")}
               </Link>
             </div>
 
             <div className="mt-4 divide-y divide-gray-800/60">
               {stats?.recent_clients?.length ? (
-                stats.recent_clients.map((client) => (
+                stats.recent_clients.map(client => (
                   <Link
                     key={client.id}
                     href={`/clients/${client.id}`}
@@ -216,11 +247,17 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3">
                       <div
                         className="h-3.5 w-3.5 rounded-full"
-                        style={{ backgroundColor: client.brand_color || "#8b5cf6" }}
+                        style={{
+                          backgroundColor: client.brand_color || "#8b5cf6",
+                        }}
                       />
                       <div>
-                        <p className="text-xs font-bold text-white">{client.name}</p>
-                        <p className="text-[10px] text-gray-400">{client.industry}</p>
+                        <p className="text-xs font-bold text-white">
+                          {client.name}
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          {client.industry}
+                        </p>
                       </div>
                     </div>
                     <span className="text-[10px] text-gray-400 flex items-center gap-1">
@@ -230,7 +267,9 @@ export default function DashboardPage() {
                   </Link>
                 ))
               ) : (
-                <p className="py-6 text-center text-xs text-gray-500">{t("dash.no_recent")}</p>
+                <p className="py-6 text-center text-xs text-gray-500">
+                  {t("dash.no_recent")}
+                </p>
               )}
             </div>
           </div>
@@ -240,24 +279,33 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between pb-3 border-b border-gray-800">
               <div className="flex items-center gap-2">
                 <FolderGit2 className="h-4 w-4 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white">{t("dash.recent_projects")}</h3>
+                <h3 className="text-sm font-bold text-white">
+                  {t("dash.recent_projects")}
+                </h3>
               </div>
-              <Link href="/projects" className="text-xs text-emerald-400 hover:underline">
+              <Link
+                href="/projects"
+                className="text-xs text-emerald-400 hover:underline"
+              >
                 {t("dash.view_all")}
               </Link>
             </div>
 
             <div className="mt-4 divide-y divide-gray-800/60">
               {stats?.recent_projects?.length ? (
-                stats.recent_projects.map((project) => (
+                stats.recent_projects.map(project => (
                   <Link
                     key={project.id}
                     href={`/projects/${project.id}`}
                     className="flex items-center justify-between py-3 px-2 rounded-lg transition hover:bg-[#181a26]"
                   >
                     <div>
-                      <p className="text-xs font-bold text-white">{project.name}</p>
-                      <p className="text-[10px] text-gray-400">{project.client_name}</p>
+                      <p className="text-xs font-bold text-white">
+                        {project.name}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        {project.client_name}
+                      </p>
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-bold text-emerald-400">
@@ -268,8 +316,8 @@ export default function DashboardPage() {
                           project.status === "active"
                             ? "text-emerald-400"
                             : project.status === "paused"
-                            ? "text-amber-400"
-                            : "text-gray-400"
+                              ? "text-amber-400"
+                              : "text-gray-400"
                         }`}
                       >
                         {project.status}
@@ -278,7 +326,9 @@ export default function DashboardPage() {
                   </Link>
                 ))
               ) : (
-                <p className="py-6 text-center text-xs text-gray-500">{t("dash.no_recent")}</p>
+                <p className="py-6 text-center text-xs text-gray-500">
+                  {t("dash.no_recent")}
+                </p>
               )}
             </div>
           </div>

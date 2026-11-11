@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/navigation";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -47,20 +46,104 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: "command_center", labelKey: "nav.command_center", href: "/dashboard", icon: LayoutDashboard, enabled: true },
-  { id: "virtual_office", labelKey: "nav.virtual_office", href: "/virtual-office", icon: Building2, enabled: true },
-  { id: "agents", labelKey: "nav.agents", href: "/agents", icon: Bot, enabled: true },
-  { id: "departments", labelKey: "nav.departments", href: "/departments", icon: Network, enabled: false },
-  { id: "tasks", labelKey: "nav.tasks", href: "/tasks", icon: CheckSquare, enabled: true },
-  { id: "workflows", labelKey: "nav.workflows", href: "/workflows", icon: Workflow, enabled: true },
-  { id: "approvals", labelKey: "nav.approvals", href: "/approvals", icon: ShieldAlert, enabled: true },
-  { id: "projects", labelKey: "nav.projects", href: "/projects", icon: FolderGit2, enabled: true },
-  { id: "clients", labelKey: "nav.clients", href: "/clients", icon: Users, enabled: true },
-  { id: "memory", labelKey: "nav.memory", href: "/memory", icon: Brain, enabled: true },
-  { id: "deliverables", labelKey: "nav.deliverables", href: "/deliverables", icon: Sparkles, enabled: true },
-  { id: "analytics", labelKey: "nav.analytics", href: "/analytics", icon: BarChart3, enabled: true },
-  { id: "integrations", labelKey: "nav.integrations", href: "/integrations", icon: Cable, enabled: true },
-  { id: "settings", labelKey: "nav.settings", href: "/settings", icon: Settings, enabled: false },
+  {
+    id: "command_center",
+    labelKey: "nav.command_center",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    enabled: true,
+  },
+  {
+    id: "virtual_office",
+    labelKey: "nav.virtual_office",
+    href: "/virtual-office",
+    icon: Building2,
+    enabled: true,
+  },
+  {
+    id: "agents",
+    labelKey: "nav.agents",
+    href: "/agents",
+    icon: Bot,
+    enabled: true,
+  },
+  {
+    id: "departments",
+    labelKey: "nav.departments",
+    href: "/departments",
+    icon: Network,
+    enabled: false,
+  },
+  {
+    id: "tasks",
+    labelKey: "nav.tasks",
+    href: "/tasks",
+    icon: CheckSquare,
+    enabled: true,
+  },
+  {
+    id: "workflows",
+    labelKey: "nav.workflows",
+    href: "/workflows",
+    icon: Workflow,
+    enabled: true,
+  },
+  {
+    id: "approvals",
+    labelKey: "nav.approvals",
+    href: "/approvals",
+    icon: ShieldAlert,
+    enabled: true,
+  },
+  {
+    id: "projects",
+    labelKey: "nav.projects",
+    href: "/projects",
+    icon: FolderGit2,
+    enabled: true,
+  },
+  {
+    id: "clients",
+    labelKey: "nav.clients",
+    href: "/clients",
+    icon: Users,
+    enabled: true,
+  },
+  {
+    id: "memory",
+    labelKey: "nav.memory",
+    href: "/memory",
+    icon: Brain,
+    enabled: true,
+  },
+  {
+    id: "deliverables",
+    labelKey: "nav.deliverables",
+    href: "/deliverables",
+    icon: Sparkles,
+    enabled: true,
+  },
+  {
+    id: "analytics",
+    labelKey: "nav.analytics",
+    href: "/analytics",
+    icon: BarChart3,
+    enabled: true,
+  },
+  {
+    id: "integrations",
+    labelKey: "nav.integrations",
+    href: "/integrations",
+    icon: Cable,
+    enabled: true,
+  },
+  {
+    id: "settings",
+    labelKey: "nav.settings",
+    href: "/settings",
+    icon: Settings,
+    enabled: false,
+  },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -81,7 +164,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
 
     Promise.all([
-      fetchMe().then((data) => data.user),
+      fetchMe().then(data => data.user),
       fetchPendingApprovalsCount().catch(() => 0),
     ])
       .then(([userData, count]) => {
@@ -99,12 +182,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     try {
       const wsUrl = `${getWsBaseUrl()}/ws/approvals`;
       ws = new WebSocket(wsUrl);
-      ws.onmessage = (event) => {
+      ws.onmessage = event => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.event === "approval_created" || msg.event === "approval_updated") {
+          if (
+            msg.event === "approval_created" ||
+            msg.event === "approval_updated"
+          ) {
             fetchPendingApprovalsCount()
-              .then((count) => setPendingApprovalsCount(count))
+              .then(count => setPendingApprovalsCount(count))
               .catch(() => {});
           }
         } catch (e) {}
@@ -137,7 +223,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#0d0e12] text-white selection:bg-[#8b5cf6] selection:text-white">
       {/* ── Desktop Persistent Sidebar (13 Items) ─────────────────────────── */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-gray-800/80 bg-[#12141c] shrink-0">
+      <aside
+        aria-label="Sidebar navigation"
+        className="hidden lg:flex w-64 flex-col border-r border-gray-800/80 bg-[#12141c] shrink-0"
+      >
         {/* Brand Header */}
         <div className="flex h-16 items-center gap-3 px-5 border-b border-gray-800/80">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-[#8b5cf6] to-indigo-500 font-black text-white shadow-md shadow-[#8b5cf6]/20">
@@ -154,10 +243,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* 13 Nav Items */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4 scrollbar-thin scrollbar-thumb-gray-800">
-          {MENU_ITEMS.map((item) => {
+        <nav
+          aria-label="Main navigation"
+          className="flex-1 space-y-1 overflow-y-auto px-3 py-4 scrollbar-thin scrollbar-thumb-gray-800"
+        >
+          {MENU_ITEMS.map(item => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+            const isActive =
+              pathname === item.href || pathname?.startsWith(item.href + "/");
 
             if (!item.enabled) {
               return (
@@ -188,7 +281,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-gray-400"}`} />
+                  <Icon
+                    className={`h-4 w-4 ${isActive ? "text-white" : "text-gray-400"}`}
+                  />
                   <span>{t(item.labelKey)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -197,7 +292,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       {pendingApprovalsCount}
                     </span>
                   )}
-                  {isActive && <ChevronRight className={`h-3 w-3 ${isAr ? "rotate-180" : ""}`} />}
+                  {isActive && (
+                    <ChevronRight
+                      className={`h-3 w-3 ${isAr ? "rotate-180" : ""}`}
+                    />
+                  )}
                 </div>
               </a>
             );
@@ -211,7 +310,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Shield className="h-4 w-4" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-gray-200 truncate">{user?.organization_name || t("nav.org")}</p>
+              <p className="text-xs font-bold text-gray-200 truncate">
+                {user?.organization_name || t("nav.org")}
+              </p>
               <p className="text-[10px] text-gray-400 truncate uppercase tracking-wider">
                 {isOwner ? t("role.owner") : t("role.member")}
               </p>
@@ -227,17 +328,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Mobile menu trigger */}
           <div className="flex items-center gap-3 lg:hidden">
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={
+                mobileMenuOpen
+                  ? "Close navigation menu"
+                  : "Open navigation menu"
+              }
+              aria-expanded={mobileMenuOpen}
               className="rounded-lg border border-gray-800 bg-[#171923] p-2 text-gray-300 hover:text-white"
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Menu className="h-5 w-5" aria-hidden="true" />
+              )}
             </button>
-            <span className="font-bold text-sm tracking-tight text-white">{t("app.name")}</span>
+            <span className="font-bold text-sm tracking-tight text-white">
+              {t("app.name")}
+            </span>
           </div>
 
           {/* Desktop Left: Breadcrumb / Active Context */}
           <div className="hidden lg:flex items-center gap-2 text-xs text-gray-400">
-            <span className="text-gray-200 font-semibold">{user?.organization_name || t("nav.org")}</span>
+            <span className="text-gray-200 font-semibold">
+              {user?.organization_name || t("nav.org")}
+            </span>
             <span>/</span>
             <span className="text-[#a78bfa] capitalize">
               {pathname === "/dashboard"
@@ -251,10 +367,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {/* Approvals Notification Bell */}
             <a
               href="/approvals"
+              aria-label={`View pending approvals${pendingApprovalsCount > 0 ? ` (${pendingApprovalsCount} pending)` : ""}`}
               className="relative flex items-center justify-center rounded-lg border border-gray-800 bg-[#171923] p-2 text-gray-300 transition hover:border-[#8b5cf6] hover:text-white"
               title={t("nav.approvals")}
             >
-              <Bell className="h-4 w-4" />
+              <Bell className="h-4 w-4" aria-hidden="true" />
               {pendingApprovalsCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black shadow-sm shadow-amber-500/50">
                   {pendingApprovalsCount > 9 ? "9+" : pendingApprovalsCount}
@@ -264,11 +381,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* Language Switcher */}
             <button
+              type="button"
               onClick={toggleLang}
+              aria-label="Toggle language between Arabic and English"
               className="flex items-center gap-1.5 rounded-lg border border-gray-800 bg-[#171923] px-3 py-1.5 text-xs font-semibold text-gray-300 transition hover:border-[#8b5cf6] hover:text-white"
               title="Toggle Language"
             >
-              <Globe className="h-3.5 w-3.5 text-[#8b5cf6]" />
+              <Globe
+                className="h-3.5 w-3.5 text-[#8b5cf6]"
+                aria-hidden="true"
+              />
               <span>{isAr ? "English" : "العربية"}</span>
             </button>
 
@@ -295,11 +417,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* Logout */}
             <button
+              type="button"
               onClick={handleLogout}
+              aria-label="Sign out of account"
               className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
               title={t("nav.logout")}
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">{t("nav.logout")}</span>
             </button>
           </div>
@@ -307,8 +431,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden fixed inset-x-0 top-16 z-40 bg-[#12141c] border-b border-gray-800 p-4 space-y-1">
-            {MENU_ITEMS.map((item) => {
+          <nav
+            aria-label="Mobile navigation"
+            className="lg:hidden fixed inset-x-0 top-16 z-40 bg-[#12141c] border-b border-gray-800 p-4 space-y-1"
+          >
+            {MENU_ITEMS.map(item => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               if (!item.enabled) return null;
@@ -318,7 +445,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium ${
-                    isActive ? "bg-[#8b5cf6] text-white" : "text-gray-300 hover:bg-[#1a1c27]"
+                    isActive
+                      ? "bg-[#8b5cf6] text-white"
+                      : "text-gray-300 hover:bg-[#1a1c27]"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -326,11 +455,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </a>
               );
             })}
-          </div>
+          </nav>
         )}
 
         {/* Page Content Body */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main
+          id="main-content"
+          role="main"
+          className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto"
+        >
           {children}
         </main>
       </div>
