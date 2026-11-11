@@ -291,6 +291,7 @@ export interface Workflow {
   org_id: string;
   project_id?: string | null;
   project_name?: string;
+  title?: string;
   user_request: string;
   status: WorkflowStatus;
   compiled_deliverable_id?: string | null;
@@ -1078,6 +1079,9 @@ export async function fetchWorkflow(workflowId: string): Promise<Workflow> {
 export async function createWorkflow(payload: {
   user_request: string;
   project_id?: string;
+  title?: string;
+  steps?: any[];
+  auto_start?: boolean;
 }): Promise<Workflow> {
   const res = await customFetch(`${API_BASE_URL}/api/workflows`, {
     method: "POST",
@@ -1087,6 +1091,52 @@ export async function createWorkflow(payload: {
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Failed to initiate workflow");
   return data.workflow;
+}
+
+export async function updateWorkflow(
+  workflowId: string,
+  payload: {
+    title?: string;
+    user_request?: string;
+    status?: string;
+    steps?: any[];
+  }
+): Promise<Workflow> {
+  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to update workflow");
+  return data.workflow;
+}
+
+export async function deleteWorkflow(workflowId: string): Promise<void> {
+  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Failed to delete workflow");
+  }
+}
+
+export async function executeWorkflow(
+  workflowId: string,
+  sync: boolean = false
+): Promise<{ success: boolean; status: string; workflow: Workflow }> {
+  const res = await customFetch(
+    `${API_BASE_URL}/api/workflows/${workflowId}/execute?sync=${sync}`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to execute workflow");
+  return data;
 }
 
 export async function fetchWorkflowLogs(

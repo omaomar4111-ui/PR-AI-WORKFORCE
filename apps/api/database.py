@@ -1196,11 +1196,13 @@ def create_workflow(data: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any
     wf_id = data.get("id") or str(uuid.uuid4())
     org_id = user.get("organization_id", "00000000-0000-0000-0000-000000000001")
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    title = data.get("title") or data.get("user_request", "")[:60]
     
     wf = {
         "id": wf_id,
         "org_id": org_id,
         "project_id": data.get("project_id"),
+        "title": title,
         "user_request": data["user_request"],
         "status": data.get("status", "planning"),
         "compiled_deliverable_id": None,
@@ -1233,6 +1235,8 @@ def get_workflow(workflow_id: str, user: Optional[Dict[str, Any]] = None) -> Opt
         return None
         
     wf_copy = dict(wf)
+    if "title" not in wf_copy or not wf_copy["title"]:
+        wf_copy["title"] = wf_copy.get("user_request", "")[:60]
     if wf.get("project_id") and wf["project_id"] in PROJECTS_DB:
         wf_copy["project_name"] = PROJECTS_DB[wf["project_id"]]["name"]
     wf_copy["steps"] = get_workflow_steps(workflow_id)
@@ -1246,6 +1250,8 @@ def list_workflows(user: Dict[str, Any], project_id: Optional[str] = None) -> Li
             if project_id and wf.get("project_id") != project_id:
                 continue
             wf_copy = dict(wf)
+            if "title" not in wf_copy or not wf_copy["title"]:
+                wf_copy["title"] = wf_copy.get("user_request", "")[:60]
             if wf.get("project_id") and wf["project_id"] in PROJECTS_DB:
                 wf_copy["project_name"] = PROJECTS_DB[wf["project_id"]]["name"]
             wf_copy["steps"] = get_workflow_steps(wf["id"])
@@ -1259,13 +1265,34 @@ def update_workflow(workflow_id: str, updates: Dict[str, Any]) -> Optional[Dict[
     if not wf:
         return None
     for k, v in updates.items():
-        if k in ["status", "compiled_deliverable_id", "completed_at"]:
+        if k in ["title", "user_request", "status", "compiled_deliverable_id", "completed_at"]:
             wf[k] = v
     wf_copy = dict(wf)
+    if "title" not in wf_copy or not wf_copy["title"]:
+        wf_copy["title"] = wf_copy.get("user_request", "")[:60]
     if wf.get("project_id") and wf["project_id"] in PROJECTS_DB:
         wf_copy["project_name"] = PROJECTS_DB[wf["project_id"]]["name"]
     wf_copy["steps"] = get_workflow_steps(workflow_id)
     return wf_copy
+
+
+def remove_workflow_steps(workflow_id: str) -> None:
+    to_delete = [sid for sid, s in WORKFLOW_STEPS_DB.items() if s.get("workflow_id") == workflow_id]
+    for sid in to_delete:
+        del WORKFLOW_STEPS_DB[sid]
+
+
+def delete_workflow(workflow_id: str, user: Optional[Dict[str, Any]] = None) -> bool:
+    wf = WORKFLOWS_DB.get(workflow_id)
+    if not wf:
+        return False
+    if user and not can_access_workflow(wf, user):
+        return False
+    del WORKFLOWS_DB[workflow_id]
+    remove_workflow_steps(workflow_id)
+    global EXECUTION_LOGS_DB
+    EXECUTION_LOGS_DB = [l for l in EXECUTION_LOGS_DB if l.get("workflow_id") != workflow_id]
+    return True
 
 
 def create_workflow_step(data: Dict[str, Any]) -> Dict[str, Any]:

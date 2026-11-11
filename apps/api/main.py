@@ -90,6 +90,9 @@ from database import (
     get_workflow,
     list_workflows,
     update_workflow,
+    delete_workflow,
+    remove_workflow_steps,
+    create_workflow_step,
     get_workflow_steps,
     get_execution_logs,
     record_web_vital_db,
@@ -447,6 +450,16 @@ class AgentStatusUpdateRequest(BaseModel):
 class WorkflowCreateRequest(BaseModel):
     user_request: str = Field(..., min_length=3)
     project_id: Optional[str] = None
+    title: Optional[str] = None
+    steps: Optional[List[Dict[str, Any]]] = None
+    auto_start: Optional[bool] = True
+
+
+class WorkflowUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    user_request: Optional[str] = None
+    status: Optional[str] = None
+    steps: Optional[List[Dict[str, Any]]] = None
 
 
 class StepApprovalRequest(BaseModel):
@@ -1406,25 +1419,45 @@ def serve_deliverable_file(filename: str):
     return FileResponse(file_path, media_type="application/json", filename=filename)
 
 
-# ── Milestone 5: Workflows API (Om Samah Orchestrator) ────────────────────────
+# ── Milestone 5: Workflows API (Om Samah Orchestrator & Builder) ──────────────
 @app.post("/api/workflows", status_code=201)
 async def create_workflow_endpoint(
     payload: WorkflowCreateRequest,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Initiates an Om Samah autonomous workflow from a user brief."""
+    """Initiates an Om Samah autonomous workflow or creates a custom workflow from the builder."""
+    wf_title = payload.title.strip() if payload.title and payload.title.strip() else payload.user_request.strip()[:60]
     wf = create_workflow({
+        "title": wf_title,
         "user_request": payload.user_request.strip(),
         "project_id": payload.project_id,
         "status": "planning",
     }, user=current_user)
 
-    orchestrator = OmSamahOrchestrator(wf["id"], current_user)
-    steps = await orchestrator.initialize_steps(payload.project_id)
-    wf["steps"] = steps
+    if payload.steps and len(payload.steps) > 0:
+        steps = []
+        for idx, s in enumerate(payload.steps):
+            step_record = create_workflow_step({
+                "workflow_id": wf["id"],
+                "step_order": s.get("step_order", idx + 1),
+                "assigned_agent_id": s["assigned_agent_id"],
+                "assigned_agent_name": s.get("assigned_agent_name", s["assigned_agent_id"]),
+                "title": s.get("title", f"Step {idx + 1}"),
+                "status": "pending",
+                "depends_on": s.get("depends_on", []),
+                "input": s.get("input", {}),
+                "requires_approval": s.get("requires_approval", False),
+            })
+            steps.append(step_record)
+        wf["steps"] = steps
 
-    # Start execution in background task (non-blocking)
-    start_workflow_in_background(wf["id"], current_user, payload.project_id)
+        if payload.auto_start:
+            start_workflow_in_background(wf["id"], current_user, payload.project_id)
+    else:
+        orchestrator = OmSamahOrchestrator(wf["id"], current_user)
+        steps = await orchestrator.initialize_steps(payload.project_id)
+        wf["steps"] = steps
+        start_workflow_in_background(wf["id"], current_user, payload.project_id)
 
     # Broadcast creation event
     await ws_manager.broadcast({
@@ -1465,6 +1498,96 @@ def get_workflow_endpoint(
     if not wf:
         raise HTTPException(status_code=404, detail="Workflow not found or access denied")
     return {"workflow": wf}
+
+
+@app.put("/api/workflows/{workflow_id}")
+async def update_workflow_endpoint(
+    workflow_id: str,
+    payload: WorkflowUpdateRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Updates workflow metadata, user request, or steps."""
+    wf = get_workflow(workflow_id, user=current_user)
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found or access denied")
+
+    updates = {}
+    if payload.title is not None:
+        updates["title"] = payload.title.strip()
+    if payload.user_request is not None:
+        updates["user_request"] = payload.user_request.strip()
+    if payload.status is not None:
+        updates["status"] = payload.status
+
+    updated_wf = update_workflow(workflow_id, updates)
+
+    if payload.steps is not None:
+        remove_workflow_steps(workflow_id)
+        for idx, s in enumerate(payload.steps):
+            create_workflow_step({
+                "workflow_id": workflow_id,
+                "step_order": s.get("step_order", idx + 1),
+                "assigned_agent_id": s["assigned_agent_id"],
+                "assigned_agent_name": s.get("assigned_agent_name", s["assigned_agent_id"]),
+                "title": s.get("title", f"Step {idx + 1}"),
+                "status": s.get("status", "pending"),
+                "depends_on": s.get("depends_on", []),
+                "input": s.get("input", {}),
+                "requires_approval": s.get("requires_approval", False),
+            })
+        updated_wf = get_workflow(workflow_id, user=current_user)
+
+    await ws_manager.broadcast({
+        "type": "workflow_updated",
+        "workflow": updated_wf,
+    })
+    return {"workflow": updated_wf}
+
+
+@app.delete("/api/workflows/{workflow_id}")
+async def delete_workflow_endpoint(
+    workflow_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Deletes a workflow and all associated steps and execution logs."""
+    wf = get_workflow(workflow_id, user=current_user)
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found or access denied")
+
+    deleted = delete_workflow(workflow_id, user=current_user)
+    if not deleted:
+        raise HTTPException(status_code=403, detail="Unable to delete workflow")
+
+    await ws_manager.broadcast({
+        "type": "workflow_deleted",
+        "workflow_id": workflow_id,
+    })
+    return {"success": True, "message": "Workflow deleted successfully"}
+
+
+@app.post("/api/workflows/{workflow_id}/execute")
+async def execute_workflow_endpoint(
+    workflow_id: str,
+    sync: bool = Query(False, description="Run synchronously if True"),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Executes a workflow either synchronously or asynchronously in the background."""
+    wf = get_workflow(workflow_id, user=current_user)
+    if not wf:
+        raise HTTPException(status_code=404, detail="Workflow not found or access denied")
+
+    # Update status to running
+    update_workflow(workflow_id, {"status": "running"})
+
+    if sync:
+        orchestrator = OmSamahOrchestrator(workflow_id, current_user)
+        await orchestrator.run(wf.get("project_id"))
+        wf = get_workflow(workflow_id, user=current_user)
+        return {"success": True, "status": wf.get("status", "completed"), "workflow": wf}
+    else:
+        start_workflow_in_background(workflow_id, current_user, wf.get("project_id"))
+        wf = get_workflow(workflow_id, user=current_user)
+        return {"success": True, "status": "running", "workflow": wf}
 
 
 @app.get("/api/workflows/{workflow_id}/logs")
@@ -1737,6 +1860,15 @@ def disconnect_integration_endpoint(
         return {"success": success, "provider": provider, "status": "disconnected"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/integrations/{provider}")
+def delete_integration_endpoint(
+    provider: str,
+    current_user: Dict[str, Any] = Depends(require_role(["owner", "admin"]))
+):
+    """Disconnects and revokes stored credentials for an integration provider (DELETE REST alias)."""
+    return disconnect_integration_endpoint(provider=provider, current_user=current_user)
 
 
 @app.post("/api/integrations/{provider}/test")
