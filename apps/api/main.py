@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, EmailStr, Field
 import os
+import time
 import asyncio
 import datetime
 import hashlib
@@ -203,24 +204,31 @@ async def opentelemetry_tracing_middleware(request: Request, call_next):
         span_id_hex = f"{span_ctx.span_id:016x}"
         traceparent_header = f"00-{trace_id_hex}-{span_id_hex}-01"
 
+        start_time = time.perf_counter()
         try:
             response = await call_next(request)
+            duration_ms = (time.perf_counter() - start_time) * 1000
             span.set_attribute("http.status_code", response.status_code)
+            span.set_attribute("http.response_time_ms", round(duration_ms, 2))
+            span.set_attribute("http.latency_ms", round(duration_ms, 2))
             if response.status_code >= 500:
                 span.set_status(Status(StatusCode.ERROR))
             else:
                 span.set_status(Status(StatusCode.OK))
         except Exception as exc:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            span.set_attribute("http.response_time_ms", round(duration_ms, 2))
             span.record_exception(exc)
             span.set_status(Status(StatusCode.ERROR, str(exc)))
             raise exc
 
         response.headers["traceparent"] = traceparent_header
         response.headers["x-trace-id"] = trace_id_hex
+        response.headers["x-response-time"] = f"{duration_ms:.2f}ms"
         if settings.APP_ENV == "development" or otel_exporter_mode == "console":
             logger.info(
                 f"[OTel Trace] {request.method} {request.url.path} "
-                f"status={response.status_code} trace_id={trace_id_hex} span_id={span_id_hex}"
+                f"status={response.status_code} latency={duration_ms:.2f}ms trace_id={trace_id_hex} span_id={span_id_hex}"
             )
         return response
 
