@@ -351,6 +351,23 @@ class OrganizationUpdate(BaseModel):
     logo_url: Optional[str] = None
 
 
+class DepartmentCreate(BaseModel):
+    id: Optional[str] = None
+    name: str = Field(..., min_length=1)
+    name_ar: Optional[str] = None
+    slug: Optional[str] = None
+    description: Optional[str] = ""
+    icon: Optional[str] = "Layers"
+
+
+class DepartmentUpdate(BaseModel):
+    name: Optional[str] = None
+    name_ar: Optional[str] = None
+    slug: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+
+
 class ClientCreate(BaseModel):
     name: str = Field(..., min_length=1)
     industry: Optional[str] = "PR & Communications"
@@ -781,6 +798,82 @@ def update_current_org(
         return {"organization": org}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Departments Endpoints (Phase 5.2) ────────────────────────────────────────
+@app.get("/api/departments")
+def get_departments(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Lists all agency departments with member agents and counts."""
+    raw_depts = database.list_departments()
+    agents = list_agents()
+
+    depts_with_agents = []
+    for dept in raw_depts:
+        dept_id = dept["id"]
+        assigned_agents = [
+            {
+                "id": a.id,
+                "name": a.name,
+                "name_ar": a.name_ar,
+                "role": a.role,
+                "role_ar": a.role_ar,
+                "avatar": a.avatar,
+                "department": a.department,
+            }
+            for a in agents
+            if a.department == dept_id or a.department == dept.get("slug")
+        ]
+        dept_copy = dict(dept)
+        dept_copy["agent_count"] = len(assigned_agents)
+        dept_copy["agents"] = assigned_agents
+        depts_with_agents.append(dept_copy)
+
+    return {"departments": depts_with_agents, "count": len(depts_with_agents)}
+
+
+@app.post("/api/departments", status_code=201)
+def add_department(
+    payload: DepartmentCreate,
+    current_user: Dict[str, Any] = Depends(require_role(["owner"]))
+):
+    """Creates a new agency department (Owner only)."""
+    try:
+        data = payload.model_dump(exclude_unset=True) if hasattr(payload, "model_dump") else payload.dict(exclude_unset=True)
+        created = database.create_department(data)
+        return {"department": created}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/api/departments/{dept_id}")
+def edit_department(
+    dept_id: str,
+    payload: DepartmentUpdate,
+    current_user: Dict[str, Any] = Depends(require_role(["owner"]))
+):
+    """Updates department details (Owner only)."""
+    try:
+        data = payload.model_dump(exclude_unset=True) if hasattr(payload, "model_dump") else payload.dict(exclude_unset=True)
+        updated = database.update_department(dept_id, data)
+        if not updated:
+            raise HTTPException(status_code=404, detail=f"Department '{dept_id}' not found")
+        return {"department": updated}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/departments/{dept_id}")
+def remove_department(
+    dept_id: str,
+    current_user: Dict[str, Any] = Depends(require_role(["owner"]))
+):
+    """Deletes an agency department (Owner only)."""
+    deleted = database.delete_department(dept_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Department '{dept_id}' not found")
+    return {"status": "success", "message": f"Department '{dept_id}' deleted successfully"}
 
 
 # ── Clients Endpoints ────────────────────────────────────────────────────────

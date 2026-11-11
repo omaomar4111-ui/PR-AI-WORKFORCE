@@ -166,6 +166,84 @@ QUALITY_SCORES_DB: Dict[str, Dict[str, Any]] = {}
 SYSTEM_METRICS_DB: Dict[str, Dict[str, Any]] = {}
 WEB_VITALS_DB: Dict[str, Dict[str, Any]] = {}
 
+# Milestone 11 / Phase 5: Departments Database
+DEFAULT_DEPARTMENTS: List[Dict[str, Any]] = [
+    {
+        "id": "marketing",
+        "name": "Marketing & Brand Strategy",
+        "name_ar": "الاستراتيجية والتسويق",
+        "slug": "marketing",
+        "description": "Drive brand growth, narrative positioning, social media strategy, and multi-channel acquisition campaigns.",
+        "icon": "Megaphone",
+        "created_at": "2026-01-01T00:00:00Z",
+    },
+    {
+        "id": "creative",
+        "name": "Design & Creative Arts",
+        "name_ar": "التصميم والإبداع الفني",
+        "slug": "creative",
+        "description": "Craft visual identities, brand guidelines, graphic collateral, and high-impact UI/UX concepts.",
+        "icon": "Palette",
+        "created_at": "2026-01-01T00:00:00Z",
+    },
+    {
+        "id": "video",
+        "name": "Visual Production & Video",
+        "name_ar": "الإنتاج المرئي وصناعة الفيديو",
+        "slug": "video",
+        "description": "Produce commercial video scripts, cinematic storyboards, motion graphics, and post-production color grading.",
+        "icon": "Film",
+        "created_at": "2026-01-01T00:00:00Z",
+    },
+    {
+        "id": "engineering",
+        "name": "Engineering & Technology",
+        "name_ar": "الهندسة والتقنية",
+        "slug": "engineering",
+        "description": "Architect accessible web applications, high-throughput APIs, resilient database schemas, and DevOps workflows.",
+        "icon": "Cpu",
+        "created_at": "2026-01-01T00:00:00Z",
+    },
+    {
+        "id": "research",
+        "name": "Market Research & Intelligence",
+        "name_ar": "البحث واستخبارات السوق",
+        "slug": "research",
+        "description": "Uncover macroeconomic shifts, audience sentiments, competitor benchmarks, and emerging industry trends.",
+        "icon": "Compass",
+        "created_at": "2026-01-01T00:00:00Z",
+    },
+    {
+        "id": "sales",
+        "name": "Business Development & Sales",
+        "name_ar": "تطوير الأعمال والمبيعات",
+        "slug": "sales",
+        "description": "Generate high-ticket B2B leads, craft enterprise proposals, nurture executive prospects, and close retainers.",
+        "icon": "Briefcase",
+        "created_at": "2026-01-01T00:00:00Z",
+    },
+    {
+        "id": "operations",
+        "name": "Operations & Project Management",
+        "name_ar": "إدارة العمليات والمشاريع",
+        "slug": "operations",
+        "description": "Optimize agency resource allocation, sprint throughput, client timelines, and workflow orchestration.",
+        "icon": "Layers",
+        "created_at": "2026-01-01T00:00:00Z",
+    },
+    {
+        "id": "quality",
+        "name": "Quality Assurance & Compliance",
+        "name_ar": "ضمان الجودة والامتثال",
+        "slug": "quality",
+        "description": "Rigorous automated output auditing, regulatory verification, brand safety enforcement, and accessibility compliance.",
+        "icon": "CheckCheck",
+        "created_at": "2026-01-01T00:00:00Z",
+    },
+]
+
+DEPARTMENTS_DB: Dict[str, Dict[str, Any]] = {d["id"]: dict(d) for d in DEFAULT_DEPARTMENTS}
+
 # Status to Progress mapping per Milestone 3 requirements
 STATUS_PROGRESS: Dict[str, int] = {
     "pending": 0,
@@ -200,6 +278,9 @@ def reset_db_for_tests():
     QUALITY_SCORES_DB.clear()
     SYSTEM_METRICS_DB.clear()
     WEB_VITALS_DB.clear()
+    DEPARTMENTS_DB.clear()
+    for d in DEFAULT_DEPARTMENTS:
+        DEPARTMENTS_DB[d["id"]] = dict(d)
     try:
         from middleware.rate_limit import reset_rate_limits
         reset_rate_limits()
@@ -318,6 +399,65 @@ def update_organization(org_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
         if k in updates and updates[k] is not None:
             org[k] = updates[k]
     return get_organization(org_id)
+
+
+# ── Departments CRUD (Phase 5) ──────────────────────────────────────────────
+def list_departments() -> List[Dict[str, Any]]:
+    return [dict(d) for d in DEPARTMENTS_DB.values()]
+
+
+def get_department(dept_id: str) -> Optional[Dict[str, Any]]:
+    d = DEPARTMENTS_DB.get(dept_id)
+    return dict(d) if d else None
+
+
+def create_department(data: Dict[str, Any]) -> Dict[str, Any]:
+    dept_id = data.get("id") or str(uuid.uuid4())[:8]
+    if dept_id in DEPARTMENTS_DB:
+        raise ValueError(f"Department with id '{dept_id}' already exists")
+
+    slug = data.get("slug") or dept_id.lower().replace(" ", "-")
+    for existing in DEPARTMENTS_DB.values():
+        if existing.get("slug") == slug:
+            raise ValueError(f"Department slug '{slug}' already in use")
+
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    new_dept = {
+        "id": dept_id,
+        "name": data["name"],
+        "name_ar": data.get("name_ar", data["name"]),
+        "slug": slug,
+        "description": data.get("description", ""),
+        "icon": data.get("icon", "Layers"),
+        "created_at": now,
+    }
+    DEPARTMENTS_DB[dept_id] = new_dept
+    return dict(new_dept)
+
+
+def update_department(dept_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    d = DEPARTMENTS_DB.get(dept_id)
+    if not d:
+        return None
+
+    if "slug" in updates and updates["slug"]:
+        new_slug = updates["slug"]
+        for existing_id, existing in DEPARTMENTS_DB.items():
+            if existing_id != dept_id and existing.get("slug") == new_slug:
+                raise ValueError(f"Department slug '{new_slug}' already in use")
+
+    for k in ["name", "name_ar", "slug", "description", "icon"]:
+        if k in updates and updates[k] is not None:
+            d[k] = updates[k]
+
+    return dict(d)
+
+
+def delete_department(dept_id: str) -> bool:
+    if dept_id in DEPARTMENTS_DB:
+        del DEPARTMENTS_DB[dept_id]
+        return True
+    return False
 
 
 # ── Clients CRUD with RLS ────────────────────────────────────────────────────

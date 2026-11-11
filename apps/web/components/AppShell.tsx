@@ -72,7 +72,7 @@ const MENU_ITEMS: MenuItem[] = [
     labelKey: "nav.departments",
     href: "/departments",
     icon: Network,
-    enabled: false,
+    enabled: true,
   },
   {
     id: "tasks",

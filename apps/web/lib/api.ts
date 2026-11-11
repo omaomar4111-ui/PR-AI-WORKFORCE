@@ -53,6 +53,28 @@ export interface Organization {
   members_count: number;
 }
 
+export interface DepartmentAgent {
+  id: string;
+  name: string;
+  name_ar?: string;
+  role?: string;
+  role_ar?: string;
+  avatar?: string;
+  department: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  name_ar: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  created_at?: string;
+  agent_count?: number;
+  agents?: DepartmentAgent[];
+}
+
 export interface Client {
   id: string;
   organization_id: string;
@@ -527,6 +549,54 @@ export async function updateOrganization(payload: {
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Failed to update organization");
   return data.organization;
+}
+
+// ── Departments API (Phase 5.2) ─────────────────────────────────────────────
+export async function fetchDepartments(): Promise<Department[]> {
+  const res = await customFetch(`${API_BASE_URL}/api/departments`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load departments");
+  const data = await res.json();
+  return data.departments;
+}
+
+export async function createDepartment(
+  payload: Partial<Department>
+): Promise<Department> {
+  const res = await customFetch(`${API_BASE_URL}/api/departments`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to create department");
+  return data.department;
+}
+
+export async function updateDepartment(
+  deptId: string,
+  payload: Partial<Department>
+): Promise<Department> {
+  const res = await customFetch(`${API_BASE_URL}/api/departments/${deptId}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to update department");
+  return data.department;
+}
+
+export async function deleteDepartment(deptId: string): Promise<void> {
+  const res = await customFetch(`${API_BASE_URL}/api/departments/${deptId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Failed to delete department");
+  }
 }
 
 // ── Clients API ─────────────────────────────────────────────────────────────
