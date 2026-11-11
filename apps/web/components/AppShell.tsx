@@ -142,7 +142,7 @@ const MENU_ITEMS: MenuItem[] = [
     labelKey: "nav.settings",
     href: "/settings",
     icon: Settings,
-    enabled: false,
+    enabled: true,
   },
 ];
 

@@ -258,6 +258,68 @@ def create_user(
     return new_user
 
 
+def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+    user = get_user_by_id(user_id)
+    if not user:
+        raise ValueError("User not found")
+
+    if "email" in updates and updates["email"]:
+        new_email = updates["email"].strip().lower()
+        if new_email != user["email"]:
+            if new_email in MOCK_USERS and MOCK_USERS[new_email]["id"] != user_id:
+                raise ValueError("Email already in use")
+            old_email = user["email"]
+            user["email"] = new_email
+            MOCK_USERS[new_email] = user
+            if old_email in MOCK_USERS:
+                del MOCK_USERS[old_email]
+
+    if "full_name" in updates and updates["full_name"]:
+        user["full_name"] = updates["full_name"].strip()
+
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "full_name": user["full_name"],
+        "role": user["role"],
+        "organization_id": user.get("organization_id"),
+        "organization_name": user.get("organization_name"),
+    }
+
+
+def update_user_password(user_id: str, current_password: str, new_password: str) -> bool:
+    user = get_user_by_id(user_id)
+    if not user:
+        raise ValueError("User not found")
+
+    if user.get("password") != current_password:
+        raise ValueError("Current password is incorrect")
+
+    user["password"] = new_password
+    return True
+
+
+def get_organization(org_id: str) -> Optional[Dict[str, Any]]:
+    org = MOCK_ORGANIZATIONS.get(org_id)
+    if not org:
+        return None
+    org_copy = dict(org)
+    org_copy["members_count"] = sum(
+        1 for u in MOCK_USERS.values() if u.get("organization_id") == org_id
+    )
+    return org_copy
+
+
+def update_organization(org_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+    org = MOCK_ORGANIZATIONS.get(org_id)
+    if not org:
+        raise ValueError("Organization not found")
+    for k in ["name", "slug", "logo_url"]:
+        if k in updates and updates[k] is not None:
+            org[k] = updates[k]
+    return get_organization(org_id)
+
+
 # ── Clients CRUD with RLS ────────────────────────────────────────────────────
 def can_access_client(client: Dict[str, Any], user: Dict[str, Any]) -> bool:
     if client.get("organization_id") != user.get("organization_id"):

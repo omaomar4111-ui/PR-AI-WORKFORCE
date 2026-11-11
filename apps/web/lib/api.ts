@@ -1,7 +1,10 @@
 export const getApiBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
   if (typeof window !== "undefined") {
-    const host = window.location.hostname === "localhost" ? "127.0.0.1" : window.location.hostname;
+    const host =
+      window.location.hostname === "localhost"
+        ? "127.0.0.1"
+        : window.location.hostname;
     return `${window.location.protocol}//${host}:8000`;
   }
   return "http://127.0.0.1:8000";
@@ -10,15 +13,20 @@ export const getApiBaseUrl = () => {
 export const getWsBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
   if (typeof window !== "undefined") {
-    const host = window.location.hostname === "localhost" ? "127.0.0.1" : window.location.hostname;
+    const host =
+      window.location.hostname === "localhost"
+        ? "127.0.0.1"
+        : window.location.hostname;
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${proto}//${host}:8000`;
   }
   return "ws://127.0.0.1:8000";
 };
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8000";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+export const WS_BASE_URL =
+  process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8000";
 
 export interface User {
   id: string;
@@ -34,6 +42,15 @@ export interface AuthSession {
   access_token: string;
   token_type: string;
   user: User;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string | null;
+  created_at: string;
+  members_count: number;
 }
 
 export interface Client {
@@ -307,9 +324,9 @@ export function clearStoredSession() {
   if (typeof window === "undefined") return;
   localStorage.removeItem("pr_auth_token");
   localStorage.removeItem("pr_auth_user");
-  document.cookie = "pr_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  document.cookie =
+    "pr_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 }
-
 
 export const DEFAULT_TIMEOUT_MS = 12000;
 
@@ -325,7 +342,7 @@ function generateTraceparent(): string {
   if (typeof crypto !== "undefined" && crypto.getRandomValues) {
     const bytes = new Uint8Array(24);
     crypto.getRandomValues(bytes);
-    hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    hex = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
   } else {
     for (let i = 0; i < 48; i++) {
       hex += Math.floor(Math.random() * 16).toString(16);
@@ -336,7 +353,10 @@ function generateTraceparent(): string {
   return `00-${traceId}-${spanId}-01`;
 }
 
-export async function customFetch(url: string | URL, options: RequestInit = {}): Promise<Response> {
+export async function customFetch(
+  url: string | URL,
+  options: RequestInit = {}
+): Promise<Response> {
   const method = (options.method || "GET").toUpperCase();
   const urlStr = url.toString();
 
@@ -348,7 +368,8 @@ export async function customFetch(url: string | URL, options: RequestInit = {}):
 
   // Deduplicate identical in-flight GET requests
   const canDeduplicate = method === "GET" && !options.body;
-  const authHeader = reqHeaders.get("authorization") || reqHeaders.get("Authorization") || "";
+  const authHeader =
+    reqHeaders.get("authorization") || reqHeaders.get("Authorization") || "";
   const cacheKey = canDeduplicate ? `${urlStr}::${authHeader}` : null;
 
   if (cacheKey && inflightGetRequests.has(cacheKey)) {
@@ -357,20 +378,29 @@ export async function customFetch(url: string | URL, options: RequestInit = {}):
     return res.clone();
   }
 
-  const signal = options.signal || (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
-    ? AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
-    : undefined);
+  const signal =
+    options.signal ||
+    (typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
+      ? AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+      : undefined);
 
   const fetchPromise = (async () => {
     try {
-      const res = await globalThis.fetch(url, { ...options, headers: reqHeaders, signal });
-      const traceHeader = res.headers.get("traceparent") || res.headers.get("x-trace-id");
+      const res = await globalThis.fetch(url, {
+        ...options,
+        headers: reqHeaders,
+        signal,
+      });
+      const traceHeader =
+        res.headers.get("traceparent") || res.headers.get("x-trace-id");
       if (traceHeader && typeof window !== "undefined") {
-        console.debug(`[OTel Trace Correlation] ${method} ${urlStr} -> ${traceHeader}`);
+        console.debug(
+          `[OTel Trace Correlation] ${method} ${urlStr} -> ${traceHeader}`
+        );
       }
       return res;
     } catch (error: any) {
-      if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+      if (error?.name === "TimeoutError" || error?.name === "AbortError") {
         throw new Error("انتهت مهلة الطلب (12 ثانية). الخادم لا يستجيب.");
       }
       throw error;
@@ -403,18 +433,21 @@ export async function fetchHealth() {
   return res.json();
 }
 
-export async function loginUser(email: string, password: string): Promise<AuthSession> {
+export async function loginUser(
+  email: string,
+  password: string
+): Promise<AuthSession> {
   const res = await customFetch(`${API_BASE_URL}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  
+
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.detail || "Login failed");
   }
-  
+
   setStoredSession(data);
   return data;
 }
@@ -443,6 +476,57 @@ export async function fetchUsers(): Promise<User[]> {
   if (!res.ok) throw new Error("Failed to load users");
   const data = await res.json();
   return data.users;
+}
+
+export async function updateUserProfile(payload: {
+  full_name?: string;
+  email?: string;
+}): Promise<User> {
+  const res = await customFetch(`${API_BASE_URL}/api/users/me`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to update profile");
+  return data.user;
+}
+
+export async function updateUserPassword(payload: {
+  current_password: string;
+  new_password: string;
+}): Promise<{ status: string; message: string }> {
+  const res = await customFetch(`${API_BASE_URL}/api/users/me/password`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to update password");
+  return data;
+}
+
+export async function fetchOrganization(): Promise<Organization> {
+  const res = await customFetch(`${API_BASE_URL}/api/organization`, {
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to fetch organization");
+  return data.organization;
+}
+
+export async function updateOrganization(payload: {
+  name?: string;
+  slug?: string;
+}): Promise<Organization> {
+  const res = await customFetch(`${API_BASE_URL}/api/organization`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to update organization");
+  return data.organization;
 }
 
 // ── Clients API ─────────────────────────────────────────────────────────────
@@ -481,7 +565,10 @@ export async function createClient(payload: Partial<Client>): Promise<Client> {
   return data.client;
 }
 
-export async function updateClient(clientId: string, payload: Partial<Client>): Promise<Client> {
+export async function updateClient(
+  clientId: string,
+  payload: Partial<Client>
+): Promise<Client> {
   const res = await customFetch(`${API_BASE_URL}/api/clients/${clientId}`, {
     method: "PUT",
     headers: authHeaders(),
@@ -504,7 +591,10 @@ export async function deleteClient(clientId: string): Promise<void> {
 }
 
 // ── Projects API ────────────────────────────────────────────────────────────
-export async function fetchProjects(params?: { client_id?: string; status?: string }): Promise<Project[]> {
+export async function fetchProjects(params?: {
+  client_id?: string;
+  status?: string;
+}): Promise<Project[]> {
   const url = new URL(`${API_BASE_URL}/api/projects`);
   if (params?.client_id) url.searchParams.set("client_id", params.client_id);
   if (params?.status) url.searchParams.set("status", params.status);
@@ -535,15 +625,20 @@ export async function fetchProjectProgress(projectId: string): Promise<{
   completed_tasks: number;
   progress_percentage: number;
 }> {
-  const res = await customFetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
-    headers: authHeaders(),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/projects/${projectId}/progress`,
+    {
+      headers: authHeaders(),
+    }
+  );
   if (!res.ok) throw new Error("Failed to fetch project progress");
   const data = await res.json();
   return data.progress;
 }
 
-export async function createProject(payload: Partial<Project>): Promise<Project> {
+export async function createProject(
+  payload: Partial<Project>
+): Promise<Project> {
   const res = await customFetch(`${API_BASE_URL}/api/projects`, {
     method: "POST",
     headers: authHeaders(),
@@ -554,7 +649,10 @@ export async function createProject(payload: Partial<Project>): Promise<Project>
   return data.project;
 }
 
-export async function updateProject(projectId: string, payload: Partial<Project>): Promise<Project> {
+export async function updateProject(
+  projectId: string,
+  payload: Partial<Project>
+): Promise<Project> {
   const res = await customFetch(`${API_BASE_URL}/api/projects/${projectId}`, {
     method: "PUT",
     headers: authHeaders(),
@@ -589,16 +687,19 @@ export async function fetchTasks(params?: {
   if (params?.project_id) url.searchParams.set("project_id", params.project_id);
   if (params?.status) url.searchParams.set("status", params.status);
   if (params?.priority) url.searchParams.set("priority", params.priority);
-  if (params?.assigned_to) url.searchParams.set("assigned_to", params.assigned_to);
-  if (params?.skip !== undefined) url.searchParams.set("skip", params.skip.toString());
-  if (params?.limit !== undefined) url.searchParams.set("limit", params.limit.toString());
+  if (params?.assigned_to)
+    url.searchParams.set("assigned_to", params.assigned_to);
+  if (params?.skip !== undefined)
+    url.searchParams.set("skip", params.skip.toString());
+  if (params?.limit !== undefined)
+    url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load tasks");
   const data = await res.json();
-  return Array.isArray(data) ? data : (data.tasks || []);
+  return Array.isArray(data) ? data : data.tasks || [];
 }
 
 export async function fetchTask(taskId: string): Promise<Task> {
@@ -624,7 +725,10 @@ export async function createTask(payload: Partial<Task>): Promise<Task> {
   return data.task;
 }
 
-export async function updateTask(taskId: string, payload: Partial<Task>): Promise<Task> {
+export async function updateTask(
+  taskId: string,
+  payload: Partial<Task>
+): Promise<Task> {
   const res = await customFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
     method: "PATCH",
     headers: authHeaders(),
@@ -684,11 +788,14 @@ export async function executeAgent(
     title?: string;
   }
 ): Promise<AgentExecuteResult> {
-  const res = await customFetch(`${API_BASE_URL}/api/agents/${agentId}/execute`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify(payload),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/agents/${agentId}/execute`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }
+  );
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Agent execution failed");
   return data;
@@ -706,14 +813,19 @@ export async function executeAgentStream(
   onDone: (result: AgentExecuteResult) => void,
   onError: (error: Error) => void
 ): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}/execute/stream`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify(payload),
-  });
+  const res = await fetch(
+    `${API_BASE_URL}/api/agents/${agentId}/execute/stream`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }
+  );
 
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ detail: "Streaming execution failed" }));
+    const errorData = await res
+      .json()
+      .catch(() => ({ detail: "Streaming execution failed" }));
     throw new Error(errorData.detail || `Server error: ${res.status}`);
   }
 
@@ -740,7 +852,11 @@ export async function executeAgentStream(
         if (event.type === "token") {
           onToken(event.token);
         } else if (event.type === "done") {
-          onDone({ deliverable: event.deliverable, output: event.output, agent: event.agent || event.deliverable.agent_id });
+          onDone({
+            deliverable: event.deliverable,
+            output: event.output,
+            agent: event.agent || event.deliverable.agent_id,
+          });
         } else if (event.type === "error") {
           onError(new Error(event.error));
         }
@@ -765,11 +881,14 @@ export async function updateAgentStatus(
   agentId: string,
   payload: { status: "idle" | "working" | "blocked"; current_task?: string }
 ): Promise<AgentStatus> {
-  const res = await customFetch(`${API_BASE_URL}/api/agents/${agentId}/status`, {
-    method: "PATCH",
-    headers: authHeaders(),
-    body: JSON.stringify(payload),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/agents/${agentId}/status`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }
+  );
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Failed to update agent status");
   return data.agent;
@@ -791,21 +910,28 @@ export async function fetchDeliverables(params?: {
   if (params?.agent_id) url.searchParams.set("agent_id", params.agent_id);
   if (params?.task_id) url.searchParams.set("task_id", params.task_id);
   if (params?.type) url.searchParams.set("type", params.type);
-  if (params?.skip !== undefined) url.searchParams.set("skip", params.skip.toString());
-  if (params?.limit !== undefined) url.searchParams.set("limit", params.limit.toString());
+  if (params?.skip !== undefined)
+    url.searchParams.set("skip", params.skip.toString());
+  if (params?.limit !== undefined)
+    url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load deliverables");
   const data = await res.json();
-  return Array.isArray(data) ? data : (data.deliverables || []);
+  return Array.isArray(data) ? data : data.deliverables || [];
 }
 
-export async function fetchDeliverable(deliverableId: string): Promise<Deliverable> {
-  const res = await customFetch(`${API_BASE_URL}/api/deliverables/${deliverableId}`, {
-    headers: authHeaders(),
-  });
+export async function fetchDeliverable(
+  deliverableId: string
+): Promise<Deliverable> {
+  const res = await customFetch(
+    `${API_BASE_URL}/api/deliverables/${deliverableId}`,
+    {
+      headers: authHeaders(),
+    }
+  );
   if (!res.ok) throw new Error("Failed to load deliverable");
   const data = await res.json();
   return data.deliverable;
@@ -821,20 +947,29 @@ export async function createDeliverableVersion(
     status?: string;
   }
 ): Promise<Deliverable> {
-  const res = await customFetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/version`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify(payload),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/deliverables/${deliverableId}/version`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }
+  );
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Failed to create new deliverable version");
+  if (!res.ok)
+    throw new Error(data.detail || "Failed to create new deliverable version");
   return data.deliverable;
 }
 
-export async function fetchDeliverableVersions(deliverableId: string): Promise<Deliverable[]> {
-  const res = await customFetch(`${API_BASE_URL}/api/deliverables/${deliverableId}/versions`, {
-    headers: authHeaders(),
-  });
+export async function fetchDeliverableVersions(
+  deliverableId: string
+): Promise<Deliverable[]> {
+  const res = await customFetch(
+    `${API_BASE_URL}/api/deliverables/${deliverableId}/versions`,
+    {
+      headers: authHeaders(),
+    }
+  );
   if (!res.ok) throw new Error("Failed to load deliverable versions");
   const data = await res.json();
   return data.versions;
@@ -848,15 +983,17 @@ export async function fetchWorkflows(params?: {
 }): Promise<Workflow[]> {
   const url = new URL(`${API_BASE_URL}/api/workflows`);
   if (params?.project_id) url.searchParams.set("project_id", params.project_id);
-  if (params?.skip !== undefined) url.searchParams.set("skip", params.skip.toString());
-  if (params?.limit !== undefined) url.searchParams.set("limit", params.limit.toString());
+  if (params?.skip !== undefined)
+    url.searchParams.set("skip", params.skip.toString());
+  if (params?.limit !== undefined)
+    url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load workflows");
   const data = await res.json();
-  return Array.isArray(data) ? data : (data.workflows || []);
+  return Array.isArray(data) ? data : data.workflows || [];
 }
 
 export async function fetchWorkflow(workflowId: string): Promise<Workflow> {
@@ -882,10 +1019,15 @@ export async function createWorkflow(payload: {
   return data.workflow;
 }
 
-export async function fetchWorkflowLogs(workflowId: string): Promise<ExecutionLog[]> {
-  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}/logs`, {
-    headers: authHeaders(),
-  });
+export async function fetchWorkflowLogs(
+  workflowId: string
+): Promise<ExecutionLog[]> {
+  const res = await customFetch(
+    `${API_BASE_URL}/api/workflows/${workflowId}/logs`,
+    {
+      headers: authHeaders(),
+    }
+  );
   if (!res.ok) throw new Error("Failed to load workflow logs");
   const data = await res.json();
   return data.logs;
@@ -895,21 +1037,28 @@ export async function approveWorkflowStep(
   workflowId: string,
   payload: { step_id: string; approved: boolean; notes?: string }
 ): Promise<WorkflowStep> {
-  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}/approve`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify(payload),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/workflows/${workflowId}/approve`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }
+  );
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Failed to approve workflow step");
+  if (!res.ok)
+    throw new Error(data.detail || "Failed to approve workflow step");
   return data.step;
 }
 
 export async function cancelWorkflow(workflowId: string): Promise<void> {
-  const res = await customFetch(`${API_BASE_URL}/api/workflows/${workflowId}/cancel`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/workflows/${workflowId}/cancel`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+    }
+  );
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || "Failed to cancel workflow");
@@ -925,16 +1074,19 @@ export async function fetchMemories(params?: {
 }): Promise<Memory[]> {
   const url = new URL(`${API_BASE_URL}/api/memories`);
   if (params?.type) url.searchParams.set("type", params.type);
-  if (params?.reference_id) url.searchParams.set("reference_id", params.reference_id);
-  if (params?.skip !== undefined) url.searchParams.set("skip", params.skip.toString());
-  if (params?.limit !== undefined) url.searchParams.set("limit", params.limit.toString());
+  if (params?.reference_id)
+    url.searchParams.set("reference_id", params.reference_id);
+  if (params?.skip !== undefined)
+    url.searchParams.set("skip", params.skip.toString());
+  if (params?.limit !== undefined)
+    url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to load memories");
   const data = await res.json();
-  return Array.isArray(data) ? data : (data.memories || []);
+  return Array.isArray(data) ? data : data.memories || [];
 }
 
 export async function searchMemories(
@@ -948,7 +1100,8 @@ export async function searchMemories(
   const url = new URL(`${API_BASE_URL}/api/memories/search`);
   url.searchParams.set("q", query);
   if (params?.type) url.searchParams.set("type", params.type);
-  if (params?.reference_id) url.searchParams.set("reference_id", params.reference_id);
+  if (params?.reference_id)
+    url.searchParams.set("reference_id", params.reference_id);
   if (params?.limit) url.searchParams.set("limit", params.limit.toString());
 
   const res = await customFetch(url.toString(), {
@@ -1013,7 +1166,8 @@ export interface Integration {
   name: string;
   name_ar?: string;
   description?: string;
-  category: "storage" | "docs" | "email" | "sheets" | "marketing" | "social" | "media";
+  category:
+    "storage" | "docs" | "email" | "sheets" | "marketing" | "social" | "media";
   required_scopes?: string[];
   scopes?: string[];
   status: "connected" | "disconnected" | "error" | "requires_api_access";
@@ -1023,7 +1177,9 @@ export interface Integration {
   config_summary?: Record<string, any>;
 }
 
-export async function fetchApprovals(status?: string): Promise<ApprovalRequest[]> {
+export async function fetchApprovals(
+  status?: string
+): Promise<ApprovalRequest[]> {
   const url = new URL(`${API_BASE_URL}/api/approvals`);
   if (status && status !== "all") url.searchParams.set("status", status);
 
@@ -1044,7 +1200,10 @@ export async function fetchPendingApprovalsCount(): Promise<number> {
   return data.count || 0;
 }
 
-export async function approveRequest(id: string, notes?: string): Promise<ApprovalRequest> {
+export async function approveRequest(
+  id: string,
+  notes?: string
+): Promise<ApprovalRequest> {
   const res = await customFetch(`${API_BASE_URL}/api/approvals/${id}/approve`, {
     method: "POST",
     headers: authHeaders(),
@@ -1055,7 +1214,10 @@ export async function approveRequest(id: string, notes?: string): Promise<Approv
   return data.approval;
 }
 
-export async function rejectRequest(id: string, notes?: string): Promise<ApprovalRequest> {
+export async function rejectRequest(
+  id: string,
+  notes?: string
+): Promise<ApprovalRequest> {
   const res = await customFetch(`${API_BASE_URL}/api/approvals/${id}/reject`, {
     method: "POST",
     headers: authHeaders(),
@@ -1077,7 +1239,8 @@ export async function editAndApproveRequest(
     body: JSON.stringify({ edited_payload: editedPayload, notes }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Failed to edit & approve request");
+  if (!res.ok)
+    throw new Error(data.detail || "Failed to edit & approve request");
   return data.approval;
 }
 
@@ -1094,31 +1257,43 @@ export async function connectIntegration(
   provider: string,
   config: Record<string, any>
 ): Promise<any> {
-  const res = await customFetch(`${API_BASE_URL}/api/integrations/${provider}/connect`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({ config }),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/integrations/${provider}/connect`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ config }),
+    }
+  );
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Failed to connect integration");
   return data;
 }
 
 export async function disconnectIntegration(provider: string): Promise<any> {
-  const res = await customFetch(`${API_BASE_URL}/api/integrations/${provider}/disconnect`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/integrations/${provider}/disconnect`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+    }
+  );
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Failed to disconnect integration");
+  if (!res.ok)
+    throw new Error(data.detail || "Failed to disconnect integration");
   return data;
 }
 
-export async function testIntegration(provider: string): Promise<{ success: boolean; message: string; data?: any }> {
-  const res = await customFetch(`${API_BASE_URL}/api/integrations/${provider}/test`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
+export async function testIntegration(
+  provider: string
+): Promise<{ success: boolean; message: string; data?: any }> {
+  const res = await customFetch(
+    `${API_BASE_URL}/api/integrations/${provider}/test`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+    }
+  );
   const data = await res.json();
   return data;
 }
@@ -1235,18 +1410,26 @@ export async function fetchCostPerAgent(params?: {
 }
 
 export async function fetchCostPerProject(): Promise<CostPerProject[]> {
-  const res = await customFetch(`${API_BASE_URL}/api/analytics/costs/projects`, {
-    headers: authHeaders(),
-  });
+  const res = await customFetch(
+    `${API_BASE_URL}/api/analytics/costs/projects`,
+    {
+      headers: authHeaders(),
+    }
+  );
   if (!res.ok) throw new Error("Failed to load project cost breakdown");
   const data = await res.json();
   return data.costs_by_project;
 }
 
-export async function fetchQualityTrend(days: number = 30): Promise<QualityTrendPoint[]> {
-  const res = await customFetch(`${API_BASE_URL}/api/analytics/quality/trend?days=${days}`, {
-    headers: authHeaders(),
-  });
+export async function fetchQualityTrend(
+  days: number = 30
+): Promise<QualityTrendPoint[]> {
+  const res = await customFetch(
+    `${API_BASE_URL}/api/analytics/quality/trend?days=${days}`,
+    {
+      headers: authHeaders(),
+    }
+  );
   if (!res.ok) throw new Error("Failed to load quality score trends");
   const data = await res.json();
   return data.quality_trend;

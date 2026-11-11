@@ -335,6 +335,22 @@ class AuthResponse(BaseModel):
     user: Dict[str, Any]
 
 
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
+class UserPasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class OrganizationUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    logo_url: Optional[str] = None
+
+
 class ClientCreate(BaseModel):
     name: str = Field(..., min_length=1)
     industry: Optional[str] = "PR & Communications"
@@ -703,6 +719,68 @@ def get_me(current_user: Dict[str, Any] = Depends(get_current_user)):
 @app.get("/api/users")
 def list_org_users(current_user: Dict[str, Any] = Depends(get_current_user)):
     return {"users": get_all_users()}
+
+
+@app.put("/api/users/me")
+def update_me(
+    req: UserProfileUpdate,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        data = req.model_dump(exclude_unset=True) if hasattr(req, "model_dump") else req.dict(exclude_unset=True)
+        updated = database.update_user_profile(
+            current_user["id"],
+            data
+        )
+        return {"user": updated}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/api/users/me/password")
+def change_my_password(
+    req: UserPasswordUpdate,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        validate_password_strength(req.new_password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    try:
+        database.update_user_password(
+            current_user["id"],
+            req.current_password,
+            req.new_password
+        )
+        return {"status": "success", "message": "Password updated successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/organization")
+def get_current_org(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    org = database.get_organization(org_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return {"organization": org}
+
+
+@app.put("/api/organization")
+def update_current_org(
+    req: OrganizationUpdate,
+    current_user: Dict[str, Any] = Depends(require_role(["owner"]))
+):
+    org_id = current_user.get("organization_id", "00000000-0000-0000-0000-000000000001")
+    try:
+        data = req.model_dump(exclude_unset=True) if hasattr(req, "model_dump") else req.dict(exclude_unset=True)
+        org = database.update_organization(org_id, data)
+        return {"organization": org}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Clients Endpoints ────────────────────────────────────────────────────────
