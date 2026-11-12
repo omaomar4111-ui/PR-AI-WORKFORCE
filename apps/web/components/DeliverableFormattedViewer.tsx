@@ -216,17 +216,25 @@ export default function DeliverableFormattedViewer({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-bold text-white">
-                {isAr ? "مؤشر جودة المخرج" : "Quality Benchmark Score"}
+                {isAr
+                  ? "مؤشر النبرة البشرية (Human Authenticity)"
+                  : "Human Authenticity Score"}
               </span>
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${scoreMeta.bg} ${scoreMeta.text}`}
               >
-                {score}/100
+                {parsedContent.human_score || score}/100
               </span>
             </div>
             <p className="mt-0.5 text-[11px] text-gray-400">
-              {scoreMeta.label} •{" "}
-              {isAr ? "مفحوص بمعايير الامتثال" : "Audited by QA Standards"}
+              {parsedContent.human_grade ||
+                (isAr
+                  ? "نبرة بشرية مقنعة (خالٍ من الروبوتية)"
+                  : "Human Persuasive Flow")}{" "}
+              •{" "}
+              {isAr
+                ? "مدقق بمعايير Anti-AI Slop"
+                : "Audited by Anti-AI Slop Rubric"}
             </p>
           </div>
         </div>

@@ -53,6 +53,7 @@ export default function AgentExecutionModal({
   const [targetAudience, setTargetAudience] = useState("");
   const [toneOfVoice, setToneOfVoice] = useState("Luxury");
   const [visualStyle, setVisualStyle] = useState("");
+  const [marketingObjective, setMarketingObjective] = useState("all");
 
   const [inputJsonText, setInputJsonText] = useState(
     agent.sample_input ? JSON.stringify(agent.sample_input, null, 2) : "{}"
@@ -167,6 +168,8 @@ export default function AgentExecutionModal({
         brief: briefText.trim() || taskTitle,
         brief_text: briefText.trim() || taskTitle,
         task_brief: briefText.trim() || taskTitle,
+        marketing_objective: marketingObjective,
+        content_type: marketingObjective,
         client_name: clientOrProject.trim() || "General Client",
         project_name: clientOrProject.trim() || "General Project",
         target_audience: targetAudience.trim() || "General Audience",
@@ -394,6 +397,46 @@ export default function AgentExecutionModal({
                         className="w-full rounded-lg border border-gray-800 bg-[#12141f] px-2.5 py-1.5 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                       />
                     </div>
+                  </div>
+
+                  {/* Marketing Objective & Hook Intent */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-300 mb-1">
+                      {isAr
+                        ? "الهدف التسويقي / زاوية الإقناع"
+                        : "Marketing Objective & Framework"}
+                    </label>
+                    <select
+                      value={marketingObjective}
+                      onChange={e => setMarketingObjective(e.target.value)}
+                      className="w-full rounded-lg border border-gray-800 bg-[#12141f] px-2.5 py-1.5 text-xs text-purple-300 font-medium focus:border-[#8b5cf6] focus:outline-none"
+                    >
+                      <option value="all">
+                        {isAr
+                          ? "⚡ سكريبت وإعلان شامل (Full AIDA Campaign)"
+                          : "⚡ Full AIDA Conversion Script"}
+                      </option>
+                      <option value="hook">
+                        {isAr
+                          ? "🪝 جذب انتباه فوري (Pattern Interrupt Hook)"
+                          : "🪝 Scroll-Stopping Hook"}
+                      </option>
+                      <option value="pas">
+                        {isAr
+                          ? "🔥 إقناع وتحريك المشاعر (PAS Problem-Agitate)"
+                          : "🔥 Emotional Agitation (PAS)"}
+                      </option>
+                      <option value="cta">
+                        {isAr
+                          ? "🎯 إغلاق صفقة وبيع مباشر (Direct Response & Risk Reversal CTA)"
+                          : "🎯 Closing Deal & Direct Offer CTA"}
+                      </option>
+                      <option value="headline">
+                        {isAr
+                          ? "📰 عنوان فيروسي جذاب (High-Converting Headline)"
+                          : "📰 Viral Headline & Hook"}
+                      </option>
+                    </select>
                   </div>
 
                   {/* Tone of Voice & Style / Colors Grid */}

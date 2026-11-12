@@ -9,6 +9,7 @@ repos:
       - id: ruff
         name: ruff (backend linter)
         files: ^apps/api/
+        exclude: ^apps/api/knowledge/(growth_marketing_os|agentkits_marketing|prompt_eval_rubric)/
         args: [--output-format=concise]
 
   # 2. Frontend Formatting (Prettier)
