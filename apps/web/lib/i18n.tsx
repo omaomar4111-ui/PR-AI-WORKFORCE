@@ -368,10 +368,15 @@ const translations: Record<Language, Record<string, string>> = {
     "integrations.token_placeholder":
       "أدخل رمز الوصول (Access Token / API Key)...",
     "integrations.category_all": "جميع الفئات",
+    "integrations.category_founder": "حزمة المؤسس (Founder Stack)",
     "integrations.category_storage": "التخزين والمستندات",
     "integrations.category_marketing": "الإعلانات والتسويق",
     "integrations.category_social": "منصات التواصل",
     "integrations.category_media": "توليد الوسائط (AI)",
+    "integrations.category_database": "قواعد البيانات والمصادقة",
+    "integrations.category_payments": "المدفوعات والفواتير",
+    "integrations.category_productivity": "المهام والإنتاجية",
+    "integrations.category_infra": "البنية التحتية والسحاب",
 
     // Analytics (Milestone 10)
     "analytics.title": "مركز التحليلات وتتبع التكلفة (Analytics & Cost)",
@@ -755,10 +760,15 @@ const translations: Record<Language, Record<string, string>> = {
     "integrations.token_placeholder":
       "Enter Access Token / API Key / Service Credentials...",
     "integrations.category_all": "All Categories",
+    "integrations.category_founder": "Founder Stack (Dev & Cloud)",
     "integrations.category_storage": "Workspace & Docs",
     "integrations.category_marketing": "Ads & Marketing",
     "integrations.category_social": "Social Media",
     "integrations.category_media": "AI Media Generation",
+    "integrations.category_database": "Databases & Auth",
+    "integrations.category_payments": "Payments & Billing",
+    "integrations.category_productivity": "Tasks & Productivity",
+    "integrations.category_infra": "Infrastructure & Edge",
 
     // Analytics (Milestone 10)
     "analytics.title": "Analytics & Cost Tracking",

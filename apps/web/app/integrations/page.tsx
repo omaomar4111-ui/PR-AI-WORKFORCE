@@ -33,6 +33,15 @@ import {
   MessageSquare,
   Github,
   BookOpen,
+  Send,
+  Database,
+  CreditCard,
+  CheckSquare,
+  BarChart3,
+  Cloud,
+  Sparkles,
+  Layers,
+  Zap,
 } from "lucide-react";
 
 export default function IntegrationsPage() {
@@ -89,6 +98,29 @@ export default function IntegrationsPage() {
       setConfigFields({ access_token: "", repository: "" });
     } else if (item.provider === "notion") {
       setConfigFields({ api_key: "", database_id: "" });
+    } else if (item.provider === "resend") {
+      setConfigFields({ api_key: "", sender_domain: "" });
+    } else if (item.provider === "supabase") {
+      setConfigFields({
+        supabase_url: "",
+        anon_key: "",
+        service_role_key: "",
+      });
+    } else if (item.provider === "stripe") {
+      setConfigFields({ secret_key: "", publishable_key: "" });
+    } else if (item.provider === "linear") {
+      setConfigFields({ api_key: "", team_id: "" });
+    } else if (item.provider === "posthog") {
+      setConfigFields({
+        project_api_key: "",
+        host_url: "https://app.posthog.com",
+      });
+    } else if (item.provider === "cloudflare") {
+      setConfigFields({
+        api_token: "",
+        account_id: "",
+        r2_bucket_name: "",
+      });
     } else {
       setConfigFields({ api_key: "", model: "default" });
     }
@@ -126,6 +158,39 @@ export default function IntegrationsPage() {
       setConfigFields({
         api_key: "secret_sandbox_notion_key_abc111",
         database_id: "notion-db-pr-briefs",
+      });
+    } else if (modalProvider.provider === "resend") {
+      setConfigFields({
+        api_key: "re_sandbox_test_marketing_key_8899",
+        sender_domain: "mail.pragency.eg",
+      });
+    } else if (modalProvider.provider === "supabase") {
+      setConfigFields({
+        supabase_url: "https://pr-workforce.supabase.co",
+        anon_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.sandbox_anon_key",
+        service_role_key:
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.sandbox_service_role",
+      });
+    } else if (modalProvider.provider === "stripe") {
+      setConfigFields({
+        secret_key: "sk_test_51MzSandboxTestStripeKey9988",
+        publishable_key: "pk_test_51MzSandboxPubStripeKey9988",
+      });
+    } else if (modalProvider.provider === "linear") {
+      setConfigFields({
+        api_key: "lin_api_sandbox_personal_token_7766",
+        team_id: "TEAM-PR-AGENCY",
+      });
+    } else if (modalProvider.provider === "posthog") {
+      setConfigFields({
+        project_api_key: "phc_sandbox_posthog_project_key_5544",
+        host_url: "https://app.posthog.com",
+      });
+    } else if (modalProvider.provider === "cloudflare") {
+      setConfigFields({
+        api_token: "cf_token_sandbox_global_edge_token_1122",
+        account_id: "cf_act_99887766",
+        r2_bucket_name: "pr-agency-assets",
       });
     } else {
       setConfigFields({
@@ -210,6 +275,18 @@ export default function IntegrationsPage() {
         return <Github className="h-5 w-5 text-gray-200" />;
       case "notion":
         return <BookOpen className="h-5 w-5 text-amber-200" />;
+      case "resend":
+        return <Send className="h-5 w-5 text-white" />;
+      case "supabase":
+        return <Database className="h-5 w-5 text-emerald-400" />;
+      case "stripe":
+        return <CreditCard className="h-5 w-5 text-indigo-400" />;
+      case "linear":
+        return <CheckSquare className="h-5 w-5 text-zinc-300" />;
+      case "posthog":
+        return <BarChart3 className="h-5 w-5 text-amber-400" />;
+      case "cloudflare":
+        return <Cloud className="h-5 w-5 text-orange-400" />;
       case "image_gen":
         return <ImageIcon className="h-5 w-5 text-purple-400" />;
       case "video_gen":
@@ -255,16 +332,81 @@ export default function IntegrationsPage() {
   const filteredIntegrations = integrations.filter(item => {
     if (filterCategory === "all") return true;
     const cat = (item.category || "").toLowerCase();
-    if (filterCategory === "storage")
-      return ["storage", "docs", "email", "sheets", "knowledge base"].includes(
-        cat
+    const prov = (item.provider || "").toLowerCase();
+    if (filterCategory === "founder") {
+      return [
+        "resend",
+        "supabase",
+        "stripe",
+        "linear",
+        "posthog",
+        "cloudflare",
+        "github",
+        "slack",
+        "notion",
+      ].includes(prov);
+    }
+    if (filterCategory === "database") {
+      return cat === "database" || ["supabase"].includes(prov);
+    }
+    if (filterCategory === "payments") {
+      return cat === "payments" || ["stripe"].includes(prov);
+    }
+    if (filterCategory === "productivity") {
+      return cat === "productivity" || ["linear", "notion"].includes(prov);
+    }
+    if (filterCategory === "infra") {
+      return (
+        ["infrastructure", "development"].includes(cat) ||
+        ["cloudflare", "supabase", "posthog", "github"].includes(prov)
       );
-    if (filterCategory === "marketing") return cat === "marketing";
-    if (filterCategory === "social")
-      return ["social", "communication"].includes(cat);
-    if (filterCategory === "media") return cat === "media";
-    if (filterCategory === "dev")
-      return ["development", "communication"].includes(cat);
+    }
+    if (filterCategory === "storage") {
+      return (
+        [
+          "storage",
+          "docs",
+          "sheets",
+          "knowledge base",
+          "infrastructure",
+        ].includes(cat) ||
+        [
+          "google_drive",
+          "google_docs",
+          "google_sheets",
+          "notion",
+          "cloudflare",
+        ].includes(prov)
+      );
+    }
+    if (filterCategory === "marketing")
+      return cat === "marketing" || ["meta_ads", "google_ads"].includes(prov);
+    if (filterCategory === "social") {
+      return (
+        ["social", "communication"].includes(cat) ||
+        ["instagram", "slack", "gmail", "resend"].includes(prov)
+      );
+    }
+    if (filterCategory === "media")
+      return cat === "media" || ["image_gen", "video_gen"].includes(prov);
+    if (filterCategory === "dev") {
+      return (
+        [
+          "development",
+          "communication",
+          "analytics",
+          "infrastructure",
+        ].includes(cat) ||
+        [
+          "github",
+          "slack",
+          "supabase",
+          "linear",
+          "posthog",
+          "cloudflare",
+        ].includes(prov)
+      );
+    }
     return true;
   });
 
@@ -335,15 +477,156 @@ export default function IntegrationsPage() {
           </div>
         )}
 
+        {/* Founder Minimalist Tech Stack Showcase (Inspired by Viral Reel/Card) */}
+        <div className="rounded-2xl border border-gray-800 bg-gradient-to-br from-[#13151f] via-[#10121a] to-[#0c0d14] p-5 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-800 pb-3 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <Sparkles className="h-4 w-4" />
+              </span>
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>
+                    {isAr
+                      ? "حزمة تقنيات المؤسس العصري"
+                      : "Modern Founder Tech Stack"}
+                  </span>
+                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20">
+                    2026 Edition
+                  </span>
+                </h2>
+                <p className="text-[11px] text-gray-400">
+                  {isAr
+                    ? "أدوات الإنتاجية وقواعد البيانات والسحاب المفضلة للمؤسسين والشركات الناشئة"
+                    : "Curated high-velocity toolchain for solo founders and modern AI agencies"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setFilterCategory("founder")}
+              className="text-xs font-bold text-[#a78bfa] hover:text-[#c4b5fd] flex items-center gap-1 transition"
+            >
+              <span>{isAr ? "تصفية حزمة المؤسس" : "Filter Founder Stack"}</span>
+              <Layers className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Minimalist Beige Aesthetic Card container matching the user reference */}
+          <div className="mx-auto max-w-md rounded-2xl bg-[#efebe1] p-5 text-[#1f1e1d] shadow-2xl border border-[#ded8c8] font-mono text-xs select-none">
+            <div className="space-y-2.5">
+              {[
+                {
+                  label: "Emails",
+                  provider: "resend",
+                  badge: "Resend",
+                  bg: "bg-black text-white",
+                },
+                {
+                  label: "Database",
+                  provider: "supabase",
+                  badge: "Supabase",
+                  bg: "bg-[#22c55e] text-white",
+                },
+                {
+                  label: "Domains",
+                  provider: "cloudflare",
+                  badge: "Cloudflare",
+                  bg: "bg-[#f97316] text-white",
+                },
+                {
+                  label: "Images",
+                  provider: "cloudflare",
+                  badge: "Cloudflare R2",
+                  bg: "bg-[#f97316] text-white",
+                },
+                {
+                  label: "Code library",
+                  provider: "github",
+                  badge: "GitHub",
+                  bg: "bg-black text-white",
+                },
+                {
+                  label: "Analytics",
+                  provider: "posthog",
+                  badge: "PostHog",
+                  bg: "bg-[#3b82f6] text-white",
+                },
+                {
+                  label: "Payments",
+                  provider: "stripe",
+                  badge: "Stripe",
+                  bg: "bg-[#6366f1] text-white",
+                },
+                {
+                  label: "Tasks",
+                  provider: "linear",
+                  badge: "Linear",
+                  bg: "bg-[#d1d5db] text-[#111827]",
+                },
+              ].map(stackItem => {
+                const targetIntegration = integrations.find(
+                  i => i.provider === stackItem.provider
+                );
+                const isConn = targetIntegration?.status === "connected";
+                return (
+                  <div
+                    key={stackItem.label}
+                    onClick={() => {
+                      if (targetIntegration) {
+                        handleOpenConnect(targetIntegration);
+                      }
+                    }}
+                    className="flex items-center justify-between py-0.5 cursor-pointer hover:opacity-85 transition group"
+                  >
+                    <span className="font-medium text-stone-700 tracking-tight">
+                      {stackItem.label}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold shadow-sm transition group-hover:scale-[1.02] ${stackItem.bg}`}
+                      >
+                        {stackItem.badge}
+                      </span>
+                      <span
+                        title={
+                          isConn
+                            ? "Connected"
+                            : "Disconnected (Click to connect)"
+                        }
+                        className={`h-2 w-2 rounded-full ${
+                          isConn
+                            ? "bg-emerald-500 animate-pulse"
+                            : "bg-stone-300"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Category Filters */}
         <div className="flex flex-wrap items-center gap-2 border-b border-gray-800 pb-2">
           {[
             { id: "all", label: t("integrations.category_all") },
+            {
+              id: "founder",
+              label: `⚡ ${t("integrations.category_founder")}`,
+            },
+            { id: "database", label: t("integrations.category_database") },
+            { id: "payments", label: t("integrations.category_payments") },
+            {
+              id: "productivity",
+              label: t("integrations.category_productivity"),
+            },
+            { id: "infra", label: t("integrations.category_infra") },
             { id: "storage", label: t("integrations.category_storage") },
             { id: "marketing", label: t("integrations.category_marketing") },
             { id: "social", label: t("integrations.category_social") },
             { id: "media", label: t("integrations.category_media") },
-            { id: "dev", label: isAr ? "البرمجة والتواصل" : "Dev & Chat" },
+            { id: "dev", label: isAr ? "البرمجة والسحاب" : "Dev & Cloud" },
           ].map(cat => (
             <button
               key={cat.id}

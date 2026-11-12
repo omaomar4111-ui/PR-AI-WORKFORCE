@@ -1364,10 +1364,11 @@ export async function editAndApproveRequest(
 }
 
 export async function fetchIntegrations(
-  includeExtended: boolean = true
+  includeExtended: boolean = true,
+  includeFounder: boolean = true
 ): Promise<Integration[]> {
   const res = await customFetch(
-    `${API_BASE_URL}/api/integrations?include_extended=${includeExtended}`,
+    `${API_BASE_URL}/api/integrations?include_extended=${includeExtended}&include_founder=${includeFounder}`,
     {
       headers: authHeaders(),
     }
