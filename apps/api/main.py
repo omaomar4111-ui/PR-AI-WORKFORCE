@@ -1952,6 +1952,43 @@ def get_quality_trend_endpoint(
     return {"quality_trend": trend}
 
 
+# ── Founder Venture Validation & Unit Economics Endpoints ────────────────────
+@app.post("/api/founder/unit-economics")
+def calculate_unit_economics_endpoint(
+    spec: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Calculates comprehensive unit economics, contribution margins, break-even, and year 1 ramp."""
+    from founder.unit_economics import analyse, sensitivity, generate_markdown_report
+    try:
+        analysis = analyse(spec)
+        scenarios = [{"scenario": name, "results": res} for name, res in sensitivity(spec)]
+        report_md = generate_markdown_report(spec)
+        return {
+            "analysis": analysis,
+            "scenarios": scenarios,
+            "report_markdown": report_md,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/founder/pricing-sensitivity")
+def analyze_pricing_sensitivity_endpoint(
+    payload: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Performs Van Westendorp Price Sensitivity analysis on customer responses."""
+    from founder.van_westendorp import analyse_prices
+    rows = payload.get("rows", [])
+    test_price = payload.get("test_price")
+    try:
+        result = analyse_prices(rows, test_price=test_price)
+        return {"pricing_analysis": result}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host=settings.API_HOST, port=settings.API_PORT, reload=settings.DEBUG)

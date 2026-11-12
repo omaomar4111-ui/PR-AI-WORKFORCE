@@ -45,11 +45,30 @@ const TYPE_ICONS: Record<MemoryType, any> = {
   agent: Bot,
 };
 
-const TYPE_COLORS: Record<MemoryType, { bg: string; text: string; border: string }> = {
-  organization: { bg: "bg-purple-500/15", text: "text-[#c4b5fd]", border: "border-[#8b5cf6]/40" },
-  client: { bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/40" },
-  project: { bg: "bg-blue-500/15", text: "text-blue-400", border: "border-blue-500/40" },
-  agent: { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/40" },
+const TYPE_COLORS: Record<
+  MemoryType,
+  { bg: string; text: string; border: string }
+> = {
+  organization: {
+    bg: "bg-purple-500/15",
+    text: "text-[#c4b5fd]",
+    border: "border-[#8b5cf6]/40",
+  },
+  client: {
+    bg: "bg-emerald-500/15",
+    text: "text-emerald-400",
+    border: "border-emerald-500/40",
+  },
+  project: {
+    bg: "bg-blue-500/15",
+    text: "text-blue-400",
+    border: "border-blue-500/40",
+  },
+  agent: {
+    bg: "bg-amber-500/15",
+    text: "text-amber-400",
+    border: "border-amber-500/40",
+  },
 };
 
 export default function MemoryPage() {
@@ -153,7 +172,7 @@ export default function MemoryPage() {
     if (!confirm(t("memory.delete_confirm"))) return;
     try {
       await deleteMemory(memoryId);
-      setMemories((prev) => prev.filter((m) => m.id !== memoryId));
+      setMemories(prev => prev.filter(m => m.id !== memoryId));
     } catch (err: any) {
       alert(err.message || "Failed to delete memory");
     }
@@ -171,7 +190,9 @@ export default function MemoryPage() {
     try {
       let resolvedRefId = modalRefId;
       if (modalType === "organization") {
-        resolvedRefId = currentUser?.organization_id || "00000000-0000-0000-0000-000000000001";
+        resolvedRefId =
+          currentUser?.organization_id ||
+          "00000000-0000-0000-0000-000000000001";
       }
 
       const newMem = await createMemory({
@@ -184,7 +205,7 @@ export default function MemoryPage() {
         },
       });
 
-      setMemories((prev) => [newMem, ...prev]);
+      setMemories(prev => [newMem, ...prev]);
       setIsModalOpen(false);
       setModalContent("");
       setModalCategory("Brand Guidelines");
@@ -199,15 +220,15 @@ export default function MemoryPage() {
   const getReferenceLabel = (m: Memory) => {
     if (m.type === "organization") return t("memory.tab_organization");
     if (m.type === "client") {
-      const cl = clients.find((c) => c.id === m.reference_id);
+      const cl = clients.find(c => c.id === m.reference_id);
       return cl ? cl.name : `Client (${m.reference_id.slice(0, 8)})`;
     }
     if (m.type === "project") {
-      const pr = projects.find((p) => p.id === m.reference_id);
+      const pr = projects.find(p => p.id === m.reference_id);
       return pr ? pr.name : `Project (${m.reference_id.slice(0, 8)})`;
     }
     if (m.type === "agent") {
-      const ag = agents.find((a) => a.id === m.reference_id);
+      const ag = agents.find(a => a.id === m.reference_id);
       return ag ? ag.name : `Agent (${m.reference_id})`;
     }
     return m.reference_id;
@@ -240,14 +261,17 @@ export default function MemoryPage() {
 
         {/* Semantic Search Bar */}
         <div className="rounded-2xl border border-gray-800 bg-[#13151f] p-4 shadow-xl">
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-col sm:flex-row gap-3"
+          >
             <div className="relative flex-1">
               <Search className="absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 data-testid="memory-search-input"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 placeholder={t("memory.search_placeholder")}
                 className="w-full rounded-xl border border-gray-800 bg-[#181a26] py-2.5 ps-10 pe-10 text-sm text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none focus:ring-1 focus:ring-[#8b5cf6]"
               />
@@ -276,7 +300,9 @@ export default function MemoryPage() {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  <span>{isAr ? "بحث دلالي متقدم" : "Semantic Search (<=>)"}</span>
+                  <span>
+                    {isAr ? "بحث دلالي متقدم" : "Semantic Search (<=>)"}
+                  </span>
                 </>
               )}
             </button>
@@ -288,7 +314,9 @@ export default function MemoryPage() {
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
                 <span>
-                  {isAr ? "نتائج البحث الدلالي المتجه (Vector Embeddings) لـ:" : "Semantic Vector Results for:"}{" "}
+                  {isAr
+                    ? "نتائج البحث الدلالي المتجه (Vector Embeddings) لـ:"
+                    : "Semantic Vector Results for:"}{" "}
                   <strong className="text-white">"{searchQuery}"</strong>
                 </span>
               </div>
@@ -304,28 +332,30 @@ export default function MemoryPage() {
 
         {/* Level Tabs */}
         <div className="flex flex-wrap items-center gap-2 border-b border-gray-800 pb-3">
-          {(["all", "organization", "client", "project", "agent"] as const).map((tab) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                data-testid={`memory-tab-${tab}`}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
-                  isActive
-                    ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/30"
-                    : "border border-gray-800 bg-[#13151f] text-gray-400 hover:border-gray-700 hover:text-white"
-                }`}
-              >
-                <span>{t(`memory.tab_${tab}`)}</span>
-                <span className="rounded-full bg-black/30 px-2 py-0.5 text-[10px]">
-                  {tab === "all"
-                    ? memories.length
-                    : memories.filter((m) => m.type === tab).length}
-                </span>
-              </button>
-            );
-          })}
+          {(["all", "organization", "client", "project", "agent"] as const).map(
+            tab => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  data-testid={`memory-tab-${tab}`}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                    isActive
+                      ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/30"
+                      : "border border-gray-800 bg-[#13151f] text-gray-400 hover:border-gray-700 hover:text-white"
+                  }`}
+                >
+                  <span>{t(`memory.tab_${tab}`)}</span>
+                  <span className="rounded-full bg-black/30 px-2 py-0.5 text-[10px]">
+                    {tab === "all"
+                      ? memories.length
+                      : memories.filter(m => m.type === tab).length}
+                  </span>
+                </button>
+              );
+            }
+          )}
         </div>
 
         {/* Memories Grid */}
@@ -357,7 +387,9 @@ export default function MemoryPage() {
         ) : memories.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-800 bg-[#13151f]/50 p-12 text-center">
             <Brain className="mx-auto h-12 w-12 text-gray-600" />
-            <h3 className="mt-4 text-base font-bold text-white">{t("memory.empty")}</h3>
+            <h3 className="mt-4 text-base font-bold text-white">
+              {t("memory.empty")}
+            </h3>
             <p className="mt-1 text-xs text-gray-400">
               {isAr
                 ? "ابدأ بتدوين إرشادات العلامات التجارية أو أسلوب التواصل لتزويد الوكلاء بالسياق الحي."
@@ -366,7 +398,7 @@ export default function MemoryPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {memories.map((mem) => {
+            {memories.map(mem => {
               const Icon = TYPE_ICONS[mem.type] || Brain;
               const color = TYPE_COLORS[mem.type] || TYPE_COLORS.organization;
               const hasScore = typeof mem.similarity === "number";
@@ -399,7 +431,11 @@ export default function MemoryPage() {
                           className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-[11px] font-bold text-emerald-400"
                         >
                           <Sparkles className="h-3 w-3" />
-                          <span>{mem.similarity_percent ?? Math.round(mem.similarity! * 100)}% {t("memory.match_score")}</span>
+                          <span>
+                            {mem.similarity_percent ??
+                              Math.round(mem.similarity! * 100)}
+                            % {t("memory.match_score")}
+                          </span>
                         </span>
                       )}
                     </div>
@@ -481,16 +517,21 @@ export default function MemoryPage() {
                   <select
                     value={modalType}
                     data-testid="memory-type-select"
-                    onChange={(e) => {
+                    onChange={e => {
                       const newType = e.target.value as MemoryType;
                       setModalType(newType);
-                      if (newType === "client" && clients.length > 0) setModalRefId(clients[0].id);
-                      if (newType === "project" && projects.length > 0) setModalRefId(projects[0].id);
-                      if (newType === "agent" && agents.length > 0) setModalRefId(agents[0].id);
+                      if (newType === "client" && clients.length > 0)
+                        setModalRefId(clients[0].id);
+                      if (newType === "project" && projects.length > 0)
+                        setModalRefId(projects[0].id);
+                      if (newType === "agent" && agents.length > 0)
+                        setModalRefId(agents[0].id);
                     }}
                     className="mt-1.5 w-full rounded-xl border border-gray-800 bg-[#181a26] px-3.5 py-2.5 text-sm text-white focus:border-[#8b5cf6] focus:outline-none"
                   >
-                    <option value="organization">{t("memory.tab_organization")}</option>
+                    <option value="organization">
+                      {t("memory.tab_organization")}
+                    </option>
                     <option value="client">{t("memory.tab_client")}</option>
                     <option value="project">{t("memory.tab_project")}</option>
                     <option value="agent">{t("memory.tab_agent")}</option>
@@ -506,23 +547,23 @@ export default function MemoryPage() {
                     <select
                       value={modalRefId}
                       data-testid="memory-ref-select"
-                      onChange={(e) => setModalRefId(e.target.value)}
+                      onChange={e => setModalRefId(e.target.value)}
                       className="mt-1.5 w-full rounded-xl border border-gray-800 bg-[#181a26] px-3.5 py-2.5 text-sm text-white focus:border-[#8b5cf6] focus:outline-none"
                     >
                       {modalType === "client" &&
-                        clients.map((c) => (
+                        clients.map(c => (
                           <option key={c.id} value={c.id}>
                             {c.name} ({c.industry || "Client"})
                           </option>
                         ))}
                       {modalType === "project" &&
-                        projects.map((p) => (
+                        projects.map(p => (
                           <option key={p.id} value={p.id}>
                             {p.name}
                           </option>
                         ))}
                       {modalType === "agent" &&
-                        agents.map((a) => (
+                        agents.map(a => (
                           <option key={a.id} value={a.id}>
                             {a.name} ({a.department})
                           </option>
@@ -540,7 +581,7 @@ export default function MemoryPage() {
                     rows={4}
                     data-testid="memory-content-input"
                     value={modalContent}
-                    onChange={(e) => setModalContent(e.target.value)}
+                    onChange={e => setModalContent(e.target.value)}
                     placeholder={
                       isAr
                         ? "مثال: يفضل العميل ألوان البنفسجي #8b5cf6 والأبيض، ونبرة الخطاب فصحى معاصرة بدون كلمات عامية مبتذلة..."
@@ -559,7 +600,7 @@ export default function MemoryPage() {
                   <input
                     type="text"
                     value={modalCategory}
-                    onChange={(e) => setModalCategory(e.target.value)}
+                    onChange={e => setModalCategory(e.target.value)}
                     placeholder="e.g. Brand Guidelines, Tone of Voice, Forbidden Words"
                     className="mt-1.5 w-full rounded-xl border border-gray-800 bg-[#181a26] px-3.5 py-2.5 text-sm text-white focus:border-[#8b5cf6] focus:outline-none"
                   />

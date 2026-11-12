@@ -41,7 +41,9 @@ export default function ProjectsPage() {
   const [clientId, setClientId] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState<"active" | "paused" | "completed">("active");
+  const [status, setStatus] = useState<"active" | "paused" | "completed">(
+    "active"
+  );
   const [retainer, setRetainer] = useState("5000");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -122,9 +124,7 @@ export default function ProjectsPage() {
           <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
             {t("projects.title")}
           </h1>
-          <p className="mt-1 text-xs text-gray-400">
-            {t("projects.subtitle")}
-          </p>
+          <p className="mt-1 text-xs text-gray-400">{t("projects.subtitle")}</p>
         </div>
 
         <button
@@ -140,14 +140,16 @@ export default function ProjectsPage() {
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-gray-800 bg-[#13151f] p-3 text-xs">
         <div className="flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-[#8b5cf6]" />
-          <span className="font-semibold text-gray-300">{t("projects.filter_client")}</span>
+          <span className="font-semibold text-gray-300">
+            {t("projects.filter_client")}
+          </span>
           <select
             value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
+            onChange={e => setSelectedClient(e.target.value)}
             className="rounded-lg border border-gray-800 bg-[#181a26] px-2.5 py-1.5 text-white focus:outline-none"
           >
             <option value="">{t("projects.all_clients")}</option>
-            {clients.map((c) => (
+            {clients.map(c => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
@@ -156,10 +158,12 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-gray-300">{t("projects.filter_status")}</span>
+          <span className="font-semibold text-gray-300">
+            {t("projects.filter_status")}
+          </span>
           <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={e => setSelectedStatus(e.target.value)}
             className="rounded-lg border border-gray-800 bg-[#181a26] px-2.5 py-1.5 text-white focus:outline-none"
           >
             <option value="">{t("projects.all_statuses")}</option>
@@ -192,7 +196,9 @@ export default function ProjectsPage() {
                 <th className="px-5 py-3.5">{t("projects.col_client")}</th>
                 <th className="px-5 py-3.5">{t("projects.col_status")}</th>
                 <th className="px-5 py-3.5">{t("projects.col_retainer")}</th>
-                <th className="px-5 py-3.5 text-right">{t("projects.col_actions")}</th>
+                <th className="px-5 py-3.5 text-right">
+                  {t("projects.col_actions")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/60">
@@ -203,10 +209,18 @@ export default function ProjectsPage() {
                       <div className="h-4 w-36 bg-gray-800 rounded mb-1.5" />
                       <div className="h-3 w-24 bg-gray-800/60 rounded" />
                     </td>
-                    <td className="px-5 py-4"><div className="h-4 w-24 bg-gray-800 rounded" /></td>
-                    <td className="px-5 py-4"><div className="h-5 w-16 bg-gray-800 rounded-full" /></td>
-                    <td className="px-5 py-4"><div className="h-4 w-20 bg-gray-800 rounded" /></td>
-                    <td className="px-5 py-4 text-right"><div className="h-4 w-12 bg-gray-800 rounded ml-auto" /></td>
+                    <td className="px-5 py-4">
+                      <div className="h-4 w-24 bg-gray-800 rounded" />
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="h-5 w-16 bg-gray-800 rounded-full" />
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="h-4 w-20 bg-gray-800 rounded" />
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="h-4 w-12 bg-gray-800 rounded ml-auto" />
+                    </td>
                   </tr>
                 ))
               ) : projects.length === 0 ? (
@@ -221,7 +235,7 @@ export default function ProjectsPage() {
                   </td>
                 </tr>
               ) : (
-                projects.map((proj) => (
+                projects.map(proj => (
                   <tr key={proj.id} className="transition hover:bg-[#181a26]">
                     {/* Project Name */}
                     <td className="px-5 py-3.5">
@@ -246,7 +260,10 @@ export default function ProjectsPage() {
                       >
                         <div
                           className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: proj.client_brand_color || "#8b5cf6" }}
+                          style={{
+                            backgroundColor:
+                              proj.client_brand_color || "#8b5cf6",
+                          }}
                         />
                         <span>{proj.client_name || "Client"}</span>
                       </Link>
@@ -259,8 +276,8 @@ export default function ProjectsPage() {
                           proj.status === "active"
                             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                             : proj.status === "paused"
-                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
                         }`}
                       >
                         {proj.status}
@@ -343,10 +360,10 @@ export default function ProjectsPage() {
                   <select
                     required
                     value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
+                    onChange={e => setClientId(e.target.value)}
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                   >
-                    {clients.map((c) => (
+                    {clients.map(c => (
                       <option key={c.id} value={c.id}>
                         {c.name} ({c.industry})
                       </option>
@@ -363,7 +380,7 @@ export default function ProjectsPage() {
                     type="text"
                     required
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={e => setName(e.target.value)}
                     placeholder="e.g. Media Crisis Management & PR"
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                   />
@@ -377,7 +394,7 @@ export default function ProjectsPage() {
                   <textarea
                     rows={3}
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={e => setDescription(e.target.value)}
                     placeholder="Project deliverables, campaign scope..."
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                   />
@@ -391,12 +408,18 @@ export default function ProjectsPage() {
                     </label>
                     <select
                       value={status}
-                      onChange={(e) => setStatus(e.target.value as any)}
+                      onChange={e => setStatus(e.target.value as any)}
                       className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                     >
-                      <option value="active">{t("projects.status_active")}</option>
-                      <option value="paused">{t("projects.status_paused")}</option>
-                      <option value="completed">{t("projects.status_completed")}</option>
+                      <option value="active">
+                        {t("projects.status_active")}
+                      </option>
+                      <option value="paused">
+                        {t("projects.status_paused")}
+                      </option>
+                      <option value="completed">
+                        {t("projects.status_completed")}
+                      </option>
                     </select>
                   </div>
 
@@ -407,7 +430,7 @@ export default function ProjectsPage() {
                     <input
                       type="number"
                       value={retainer}
-                      onChange={(e) => setRetainer(e.target.value)}
+                      onChange={e => setRetainer(e.target.value)}
                       placeholder="5000"
                       className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                     />
@@ -423,7 +446,7 @@ export default function ProjectsPage() {
                     <input
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={e => setStartDate(e.target.value)}
                       className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                     />
                   </div>
@@ -435,7 +458,7 @@ export default function ProjectsPage() {
                     <input
                       type="date"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={e => setEndDate(e.target.value)}
                       className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                     />
                   </div>
@@ -455,7 +478,9 @@ export default function ProjectsPage() {
                     disabled={submitting}
                     className="rounded-lg bg-[#8b5cf6] px-4 py-2 text-xs font-bold text-white shadow-lg shadow-[#8b5cf6]/20 hover:bg-[#7c3aed] disabled:opacity-50"
                   >
-                    {submitting ? t("project_modal.saving") : t("project_modal.save")}
+                    {submitting
+                      ? t("project_modal.saving")
+                      : t("project_modal.save")}
                   </button>
                 </div>
               </form>

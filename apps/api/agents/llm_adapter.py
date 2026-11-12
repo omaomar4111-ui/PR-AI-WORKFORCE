@@ -2,9 +2,102 @@ import os
 import json
 import logging
 from typing import Dict, Any, Optional
-import httpx
 
 logger = logging.getLogger(__name__)
+
+DESIGN_AGENTS = {
+    "brand-identity-designer",
+    "visual-designer",
+    "creative-director",
+    "packaging-designer",
+    "storyboard-artist",
+    "infographic-specialist",
+    "ui-ux-designer",
+    "social-media-designer",
+    "fawzyia",
+}
+
+
+def is_design_agent(agent_id: str) -> bool:
+    """Checks whether the agent archetype produces visual / branding assets."""
+    return agent_id in DESIGN_AGENTS
+
+
+def compile_brief_to_prompt(task_input: Dict[str, Any]) -> str:
+    """
+    Transforms structured user brief inputs (creative brief, target audience, tone, colors)
+    into a comprehensive, natural language prompt for the LLM.
+    """
+    parts = []
+    brief = (
+        task_input.get("brief")
+        or task_input.get("task_description")
+        or task_input.get("prompt")
+        or task_input.get("user_request")
+    )
+    if brief:
+        parts.append(f"CORE CREATIVE BRIEF:\n{str(brief).strip()}")
+
+    project = task_input.get("project_name") or task_input.get("client_name") or task_input.get("brand_name")
+    if project:
+        parts.append(f"PROJECT / CLIENT NAME:\n{project}")
+
+    target_audience = task_input.get("target_audience")
+    if target_audience:
+        parts.append(f"TARGET AUDIENCE:\n{target_audience}")
+
+    tone = task_input.get("tone")
+    if tone:
+        parts.append(f"TONE OF VOICE:\n{tone}")
+
+    style = (
+        task_input.get("colors")
+        or task_input.get("visual_style")
+        or task_input.get("visual_mood")
+        or task_input.get("brand_guidelines")
+    )
+    if style:
+        parts.append(f"DESIGN, COLORS & STYLE GUIDELINES:\n{style}")
+
+    # Add extra specialized task inputs if present
+    skip_keys = {
+        "brief", "task_description", "prompt", "user_request", "project_name",
+        "client_name", "brand_name", "target_audience", "tone", "colors",
+        "visual_style", "visual_mood", "brand_guidelines", "approved", "action_type",
+        "retrieved_context"
+    }
+    extras = {k: v for k, v in task_input.items() if k not in skip_keys and v is not None}
+    if extras:
+        parts.append(f"ADDITIONAL PARAMETERS:\n{json.dumps(extras, ensure_ascii=False, indent=2)}")
+
+    return "\n\n".join(parts) if parts else json.dumps(task_input, ensure_ascii=False)
+
+
+async def generate_image(prompt: str, size: str = "1024x1024") -> str:
+    """
+    Generates high-resolution branding artwork / logo using OpenAI DALL-E 3 or Google Imagen.
+    Falls back gracefully to a high-quality mockup if API keys are not provided.
+    """
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=openai_key)
+            dalle_prompt = f"Professional corporate branding design, graphic identity, clean presentation: {prompt[:800]}"
+            resp = await client.images.generate(
+                model="dall-e-3",
+                prompt=dalle_prompt,
+                n=1,
+                size=size,
+            )
+            if resp.data and len(resp.data) > 0 and resp.data[0].url:
+                return resp.data[0].url
+        except Exception as e:
+            logger.warning(f"DALL-E 3 image generation failed: {e}. Falling back to visual mockup.")
+
+    # High quality branding visual mockup (fallback)
+    logger.info("Using visual identity mockup URL for design deliverable.")
+    return "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80"
 
 
 async def call_llm(
@@ -15,70 +108,88 @@ async def call_llm(
     max_tokens: int = 4000
 ) -> Dict[str, Any]:
     """
-    Executes LLM call using Gemini, OpenAI, or domain-accurate deterministic generator.
+    Executes real LLM call using OpenAI (GPT-4o) or Google Gemini (Gemini 1.5 Pro).
+    Falls back gracefully to domain-accurate deterministic engine if keys are not present or if calls fail.
     Guarantees valid JSON matching output_schema.
     """
-    gemini_key = os.getenv("GEMINI_API_KEY")
     openai_key = os.getenv("OPENAI_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    compiled_user_prompt = compile_brief_to_prompt(task_input)
 
-    # 1. Try Gemini if configured
-    if gemini_key:
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                prompt_text = (
-                    f"{system_prompt}\n\n"
-                    f"INPUT:\n{json.dumps(task_input, ensure_ascii=False, indent=2)}\n\n"
-                    f"OUTPUT SCHEMA (Return ONLY valid JSON matching this schema):\n{json.dumps(output_schema, indent=2)}"
-                )
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-                payload = {
-                    "contents": [{"parts": [{"text": prompt_text}]}],
-                    "generationConfig": {
-                        "temperature": 0.2,
-                        "maxOutputTokens": max_tokens,
-                        "responseMimeType": "application/json"
-                    }
-                }
-                res = await client.post(url, json=payload)
-                if res.status_code == 200:
-                    data = res.json()
-                    raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-                    return json.loads(raw_text)
-        except Exception as e:
-            logger.warning(f"Gemini API call failed or timed out: {e}. Falling back to domain engine.")
-
-    # 2. Try OpenAI if configured
+    # 1. Try OpenAI GPT-4o if configured
     if openai_key:
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                headers = {
-                    "Authorization": f"Bearer {openai_key}",
-                    "Content-Type": "application/json"
-                }
-                messages = [
-                    {"role": "system", "content": f"{system_prompt}\nReturn JSON matching schema: {json.dumps(output_schema)}"},
-                    {"role": "user", "content": json.dumps(task_input, ensure_ascii=False)}
-                ]
-                res = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers=headers,
-                    json={
-                        "model": "gpt-4o-mini",
-                        "messages": messages,
-                        "response_format": {"type": "json_object"},
-                        "max_tokens": max_tokens,
-                        "temperature": 0.2
-                    }
-                )
-                if res.status_code == 200:
-                    data = res.json()
-                    raw_text = data["choices"][0]["message"]["content"]
-                    return json.loads(raw_text)
-        except Exception as e:
-            logger.warning(f"OpenAI API call failed: {e}. Falling back to domain engine.")
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=openai_key)
+            system_instruction = (
+                f"{system_prompt}\n\n"
+                f"You are an expert AI agent in a high-end PR & Workforce platform.\n"
+                f"CRITICAL: You MUST respond with a single, strictly valid JSON object matching this JSON Schema:\n"
+                f"{json.dumps(output_schema, indent=2)}\n"
+                f"Never include markdown code blocks (like ```json), commentary, or surrounding text. Output valid JSON only."
+            )
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": compiled_user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=max_tokens,
+                temperature=0.3,
+            )
+            raw_text = response.choices[0].message.content or "{}"
+            result = json.loads(raw_text)
 
-    # 3. Domain-Accurate Deterministic Generation (guarantees 100% schema compliance for tests & offline sandbox)
-    return generate_domain_fallback(agent_id, task_input, output_schema)
+            # Generate image asset for design agents
+            if is_design_agent(agent_id):
+                img_url = await generate_image(compiled_user_prompt)
+                result["image_url"] = img_url
+                result["logo_url"] = img_url
+
+            return result
+        except Exception as e:
+            logger.warning(f"OpenAI GPT-4o call failed: {e}. Trying Gemini or fallback.")
+
+    # 2. Try Google Gemini (Gemini 1.5 Pro) if configured
+    if gemini_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel(
+                model_name="gemini-1.5-pro",
+                system_instruction=system_prompt,
+                generation_config={
+                    "temperature": 0.2,
+                    "max_output_tokens": max_tokens,
+                    "response_mime_type": "application/json",
+                }
+            )
+            prompt_content = (
+                f"USER BRIEF & REQUIREMENTS:\n{compiled_user_prompt}\n\n"
+                f"REQUIRED JSON SCHEMA:\n{json.dumps(output_schema, indent=2)}"
+            )
+            response = await model.generate_content_async(prompt_content)
+            raw_text = response.text or "{}"
+            result = json.loads(raw_text)
+
+            if is_design_agent(agent_id):
+                img_url = await generate_image(compiled_user_prompt)
+                result["image_url"] = img_url
+                result["logo_url"] = img_url
+
+            return result
+        except Exception as e:
+            logger.warning(f"Google Gemini call failed: {e}. Falling back to domain engine.")
+
+    # 3. Domain-Accurate Deterministic Generation (Guarantees 100% schema compliance for offline tests)
+    logger.warning("No LLM API keys provided (OPENAI_API_KEY / GEMINI_API_KEY) or calls failed. Falling back to deterministic domain mock generator.")
+    result = generate_domain_fallback(agent_id, task_input, output_schema)
+    if is_design_agent(agent_id):
+        img_url = await generate_image(compiled_user_prompt)
+        result["image_url"] = img_url
+        result["logo_url"] = img_url
+    return result
 
 
 def generate_domain_fallback(
@@ -91,6 +202,45 @@ def generate_domain_fallback(
     if agent_id == "dr-ibrahim":
         client = task_input.get("client_name", "Client")
         industry = task_input.get("industry", "Media & Technology")
+        combined_text = str(task_input).lower()
+        if "board" in combined_text or "مجلس" in combined_text or "lens" in combined_text or "venture" in combined_text or "founder" in combined_text:
+            return {
+                "summary": f"Executive Advisory Board Assessment for {client}: 3-Lens Venture Pressure-Test.",
+                "board_verdict": "2 FUND IF, 1 PASS (Average Score: 7.8/10)",
+                "board_lenses": [
+                    {
+                        "lens": "The Offers Lens (Alex Hormozi Framework)",
+                        "score": "8.5/10",
+                        "vote": "FUND IF",
+                        "strengths": "Clear target market with massive operational pain point and purchasing power.",
+                        "critical_risks": "Proof of outcome and client guarantees are mandatory to unlock rapid conversion.",
+                        "founder_questions": "Can you double the price and still make it an irresistible no-brainer offer?"
+                    },
+                    {
+                        "lens": "The Monopoly Lens (Peter Thiel Framework)",
+                        "score": "7.5/10",
+                        "vote": "FUND IF",
+                        "strengths": "Proprietary integrated AI workflow engine 10x faster than legacy manual agency processes.",
+                        "critical_risks": "Distribution must be secured in the first 90 days before generic commodity AI tools copy the pitch.",
+                        "founder_questions": "What is the small market this can dominate first, and what is your secret distribution channel?"
+                    },
+                    {
+                        "lens": "The Product Lens (Steve Jobs Framework)",
+                        "score": "8.0/10",
+                        "vote": "FUND",
+                        "strengths": "Ruthless focus on simplicity: consolidating 38 fragmented agents into an intuitive 1-click Production Studio.",
+                        "critical_risks": "Keep the first 5 minutes of onboarding seamless and friction-free.",
+                        "founder_questions": "What is the single most important action the user takes in their first session?"
+                    }
+                ],
+                "market_overview": f"The regional market for {industry} represents a high-potential venture with favorable unit economics.",
+                "strategic_opportunities": [
+                    "Package high-converting grand offer stack with a 30-day performance guarantee.",
+                    "Target boutique marketing agencies across Riyadh and Dubai for initial customer density.",
+                    "Pre-validate consumer pricing sensitivity using the Van Westendorp model."
+                ],
+                "quality_score": 96
+            }
         return {
             "summary": f"Comprehensive market intelligence analysis for {client} in the {industry} sector.",
             "market_overview": f"The MENA market for {industry} is experiencing rapid digital acceleration with 34% YoY growth in localized Arabic content demand.",
@@ -220,6 +370,8 @@ def generate_domain_fallback(
                 "Never stretch or alter the aspect ratio of brand logotypes",
                 "Use subtle 1px border glows (rgba(139, 92, 246, 0.3)) on dark containers"
             ],
+            "image_url": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+            "logo_url": "https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80",
             "quality_score": 97
         }
 

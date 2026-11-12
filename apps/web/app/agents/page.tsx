@@ -56,7 +56,10 @@ import {
   Deliverable,
 } from "@/lib/api";
 
-const AGENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const AGENT_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   // Research & Strategy
   "dr-ibrahim": Brain,
   "data-analyst": BarChart3,
@@ -112,15 +115,50 @@ const AGENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   "compliance-officer": ShieldCheck,
 };
 
-const DEPARTMENT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  marketing: { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/30" },
-  creative: { bg: "bg-pink-500/10", text: "text-pink-400", border: "border-pink-500/30" },
-  video: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30" },
-  engineering: { bg: "bg-indigo-500/10", text: "text-indigo-400", border: "border-indigo-500/30" },
-  research: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/30" },
-  sales: { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/30" },
-  operations: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30" },
-  quality: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30" },
+const DEPARTMENT_COLORS: Record<
+  string,
+  { bg: string; text: string; border: string }
+> = {
+  marketing: {
+    bg: "bg-purple-500/10",
+    text: "text-purple-400",
+    border: "border-purple-500/30",
+  },
+  creative: {
+    bg: "bg-pink-500/10",
+    text: "text-pink-400",
+    border: "border-pink-500/30",
+  },
+  video: {
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    border: "border-red-500/30",
+  },
+  engineering: {
+    bg: "bg-indigo-500/10",
+    text: "text-indigo-400",
+    border: "border-indigo-500/30",
+  },
+  research: {
+    bg: "bg-blue-500/10",
+    text: "text-blue-400",
+    border: "border-blue-500/30",
+  },
+  sales: {
+    bg: "bg-cyan-500/10",
+    text: "text-cyan-400",
+    border: "border-cyan-500/30",
+  },
+  operations: {
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    border: "border-amber-500/30",
+  },
+  quality: {
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    border: "border-emerald-500/30",
+  },
 };
 
 const DEPARTMENT_NAMES: Record<string, { en: string; ar: string }> = {
@@ -151,10 +189,13 @@ const DEFAULT_DEPARTMENT_COLORS = {
   border: "border-gray-800",
 };
 
-const AgentExecutionModal = dynamic(() => import("@/components/AgentExecutionModal"), {
-  ssr: false,
-  loading: () => null,
-});
+const AgentExecutionModal = dynamic(
+  () => import("@/components/AgentExecutionModal"),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 export default function AgentsPage() {
   const { t, isAr } = useI18n();
@@ -207,8 +248,9 @@ export default function AgentsPage() {
 
   // Memoize filtered agents list so 38 card filters only execute when query/dept changes
   const filteredAgents = useMemo(() => {
-    return agents.filter((a) => {
-      const matchesDept = selectedDept === "all" || a.department === selectedDept;
+    return agents.filter(a => {
+      const matchesDept =
+        selectedDept === "all" || a.department === selectedDept;
       if (!matchesDept) return false;
       if (!debouncedSearch.trim()) return true;
       const q = debouncedSearch.toLowerCase().trim();
@@ -219,7 +261,7 @@ export default function AgentsPage() {
         (a.role_ar && a.role_ar.toLowerCase().includes(q)) ||
         a.department.toLowerCase().includes(q) ||
         a.id.toLowerCase().includes(q) ||
-        (a.tools && a.tools.some((tool) => tool.toLowerCase().includes(q)))
+        (a.tools && a.tools.some(tool => tool.toLowerCase().includes(q)))
       );
     });
   }, [agents, selectedDept, debouncedSearch]);
@@ -258,7 +300,7 @@ export default function AgentsPage() {
             type="text"
             data-testid="agents-search-input"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             placeholder={t("agents.search_placeholder")}
             className="w-full rounded-xl border border-gray-800 bg-[#13151f] py-2.5 pl-10 pr-10 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] rtl:pl-10 rtl:pr-10"
           />
@@ -291,10 +333,15 @@ export default function AgentsPage() {
         >
           {t("agents.all_departments")} ({agents.length})
         </button>
-        {ORDERED_DEPARTMENTS.map((dept) => {
+        {ORDERED_DEPARTMENTS.map(dept => {
           const count = departmentCounts[dept] || 0;
           const deptNameObj = DEPARTMENT_NAMES[dept];
-          const label = isAr && deptNameObj ? deptNameObj.ar : deptNameObj ? deptNameObj.en : dept;
+          const label =
+            isAr && deptNameObj
+              ? deptNameObj.ar
+              : deptNameObj
+                ? deptNameObj.en
+                : dept;
           return (
             <button
               key={dept}
@@ -319,9 +366,13 @@ export default function AgentsPage() {
       ) : filteredAgents.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-800 bg-[#13151f] p-12 text-center">
           <Bot className="h-12 w-12 text-gray-600 mb-3" />
-          <h3 className="text-sm font-bold text-gray-300">{t("agents.no_results")}</h3>
+          <h3 className="text-sm font-bold text-gray-300">
+            {t("agents.no_results")}
+          </h3>
           <p className="mt-1 text-xs text-gray-500">
-            {isAr ? "جرّب تغيير عبارة البحث أو اختيار قسم مختلف" : "Try adjusting your search query or department filter"}
+            {isAr
+              ? "جرّب تغيير عبارة البحث أو اختيار قسم مختلف"
+              : "Try adjusting your search query or department filter"}
           </p>
           {(searchQuery || selectedDept !== "all") && (
             <button
@@ -337,12 +388,14 @@ export default function AgentsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {filteredAgents.map((agent) => (
+          {filteredAgents.map(agent => (
             <AgentCard
               key={agent.id}
               agent={agent}
               isAr={isAr}
-              colors={DEPARTMENT_COLORS[agent.department] || DEFAULT_DEPARTMENT_COLORS}
+              colors={
+                DEPARTMENT_COLORS[agent.department] || DEFAULT_DEPARTMENT_COLORS
+              }
               IconComponent={AGENT_ICONS[agent.id] || Bot}
               onDeploy={openExecutionConsole}
               toolsCountLabel={t("agents.tools_count")}

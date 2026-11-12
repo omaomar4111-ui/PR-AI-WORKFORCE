@@ -25,6 +25,7 @@ import {
   Shield,
   User as UserIcon,
   Bell,
+  Wand2,
 } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n";
@@ -51,6 +52,13 @@ const MENU_ITEMS: MenuItem[] = [
     labelKey: "nav.command_center",
     href: "/dashboard",
     icon: LayoutDashboard,
+    enabled: true,
+  },
+  {
+    id: "studio",
+    labelKey: "nav.studio",
+    href: "/studio",
+    icon: Wand2,
     enabled: true,
   },
   {

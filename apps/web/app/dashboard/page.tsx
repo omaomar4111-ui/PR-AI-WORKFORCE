@@ -15,6 +15,12 @@ import {
   Briefcase,
   AlertCircle,
   RefreshCw,
+  Wand2,
+  Film,
+  Palette,
+  ShieldAlert,
+  TrendingUp,
+  Brain,
 } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
@@ -107,6 +113,125 @@ export default function DashboardPage() {
               <span>{t("dash.add_client")}</span>
             </Link>
           </div>
+        </div>
+      </div>
+
+      {/* Quick Production Studio Launcher */}
+      <div className="mb-8 rounded-2xl border border-gray-800 bg-[#12141f] p-5 shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8b5cf6]/20 text-[#c4b5fd]">
+              <Wand2 className="h-4 w-4" />
+            </span>
+            <div>
+              <h2 className="text-sm font-bold text-white">
+                {isAr
+                  ? "استوديو العمل ومسارات الإنتاج المباشرة (Production Studio)"
+                  : "Production Studio Playbooks"}
+              </h2>
+              <p className="text-[11px] text-gray-400">
+                {isAr
+                  ? "اختر مسار العمل المطلوب وتولى الإشراف على مخرجات فريق الذكاء الاصطناعي وتعديلها خطوة بخطوة."
+                  : "Select a specialized production track to generate, supervise and edit deliverables on the fly."}
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/studio"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8b5cf6] hover:text-[#c4b5fd] transition"
+          >
+            <span>{isAr ? "فتح الاستوديو بالكامل" : "Open Full Studio"}</span>
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          <Link
+            href="/studio"
+            className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-950/20 p-3 transition hover:border-blue-500/50 hover:bg-blue-950/30"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-300">
+              <Brain className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-white">
+                {isAr ? "تقييم وجدوى الأفكار" : "Venture Validation"}
+              </h3>
+              <p className="text-[10px] text-blue-300">
+                {isAr ? "مجلس إدارة واقتصاديات" : "Board Lenses & Unit Econ"}
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/studio"
+            className="flex items-center gap-3 rounded-xl border border-purple-500/20 bg-purple-950/20 p-3 transition hover:border-purple-500/50 hover:bg-purple-950/30"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-500/20 text-[#c4b5fd]">
+              <Film className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-white">
+                {isAr ? "إنتاج سيناريو وفيديو" : "Video & Script Studio"}
+              </h3>
+              <p className="text-[10px] text-purple-300">
+                {isAr ? "زوايا، سكريبت، ومؤثرات" : "Hooks, AV Script & Audio"}
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/studio"
+            className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-950/20 p-3 transition hover:border-amber-500/50 hover:bg-amber-950/30"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
+              <Palette className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-white">
+                {isAr ? "إطلاق هوية بصرية" : "Brand Identity Studio"}
+              </h3>
+              <p className="text-[10px] text-amber-300">
+                {isAr
+                  ? "شعار بالذكاء الاصطناعي، وألوان"
+                  : "AI Logo & Launch PR"}
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/studio"
+            className="flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-950/20 p-3 transition hover:border-rose-500/50 hover:bg-rose-950/30"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/20 text-rose-300">
+              <ShieldAlert className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-white">
+                {isAr ? "إدارة الأزمات والرد" : "Crisis & PR War Room"}
+              </h3>
+              <p className="text-[10px] text-rose-300">
+                {isAr ? "بيان رسمي، ومصفوفة الردود" : "Holding PR & Q&A Matrix"}
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/studio"
+            className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-3 transition hover:border-emerald-500/50 hover:bg-emerald-950/30"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+              <TrendingUp className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-white">
+                {isAr ? "حملة تسويق ونمو" : "Growth & Performance"}
+              </h3>
+              <p className="text-[10px] text-emerald-300">
+                {isAr ? "إعلانات ميتا، ميزانية، وSEO" : "Ad Copy Suite & SEO"}
+              </p>
+            </div>
+          </Link>
         </div>
       </div>
 

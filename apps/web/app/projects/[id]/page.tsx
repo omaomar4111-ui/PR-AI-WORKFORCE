@@ -35,8 +35,8 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     if (projectId) {
       fetchProject(projectId)
-        .then((data) => setProject(data))
-        .catch((err) => {
+        .then(data => setProject(data))
+        .catch(err => {
           console.error(err);
           setError(err.message || "Failed to load project");
         })
@@ -78,7 +78,11 @@ export default function ProjectDetailPage() {
           href="/projects"
           className="inline-flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-white"
         >
-          {isAr ? <ArrowRight className="h-3.5 w-3.5" /> : <ArrowLeft className="h-3.5 w-3.5" />}
+          {isAr ? (
+            <ArrowRight className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowLeft className="h-3.5 w-3.5" />
+          )}
           <span>{t("project_detail.back")}</span>
         </Link>
       </div>
@@ -93,8 +97,8 @@ export default function ProjectDetailPage() {
                   project.status === "active"
                     ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
                     : project.status === "paused"
-                    ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
-                    : "bg-gray-500/15 text-gray-400 border border-gray-500/30"
+                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                      : "bg-gray-500/15 text-gray-400 border border-gray-500/30"
                 }`}
               >
                 {project.status}
@@ -105,15 +109,21 @@ export default function ProjectDetailPage() {
               >
                 <div
                   className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: project.client_brand_color || "#8b5cf6" }}
+                  style={{
+                    backgroundColor: project.client_brand_color || "#8b5cf6",
+                  }}
                 />
                 <span>{project.client_name || "Client"}</span>
               </Link>
             </div>
-            <h1 className="text-xl font-black text-white sm:text-2xl">{project.name}</h1>
+            <h1 className="text-xl font-black text-white sm:text-2xl">
+              {project.name}
+            </h1>
             <p className="mt-1 text-xs text-gray-400">
               {isAr ? "تم الإنشاء:" : "Created:"}{" "}
-              {new Date(project.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US")}
+              {new Date(project.created_at).toLocaleDateString(
+                isAr ? "ar-EG" : "en-US"
+              )}
             </p>
           </div>
 
@@ -124,7 +134,10 @@ export default function ProjectDetailPage() {
               </p>
               <p className="text-xl font-black text-emerald-400">
                 ${project.retainer_amount.toLocaleString()}
-                <span className="text-xs font-normal text-emerald-400/70"> / mo</span>
+                <span className="text-xs font-normal text-emerald-400/70">
+                  {" "}
+                  / mo
+                </span>
               </p>
             </div>
           </div>
@@ -139,7 +152,10 @@ export default function ProjectDetailPage() {
             {t("project_detail.overview")}
           </h3>
           <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
-            {project.description || (isAr ? "لا يوجد وصف مدخل لهذا المشروع." : "No description provided.")}
+            {project.description ||
+              (isAr
+                ? "لا يوجد وصف مدخل لهذا المشروع."
+                : "No description provided.")}
           </p>
         </div>
 
@@ -150,19 +166,25 @@ export default function ProjectDetailPage() {
           </h3>
           <div className="text-xs space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">{t("project_modal.start_date")}:</span>
+              <span className="text-gray-400">
+                {t("project_modal.start_date")}:
+              </span>
               <span className="font-semibold text-white">
                 {project.start_date || "—"}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">{t("project_modal.end_date")}:</span>
+              <span className="text-gray-400">
+                {t("project_modal.end_date")}:
+              </span>
               <span className="font-semibold text-white">
                 {project.end_date || "—"}
               </span>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-gray-800">
-              <span className="text-gray-400">{t("client_modal.industry")}:</span>
+              <span className="text-gray-400">
+                {t("client_modal.industry")}:
+              </span>
               <span className="font-semibold text-[#a78bfa]">
                 {project.client_industry || "PR & Communications"}
               </span>

@@ -39,7 +39,10 @@ import {
   getWsBaseUrl,
 } from "@/lib/api";
 
-const AGENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const AGENT_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   "dr-ibrahim": Brain,
   ragaa: Target,
   copywriter: PenTool,
@@ -62,7 +65,9 @@ export default function WorkflowDetailPage() {
 
   // Approval Modal
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
-  const [approvalNotes, setApprovalNotes] = useState("Executive review complete. Approved for final packaging.");
+  const [approvalNotes, setApprovalNotes] = useState(
+    "Executive review complete. Approved for final packaging."
+  );
   const [submittingApproval, setSubmittingApproval] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -72,7 +77,7 @@ export default function WorkflowDetailPage() {
       const data = await fetchWorkflow(workflowId);
       setWorkflow(data);
       if (selectedStep) {
-        const updatedSelected = data.steps.find((s) => s.id === selectedStep.id);
+        const updatedSelected = data.steps.find(s => s.id === selectedStep.id);
         if (updatedSelected) setSelectedStep(updatedSelected);
       }
     } catch (err: any) {
@@ -96,7 +101,7 @@ export default function WorkflowDetailPage() {
         wsRef.current = ws;
 
         ws.onopen = () => setWsConnected(true);
-        ws.onmessage = (event) => {
+        ws.onmessage = event => {
           try {
             const msg = JSON.parse(event.data);
             if (
@@ -150,13 +155,13 @@ export default function WorkflowDetailPage() {
   };
 
   const steps = workflow?.steps || [];
-  const waitingStep = steps.find((s) => s.status === "waiting_approval");
+  const waitingStep = steps.find(s => s.status === "waiting_approval");
 
-  const step1 = steps.find((s) => s.assigned_agent_id === "dr-ibrahim");
-  const step2 = steps.find((s) => s.assigned_agent_id === "ragaa");
-  const step3 = steps.find((s) => s.assigned_agent_id === "copywriter");
-  const step4 = steps.find((s) => s.assigned_agent_id === "fawzyia");
-  const step5 = steps.find((s) => s.assigned_agent_id === "qa-lead");
+  const step1 = steps.find(s => s.assigned_agent_id === "dr-ibrahim");
+  const step2 = steps.find(s => s.assigned_agent_id === "ragaa");
+  const step3 = steps.find(s => s.assigned_agent_id === "copywriter");
+  const step4 = steps.find(s => s.assigned_agent_id === "fawzyia");
+  const step5 = steps.find(s => s.assigned_agent_id === "qa-lead");
 
   return (
     <AppShell>
@@ -179,7 +184,9 @@ export default function WorkflowDetailPage() {
               : "bg-gray-800 text-gray-400 border border-gray-700"
           }`}
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${wsConnected ? "bg-emerald-400 animate-pulse" : "bg-gray-500"}`} />
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${wsConnected ? "bg-emerald-400 animate-pulse" : "bg-gray-500"}`}
+          />
           <span>{wsConnected ? "Live WebSocket DAG" : "Syncing..."}</span>
         </div>
       </div>
@@ -204,8 +211,8 @@ export default function WorkflowDetailPage() {
                       workflow.status === "completed"
                         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                         : workflow.status === "waiting_approval"
-                        ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse"
-                        : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse"
+                          : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                     }`}
                   >
                     {workflow.status}
@@ -251,7 +258,8 @@ export default function WorkflowDetailPage() {
                       {t("workflows.step_approval_banner")}
                     </h3>
                     <p className="text-xs text-amber-200/80">
-                      Step: {waitingStep.title} ({waitingStep.assigned_agent_name})
+                      Step: {waitingStep.title} (
+                      {waitingStep.assigned_agent_name})
                     </p>
                   </div>
                 </div>
@@ -287,7 +295,10 @@ export default function WorkflowDetailPage() {
                       {t("workflows.compiled_package_title")}
                     </h3>
                     <p className="mt-1 text-xs text-gray-300 max-w-xl leading-relaxed">
-                      All 5 multi-agent components (Research, Strategy, Viral Copywriting, Art Direction, and QA Audit) have been autonomously compiled and verified with an overall score of 98/100.
+                      All 5 multi-agent components (Research, Strategy, Viral
+                      Copywriting, Art Direction, and QA Audit) have been
+                      autonomously compiled and verified with an overall score
+                      of 98/100.
                     </p>
                   </div>
                 </div>
@@ -325,7 +336,9 @@ export default function WorkflowDetailPage() {
                   <GitBranch className="h-4 w-4 text-[#8b5cf6]" />
                   <span>{t("workflows.dag_title")}</span>
                 </h3>
-                <p className="text-[11px] text-gray-400">{t("workflows.dag_subtitle")}</p>
+                <p className="text-[11px] text-gray-400">
+                  {t("workflows.dag_subtitle")}
+                </p>
               </div>
 
               <span className="text-[11px] font-mono text-gray-500">
@@ -422,7 +435,8 @@ export default function WorkflowDetailPage() {
             <div className="flex items-center justify-between pb-4 border-b border-gray-800">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                  Step {selectedStep.step_order} • {selectedStep.assigned_agent_name}
+                  Step {selectedStep.step_order} •{" "}
+                  {selectedStep.assigned_agent_name}
                 </span>
                 <h3 className="text-base font-bold text-white mt-1">
                   {selectedStep.title}
@@ -476,7 +490,10 @@ export default function WorkflowDetailPage() {
       {/* ── HUMAN APPROVAL MODAL ─────────────────────────────────────────── */}
       {approvalModalOpen && waitingStep && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
-          <div data-testid="approval-modal" className="relative w-full max-w-xl rounded-2xl border border-amber-500/40 bg-[#12141e] p-6 shadow-2xl">
+          <div
+            data-testid="approval-modal"
+            className="relative w-full max-w-xl rounded-2xl border border-amber-500/40 bg-[#12141e] p-6 shadow-2xl"
+          >
             <div className="flex items-center justify-between pb-4 border-b border-gray-800">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300">
@@ -501,11 +518,15 @@ export default function WorkflowDetailPage() {
 
             <div className="mt-4 space-y-4">
               <div className="rounded-xl border border-gray-800 bg-[#181a26] p-4 text-xs text-gray-300">
-                <p className="font-semibold text-white mb-2">Quality Assurance Assessment:</p>
+                <p className="font-semibold text-white mb-2">
+                  Quality Assurance Assessment:
+                </p>
                 <ul className="space-y-1.5">
                   <li className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                    <span>All client brief requirements addressed without omissions</span>
+                    <span>
+                      All client brief requirements addressed without omissions
+                    </span>
                   </li>
                   <li className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
@@ -513,7 +534,9 @@ export default function WorkflowDetailPage() {
                   </li>
                   <li className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                    <span>Overall Quality Score: {waitingStep.quality_score}/100</span>
+                    <span>
+                      Overall Quality Score: {waitingStep.quality_score}/100
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -526,7 +549,7 @@ export default function WorkflowDetailPage() {
                   rows={3}
                   data-testid="approval-notes"
                   value={approvalNotes}
-                  onChange={(e) => setApprovalNotes(e.target.value)}
+                  onChange={e => setApprovalNotes(e.target.value)}
                   className="w-full rounded-lg border border-gray-800 bg-[#181a26] p-3 text-xs text-white placeholder-gray-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>
@@ -592,10 +615,10 @@ function DAGNodeCard({
         isWaiting
           ? "border-amber-500/70 bg-[#181824] shadow-amber-500/10 ring-2 ring-amber-500/30 animate-pulse"
           : isCompleted
-          ? "border-emerald-500/40 bg-[#131722] hover:border-emerald-400"
-          : isRunning
-          ? "border-[#8b5cf6] bg-[#161426] ring-2 ring-[#8b5cf6]/30"
-          : "border-gray-800 bg-[#13151f] opacity-75 hover:opacity-100"
+            ? "border-emerald-500/40 bg-[#131722] hover:border-emerald-400"
+            : isRunning
+              ? "border-[#8b5cf6] bg-[#161426] ring-2 ring-[#8b5cf6]/30"
+              : "border-gray-800 bg-[#13151f] opacity-75 hover:opacity-100"
       }`}
     >
       <div className="flex items-start justify-between mb-2">
@@ -605,8 +628,8 @@ function DAGNodeCard({
               isWaiting
                 ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
                 : isCompleted
-                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                : "bg-[#8b5cf6]/20 border-[#8b5cf6]/40 text-[#c4b5fd]"
+                  ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                  : "bg-[#8b5cf6]/20 border-[#8b5cf6]/40 text-[#c4b5fd]"
             }`}
           >
             <Icon className="h-5 w-5" />
@@ -632,19 +655,19 @@ function DAGNodeCard({
             isCompleted
               ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
               : isWaiting
-              ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-              : isRunning
-              ? "bg-[#8b5cf6]/20 text-[#c4b5fd] border border-[#8b5cf6]/40"
-              : "bg-gray-800 text-gray-400 border border-gray-700"
+                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                : isRunning
+                  ? "bg-[#8b5cf6]/20 text-[#c4b5fd] border border-[#8b5cf6]/40"
+                  : "bg-gray-800 text-gray-400 border border-gray-700"
           }`}
         >
           {isCompleted
             ? "Completed ✅"
             : isWaiting
-            ? "Needs Approval 🛡️"
-            : isRunning
-            ? "Running ⚡"
-            : "Pending ⏳"}
+              ? "Needs Approval 🛡️"
+              : isRunning
+                ? "Running ⚡"
+                : "Pending ⏳"}
         </span>
       </div>
 
