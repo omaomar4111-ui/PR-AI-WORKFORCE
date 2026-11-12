@@ -176,7 +176,7 @@ async def call_gemini(
         logger.info("✅ Gemini API Connected & Generating Content with gemini-1.5-flash (temp=0.8, top_p=0.9)")
 
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-3.5-flash-lite",
             system_instruction=system_prompt,
             generation_config=generation_config,
         )
