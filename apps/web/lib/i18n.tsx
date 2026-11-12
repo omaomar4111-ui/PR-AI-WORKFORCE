@@ -21,9 +21,10 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "تسجيل خروج",
     "role.owner": "مالك (Owner)",
     "role.member": "عضو (Member)",
-    
-    // Sidebar 13 items
+
+    // Sidebar 14 items
     "nav.command_center": "مركز القيادة",
+    "nav.studio": "استوديو الإنتاج",
     "nav.virtual_office": "المكتب الافتراضي",
     "nav.agents": "وكلاء الذكاء الاصطناعي",
     "nav.departments": "الأقسام",
@@ -41,13 +42,15 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Dashboard
     "dash.welcome": "مرحباً بك في مركز قيادة PR AI WORKFORCE",
-    "dash.welcome_sub": "النظام المركزي لإدارة 38 موظف ذكاء اصطناعي ومنسق الإدارة التنفيذية أم سماح.",
+    "dash.welcome_sub":
+      "النظام المركزي لإدارة 38 موظف ذكاء اصطناعي ومنسق الإدارة التنفيذية أم سماح.",
     "dash.total_clients": "إجمالي العملاء",
     "dash.active_projects": "المشاريع النشطة",
     "dash.total_retainer": "إجمالي عوائد العقود (Retainer)",
     "dash.total_projects": "إجمالي المشاريع",
     "dash.empty_cta_title": "ابدأ بإضافة أول عميل",
-    "dash.empty_cta_desc": "لم يتم تسجيل أي عملاء بعد في النظام. أضف عميلك الأول لربط المشاريع وتكليف وكلاء الذكاء الاصطناعي.",
+    "dash.empty_cta_desc":
+      "لم يتم تسجيل أي عملاء بعد في النظام. أضف عميلك الأول لربط المشاريع وتكليف وكلاء الذكاء الاصطناعي.",
     "dash.add_client": "إضافة عميل جديد",
     "dash.add_project": "إضافة مشروع جديد",
     "dash.recent_clients": "أحدث العملاء",
@@ -67,7 +70,8 @@ const translations: Record<Language, Record<string, string>> = {
     "clients.col_actions": "الإجراءات",
     "clients.view": "تفاصيل",
     "clients.delete": "حذف",
-    "clients.delete_confirm": "هل أنت متأكد من حذف هذا العميل؟ سيتم حذف جميع المشاريع التابعة له.",
+    "clients.delete_confirm":
+      "هل أنت متأكد من حذف هذا العميل؟ سيتم حذف جميع المشاريع التابعة له.",
     "clients.empty": "لا يوجد عملاء يطابقون البحث",
     "clients.empty_create": "لا يوجد عملاء حتى الآن. ابدأ بإضافة أول عميل!",
 
@@ -94,7 +98,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Projects
     "projects.title": "إدارة المشاريع",
-    "projects.subtitle": "تتبع مشاريع العملاء، الميزانيات، العقود الشهرية والحالات",
+    "projects.subtitle":
+      "تتبع مشاريع العملاء، الميزانيات، العقود الشهرية والحالات",
     "projects.new_button": "مشروع جديد",
     "projects.filter_client": "تصفية حسب العميل:",
     "projects.all_clients": "جميع العملاء",
@@ -136,10 +141,12 @@ const translations: Record<Language, Record<string, string>> = {
     "project_detail.overview": "بيانات المشروع والعقد",
     "project_detail.retainer_badge": "عقد شهري",
     "project_detail.linked_tasks": "مهام الذكاء الاصطناعي (Tasks & Workflows)",
-    "project_detail.tasks_placeholder": "سيتم ربط مهام الوكلاء الـ 38 ومخرجات سير العمل في المراحل القادمة (M3 & M4).",
+    "project_detail.tasks_placeholder":
+      "سيتم ربط مهام الوكلاء الـ 38 ومخرجات سير العمل في المراحل القادمة (M3 & M4).",
     // Tasks (Milestone 3)
     "tasks.title": "إدارة المهام ومسار العمل",
-    "tasks.subtitle": "متابعة مسارات التنفيذ، التكليف، ومزامنة إنجاز المشاريع الحية (Live WebSocket)",
+    "tasks.subtitle":
+      "متابعة مسارات التنفيذ، التكليف، ومزامنة إنجاز المشاريع الحية (Live WebSocket)",
     "tasks.view_kanban": "لوحة كانبان (Kanban)",
     "tasks.view_table": "عرض الجدول (Table)",
     "tasks.new_button": "مهمة جديدة",
@@ -183,7 +190,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Agents (Milestone 8 - Full 38 Roster)
     "agents.title": "دليل الموظفين الأذكياء (AI Agents)",
-    "agents.subtitle": "إدارة وتكليف الوكلاء الـ 38 المتخصصين عبر الأقسام الـ 8 في الوكالة",
+    "agents.subtitle":
+      "إدارة وتكليف الوكلاء الـ 38 المتخصصين عبر الأقسام الـ 8 في الوكالة",
     "agents.all_departments": "جميع الأقسام",
     "agents.search_placeholder": "ابحث بالاسم، الدور، القسم أو الأدوات...",
     "agents.no_results": "لا يوجد وكلاء يطابقون معايير البحث",
@@ -208,7 +216,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Virtual Office (Milestone 9)
     "virtual_office.title": "المكتب الافتراضي التفاعلي (Virtual Office)",
-    "virtual_office.subtitle": "متابعة حية لجميع الموظفين الأذكياء الـ 38 موزعين على أقسام الوكالة الـ 8 مع تحديثات لحظية للحالة",
+    "virtual_office.subtitle":
+      "متابعة حية لجميع الموظفين الأذكياء الـ 38 موزعين على أقسام الوكالة الـ 8 مع تحديثات لحظية للحالة",
     "virtual_office.status_all": "جميع الحالات",
     "virtual_office.status_idle": "متاح / خامل",
     "virtual_office.status_working": "قيد التنفيذ ⚡",
@@ -220,14 +229,18 @@ const translations: Record<Language, Record<string, string>> = {
     "virtual_office.simulate_status": "محاكاة وتغيير الحالة:",
     "virtual_office.current_task": "المهمة الجارية حالياً:",
     "virtual_office.recent_deliverables": "أحدث المخرجات المعتمدة",
-    "virtual_office.no_deliverables": "لا توجد مخرجات مسجلة لهذا الوكيل حتى الآن",
-    "virtual_office.search_placeholder": "ابحث بالاسم، الدور، أو القسم في المكتب الافتراضي...",
+    "virtual_office.no_deliverables":
+      "لا توجد مخرجات مسجلة لهذا الوكيل حتى الآن",
+    "virtual_office.search_placeholder":
+      "ابحث بالاسم، الدور، أو القسم في المكتب الافتراضي...",
     "virtual_office.department_zones": "غرف وأقسام الوكالة",
 
     // Deliverables (Milestone 4)
     "deliverables.title": "المخرجات والملفات المعتمدة (Deliverables)",
-    "deliverables.subtitle": "سجل المخرجات الموثقة الناتجة عن الوكلاء الـ 8 مع تقييم الجودة",
-    "deliverables.empty": "لا توجد مخرجات حتى الآن. قم بتشغيل أحد الوكلاء لإنتاج أول مخرج!",
+    "deliverables.subtitle":
+      "سجل المخرجات الموثقة الناتجة عن الوكلاء الـ 8 مع تقييم الجودة",
+    "deliverables.empty":
+      "لا توجد مخرجات حتى الآن. قم بتشغيل أحد الوكلاء لإنتاج أول مخرج!",
     "deliverables.col_title": "عنوان المخرج",
     "deliverables.col_agent": "الوكيل المنفّذ",
     "deliverables.col_project": "المشروع",
@@ -241,35 +254,44 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Workflows (Milestone 5 - Om Samah)
     "workflows.title": "محرك مسارات العمل (Workflow Builder)",
-    "workflows.subtitle": "المديرة التنفيذية (أم سماح) - تفكيك المهام وإدارة شبكة الوكلاء وتدفق العمل المتوازي",
+    "workflows.subtitle":
+      "المديرة التنفيذية (أم سماح) - تفكيك المهام وإدارة شبكة الوكلاء وتدفق العمل المتوازي",
     "workflows.start_button": "بدء مسار عمل مستقل ⚡",
     "workflows.modal_title": "تكليف المديرة التنفيذية (أم سماح)",
     "workflows.request_label": "وصف المهمة أو التوجيه الاستراتيجي",
-    "workflows.request_placeholder": "مثال: خطط لحملة تسويقية وعلاقات عامة متكاملة لمطعم فاخر جديد في القاهرة...",
+    "workflows.request_placeholder":
+      "مثال: خطط لحملة تسويقية وعلاقات عامة متكاملة لمطعم فاخر جديد في القاهرة...",
     "workflows.load_sample": "تحميل نموذج تكليف جاهز",
     "workflows.initiating": "جارٍ التخطيط وبناء المخطط التوجيهي (DAG)...",
     "workflows.start_now": "إطلاق مسار العمل الآن",
-    "workflows.empty": "لا توجد مسارات عمل نشطة. قم بإطلاق أول مسار تحت قيادة أم سماح!",
+    "workflows.empty":
+      "لا توجد مسارات عمل نشطة. قم بإطلاق أول مسار تحت قيادة أم سماح!",
     "workflows.col_request": "التوجيه / طلب العميل",
     "workflows.col_status": "الحالة",
     "workflows.col_steps": "المراحل والوكلاء",
     "workflows.col_date": "تاريخ البدء",
     "workflows.dag_title": "المخطط التوجيهي للمسار (DAG Execution Graph)",
-    "workflows.dag_subtitle": "تتبع تسلسل المهام والاعتماديات والتنفيذ المتوازي بالوقت الفعلي (Real-time Live Sync)",
-    "workflows.step_approval_banner": "تنبيه تنفيذي: هناك مرحلة بانتظار الاعتماد والموافقة البشرية قبل التجميع النهائي",
+    "workflows.dag_subtitle":
+      "تتبع تسلسل المهام والاعتماديات والتنفيذ المتوازي بالوقت الفعلي (Real-time Live Sync)",
+    "workflows.step_approval_banner":
+      "تنبيه تنفيذي: هناك مرحلة بانتظار الاعتماد والموافقة البشرية قبل التجميع النهائي",
     "workflows.step_approval_btn": "مراجعة واعتماد المرحلة 🛡️",
-    "workflows.approval_modal_title": "اعتماد وتصريح المرحلة التنفيذية (Human Approval)",
+    "workflows.approval_modal_title":
+      "اعتماد وتصريح المرحلة التنفيذية (Human Approval)",
     "workflows.approval_notes": "ملاحظات الاعتماد والتوجيهات الإضافية",
     "workflows.approve_btn": "اعتماد واستكمال المسار ✅",
     "workflows.reject_btn": "رفض المرحلة ❌",
-    "workflows.compiled_package_title": "الحزمة التنفيذية النهائية المعتمدة من أم سماح",
+    "workflows.compiled_package_title":
+      "الحزمة التنفيذية النهائية المعتمدة من أم سماح",
     "workflows.download_package": "تحميل الحزمة الشاملة (JSON)",
 
     // Memory (Milestone 6)
     "memory.title": "نظام الذاكرة المؤسسية والمعرفة (Knowledge & Memory)",
-    "memory.subtitle": "تخزين واسترجاع ذاكرة الوكالة، العملاء، المشاريع، وخبرات الوكلاء بالبحث الدلالي المتجه (Vector Embeddings)",
+    "memory.subtitle":
+      "تخزين واسترجاع ذاكرة الوكالة، العملاء، المشاريع، وخبرات الوكلاء بالبحث الدلالي المتجه (Vector Embeddings)",
     "memory.add_button": "إضافة معلومة للذاكرة 🧠",
-    "memory.search_placeholder": "ابحث دلالياً في الذاكرة (مثال: الهوية البصرية، ألوان المطعم، نبرة الخطاب، إرشادات النشر)...",
+    "memory.search_placeholder":
+      "ابحث دلالياً في الذاكرة (مثال: الهوية البصرية، ألوان المطعم، نبرة الخطاب، إرشادات النشر)...",
     "memory.searching": "جارٍ البحث الدلالي المتجه (<=>)...",
     "memory.tab_all": "جميع الذكريات",
     "memory.tab_organization": "الوكالة (Org)",
@@ -277,7 +299,8 @@ const translations: Record<Language, Record<string, string>> = {
     "memory.tab_project": "المشاريع (Projects)",
     "memory.tab_agent": "الوكلاء (Agents)",
     "memory.match_score": "تطابق دلالي",
-    "memory.empty": "لا توجد ذكريات مسجلة مطابقة. أضف أول معلومة للذاكرة لتمكين الوكلاء من تذكرها!",
+    "memory.empty":
+      "لا توجد ذكريات مسجلة مطابقة. أضف أول معلومة للذاكرة لتمكين الوكلاء من تذكرها!",
     "memory.modal_title": "إضافة سياق جديد للذاكرة المتجهة",
     "memory.type_label": "مستوى الذاكرة",
     "memory.ref_label": "المرجع المرتبط",
@@ -295,14 +318,17 @@ const translations: Record<Language, Record<string, string>> = {
     "deliverables.new_version": "إصدار جديد ⚡",
     "deliverables.view_versions": "سجل الإصدارات",
     "deliverables.version_badge": "إصدار",
-    "deliverables.modal_version_title": "سجل وسلسلة إصدارات المخرج (Version Lineage)",
-    "deliverables.modal_new_version_title": "إنشاء إصدار جديد من المخرج المعتمد",
+    "deliverables.modal_version_title":
+      "سجل وسلسلة إصدارات المخرج (Version Lineage)",
+    "deliverables.modal_new_version_title":
+      "إنشاء إصدار جديد من المخرج المعتمد",
     "deliverables.version_notes": "تعديلات وتفاصيل الإصدار الجديد",
     "deliverables.version_save": "حفظ وتوليد الإصدار الجديد",
 
     // Approvals (Milestone 7)
     "approvals.title": "مركز الموافقات البشرية",
-    "approvals.subtitle": "مراجعة واعتماد وتعديل القرارات الحساسة للوكلاء قبل التنفيذ (Human-in-the-Loop)",
+    "approvals.subtitle":
+      "مراجعة واعتماد وتعديل القرارات الحساسة للوكلاء قبل التنفيذ (Human-in-the-Loop)",
     "approvals.tab_all": "الكل",
     "approvals.tab_pending": "بانتظار الموافقة",
     "approvals.tab_approved": "تمت الموافقة",
@@ -318,14 +344,17 @@ const translations: Record<Language, Record<string, string>> = {
     "approvals.col_status": "الحالة",
     "approvals.empty": "لا توجد طلبات موافقة مطابقة",
     "approvals.modal_edit_title": "تعديل واعتماد الإجراء الحساس",
-    "approvals.modal_edit_desc": "قم بتعديل بيانات الحمولة قبل السماح للوكيل بتنفيذ الإجراء",
+    "approvals.modal_edit_desc":
+      "قم بتعديل بيانات الحمولة قبل السماح للوكيل بتنفيذ الإجراء",
     "approvals.notes_placeholder": "ملاحظات الاعتماد أو أسباب التعديل...",
-    "approvals.confirm_reject": "هل أنت متأكد من رفض هذا الطلب وإيقاف تنفيذ الإجراء؟",
+    "approvals.confirm_reject":
+      "هل أنت متأكد من رفض هذا الطلب وإيقاف تنفيذ الإجراء؟",
     "approvals.live_connected": "متصل مباشرة (Live WebSocket)",
 
     // Integrations (Milestone 7)
     "integrations.title": "مركز التكاملات والأدوات الخارجية",
-    "integrations.subtitle": "ربط المنصات السحابية ومصادر البيانات ومولدات الوسائط بأمان (Google, Meta, Instagram, AI Tools)",
+    "integrations.subtitle":
+      "ربط المنصات السحابية ومصادر البيانات ومولدات الوسائط بأمان (Google, Meta, Instagram, AI Tools)",
     "integrations.btn_connect": "ربط وتفعيل",
     "integrations.btn_disconnect": "فصل التكامل",
     "integrations.btn_test": "اختبار الاتصال",
@@ -336,7 +365,8 @@ const translations: Record<Language, Record<string, string>> = {
     "integrations.scopes_label": "الصلاحيات المطلوبة:",
     "integrations.modal_title": "إعداد وتوصيل أداة",
     "integrations.modal_save": "حفظ والاتصال",
-    "integrations.token_placeholder": "أدخل رمز الوصول (Access Token / API Key)...",
+    "integrations.token_placeholder":
+      "أدخل رمز الوصول (Access Token / API Key)...",
     "integrations.category_all": "جميع الفئات",
     "integrations.category_storage": "التخزين والمستندات",
     "integrations.category_marketing": "الإعلانات والتسويق",
@@ -345,7 +375,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Analytics (Milestone 10)
     "analytics.title": "مركز التحليلات وتتبع التكلفة (Analytics & Cost)",
-    "analytics.subtitle": "رصد استهلاك الرموز (Tokens)، تكلفة النماذج، أداء الوكلاء ومؤشرات الجودة بدقة متناهية",
+    "analytics.subtitle":
+      "رصد استهلاك الرموز (Tokens)، تكلفة النماذج، أداء الوكلاء ومؤشرات الجودة بدقة متناهية",
     "analytics.kpi_tokens": "إجمالي الرموز المستهلكة",
     "analytics.kpi_cost": "التكلفة التقديرية الإجمالية ($)",
     "analytics.kpi_quality": "متوسط درجة الجودة والامتثال",
@@ -377,8 +408,9 @@ const translations: Record<Language, Record<string, string>> = {
     "role.owner": "Owner",
     "role.member": "Member",
 
-    // Sidebar 13 items
+    // Sidebar 14 items
     "nav.command_center": "Command Center",
+    "nav.studio": "Production Studio",
     "nav.virtual_office": "Virtual Office",
     "nav.agents": "Agents",
     "nav.departments": "Departments",
@@ -396,13 +428,15 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Dashboard
     "dash.welcome": "Welcome to PR AI WORKFORCE Command Center",
-    "dash.welcome_sub": "Central operating system coordinating 38 specialized AI employees and CEO Orchestrator Om Samah.",
+    "dash.welcome_sub":
+      "Central operating system coordinating 38 specialized AI employees and CEO Orchestrator Om Samah.",
     "dash.total_clients": "Total Clients",
     "dash.active_projects": "Active Projects",
     "dash.total_retainer": "Total Retainer Revenue",
     "dash.total_projects": "Total Projects",
     "dash.empty_cta_title": "Add your first client",
-    "dash.empty_cta_desc": "No clients recorded yet in the database. Add your first client to link projects and delegate work to AI agents.",
+    "dash.empty_cta_desc":
+      "No clients recorded yet in the database. Add your first client to link projects and delegate work to AI agents.",
     "dash.add_client": "Add New Client",
     "dash.add_project": "Add New Project",
     "dash.recent_clients": "Recent Clients",
@@ -412,7 +446,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Clients
     "clients.title": "Clients Management",
-    "clients.subtitle": "Agency client roster, industries, brand identities and assignees",
+    "clients.subtitle":
+      "Agency client roster, industries, brand identities and assignees",
     "clients.search": "Search by name, industry, or contact...",
     "clients.new_button": "New Client",
     "clients.col_client": "Client",
@@ -422,7 +457,8 @@ const translations: Record<Language, Record<string, string>> = {
     "clients.col_actions": "Actions",
     "clients.view": "View",
     "clients.delete": "Delete",
-    "clients.delete_confirm": "Are you sure you want to delete this client? All linked projects will also be deleted.",
+    "clients.delete_confirm":
+      "Are you sure you want to delete this client? All linked projects will also be deleted.",
     "clients.empty": "No clients match your search",
     "clients.empty_create": "No clients yet. Add your first client!",
 
@@ -449,7 +485,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Projects
     "projects.title": "Projects Management",
-    "projects.subtitle": "Track client engagements, retainer budgets, status and timelines",
+    "projects.subtitle":
+      "Track client engagements, retainer budgets, status and timelines",
     "projects.new_button": "New Project",
     "projects.filter_client": "Filter by Client:",
     "projects.all_clients": "All Clients",
@@ -491,11 +528,13 @@ const translations: Record<Language, Record<string, string>> = {
     "project_detail.overview": "Project & Retainer Overview",
     "project_detail.retainer_badge": "Monthly Retainer",
     "project_detail.linked_tasks": "AI Tasks & Workflows",
-    "project_detail.tasks_placeholder": "38 Specialized AI agents and automated workflow pipelines will be linked here in M3 & M4.",
+    "project_detail.tasks_placeholder":
+      "38 Specialized AI agents and automated workflow pipelines will be linked here in M3 & M4.",
 
     // Tasks (Milestone 3)
     "tasks.title": "Tasks & Execution Engine",
-    "tasks.subtitle": "Track work streams, assignments, and real-time project progress synchronization (Live WebSocket)",
+    "tasks.subtitle":
+      "Track work streams, assignments, and real-time project progress synchronization (Live WebSocket)",
     "tasks.view_kanban": "Kanban Board",
     "tasks.view_table": "Table View",
     "tasks.new_button": "New Task",
@@ -511,7 +550,8 @@ const translations: Record<Language, Record<string, string>> = {
     "tasks.live_sync": "Live WebSocket Sync",
     "tasks.empty": "No tasks match the filter",
     "tasks.empty_create": "No tasks yet. Create your first task!",
-    "tasks.drag_hint": "Drag card to change its status & progress automatically",
+    "tasks.drag_hint":
+      "Drag card to change its status & progress automatically",
     "tasks.delete_confirm": "Are you sure you want to delete this task?",
 
     // Task Modal
@@ -539,7 +579,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Agents (Milestone 8 - Full 38 Roster)
     "agents.title": "AI Workforce Directory",
-    "agents.subtitle": "Orchestrate and deploy all 38 specialized AI employees across 8 agency departments",
+    "agents.subtitle":
+      "Orchestrate and deploy all 38 specialized AI employees across 8 agency departments",
     "agents.all_departments": "All Departments",
     "agents.search_placeholder": "Search by name, role, department or tools...",
     "agents.no_results": "No agents matching your search",
@@ -564,7 +605,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Virtual Office (Milestone 9)
     "virtual_office.title": "Virtual Office (Interactive Simulation)",
-    "virtual_office.subtitle": "Live visual command center of all 38 AI employees across 8 agency department rooms with real-time WebSocket sync",
+    "virtual_office.subtitle":
+      "Live visual command center of all 38 AI employees across 8 agency department rooms with real-time WebSocket sync",
     "virtual_office.status_all": "All Statuses",
     "virtual_office.status_idle": "Idle & Ready",
     "virtual_office.status_working": "Working ⚡",
@@ -576,14 +618,18 @@ const translations: Record<Language, Record<string, string>> = {
     "virtual_office.simulate_status": "Simulate Status:",
     "virtual_office.current_task": "Current Active Task:",
     "virtual_office.recent_deliverables": "Recent Verified Deliverables",
-    "virtual_office.no_deliverables": "No deliverables produced by this agent yet",
-    "virtual_office.search_placeholder": "Search by name, role, or department in Virtual Office...",
+    "virtual_office.no_deliverables":
+      "No deliverables produced by this agent yet",
+    "virtual_office.search_placeholder":
+      "Search by name, role, or department in Virtual Office...",
     "virtual_office.department_zones": "Department Studios & Zones",
 
     // Deliverables (Milestone 4)
     "deliverables.title": "Verified Deliverables",
-    "deliverables.subtitle": "Immutable audit repository of all outputs produced by specialized AI agents",
-    "deliverables.empty": "No deliverables yet. Deploy an agent to generate your first verified deliverable!",
+    "deliverables.subtitle":
+      "Immutable audit repository of all outputs produced by specialized AI agents",
+    "deliverables.empty":
+      "No deliverables yet. Deploy an agent to generate your first verified deliverable!",
     "deliverables.col_title": "Deliverable Title",
     "deliverables.col_agent": "Executing Agent",
     "deliverables.col_project": "Project",
@@ -597,35 +643,43 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Workflows (Milestone 5 - Om Samah)
     "workflows.title": "Workflow Builder (DAG)",
-    "workflows.subtitle": "Om Samah (CEO Orchestrator) - Request decomposition, agent coordination & parallel DAG execution",
+    "workflows.subtitle":
+      "Om Samah (CEO Orchestrator) - Request decomposition, agent coordination & parallel DAG execution",
     "workflows.start_button": "Start Autonomous Workflow ⚡",
     "workflows.modal_title": "Task Om Samah (CEO Orchestrator)",
     "workflows.request_label": "Campaign Brief or Strategic Request",
-    "workflows.request_placeholder": "e.g., Plan luxury grand opening PR campaign for new Cairo restaurant client...",
+    "workflows.request_placeholder":
+      "e.g., Plan luxury grand opening PR campaign for new Cairo restaurant client...",
     "workflows.load_sample": "Load Sample Brief",
     "workflows.initiating": "Analyzing objective and planning DAG subtasks...",
     "workflows.start_now": "Launch Workflow Now",
-    "workflows.empty": "No workflows found. Launch your first autonomous pipeline directed by Om Samah!",
+    "workflows.empty":
+      "No workflows found. Launch your first autonomous pipeline directed by Om Samah!",
     "workflows.col_request": "Client Brief / Request",
     "workflows.col_status": "Status",
     "workflows.col_steps": "Steps & Agents",
     "workflows.col_date": "Date Started",
     "workflows.dag_title": "DAG Execution Graph",
-    "workflows.dag_subtitle": "Real-time task dependencies, parallel agent execution & live status sync",
-    "workflows.step_approval_banner": "Executive Alert: A pipeline step requires human sign-off before final package compilation",
+    "workflows.dag_subtitle":
+      "Real-time task dependencies, parallel agent execution & live status sync",
+    "workflows.step_approval_banner":
+      "Executive Alert: A pipeline step requires human sign-off before final package compilation",
     "workflows.step_approval_btn": "Review & Approve Step 🛡️",
     "workflows.approval_modal_title": "Executive Human Approval Gate",
     "workflows.approval_notes": "Approval Notes & Guidance",
     "workflows.approve_btn": "Approve & Resume Pipeline ✅",
     "workflows.reject_btn": "Reject Step ❌",
-    "workflows.compiled_package_title": "Final Executive PR Package Sealed by Om Samah",
+    "workflows.compiled_package_title":
+      "Final Executive PR Package Sealed by Om Samah",
     "workflows.download_package": "Download Master Package (JSON)",
 
     // Memory (Milestone 6)
     "memory.title": "Knowledge & Memory Base",
-    "memory.subtitle": "Persistent multi-level context & semantic vector search across agency, clients, projects, and agents",
+    "memory.subtitle":
+      "Persistent multi-level context & semantic vector search across agency, clients, projects, and agents",
     "memory.add_button": "Add Memory Context 🧠",
-    "memory.search_placeholder": "Search memory semantically (e.g., brand guidelines, tone of voice, color palette)...",
+    "memory.search_placeholder":
+      "Search memory semantically (e.g., brand guidelines, tone of voice, color palette)...",
     "memory.searching": "Searching vector embeddings (<=>)...",
     "memory.tab_all": "All Memories",
     "memory.tab_organization": "Agency (Org)",
@@ -633,7 +687,8 @@ const translations: Record<Language, Record<string, string>> = {
     "memory.tab_project": "Projects",
     "memory.tab_agent": "Agents",
     "memory.match_score": "Match Score",
-    "memory.empty": "No memory records found matching criteria. Add your first memory context!",
+    "memory.empty":
+      "No memory records found matching criteria. Add your first memory context!",
     "memory.modal_title": "Add Vector Memory Context",
     "memory.type_label": "Memory Level",
     "memory.ref_label": "Associated Reference",
@@ -641,7 +696,8 @@ const translations: Record<Language, Record<string, string>> = {
     "memory.metadata_label": "Metadata Tags",
     "memory.save": "Embed & Save Memory 💾",
     "memory.cancel": "Cancel",
-    "memory.delete_confirm": "Are you sure you want to permanently delete this memory item?",
+    "memory.delete_confirm":
+      "Are you sure you want to permanently delete this memory item?",
 
     // Deliverables v2 Enhancements (Milestone 6)
     "deliverables.filter_all": "All",
@@ -658,7 +714,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Approvals (Milestone 7)
     "approvals.title": "Human Approvals Hub",
-    "approvals.subtitle": "Review, approve, and edit high-impact agent actions before execution (Human-in-the-Loop)",
+    "approvals.subtitle":
+      "Review, approve, and edit high-impact agent actions before execution (Human-in-the-Loop)",
     "approvals.tab_all": "All",
     "approvals.tab_pending": "Pending Approval",
     "approvals.tab_approved": "Approved",
@@ -674,14 +731,17 @@ const translations: Record<Language, Record<string, string>> = {
     "approvals.col_status": "Status",
     "approvals.empty": "No approval requests match the selected filter",
     "approvals.modal_edit_title": "Edit & Approve Sensitive Action",
-    "approvals.modal_edit_desc": "Modify the action payload parameters before granting execution clearance to the agent",
+    "approvals.modal_edit_desc":
+      "Modify the action payload parameters before granting execution clearance to the agent",
     "approvals.notes_placeholder": "Review notes or edit justification...",
-    "approvals.confirm_reject": "Are you sure you want to reject this request and halt action execution?",
+    "approvals.confirm_reject":
+      "Are you sure you want to reject this request and halt action execution?",
     "approvals.live_connected": "Live WebSocket Connected",
 
     // Integrations (Milestone 7)
     "integrations.title": "External Tools & Integration Hub",
-    "integrations.subtitle": "Securely connect cloud workspaces, ad platforms, and generative media tools (Google, Meta, Instagram, AI Tools)",
+    "integrations.subtitle":
+      "Securely connect cloud workspaces, ad platforms, and generative media tools (Google, Meta, Instagram, AI Tools)",
     "integrations.btn_connect": "Connect Tool",
     "integrations.btn_disconnect": "Disconnect",
     "integrations.btn_test": "Test Connection",
@@ -692,7 +752,8 @@ const translations: Record<Language, Record<string, string>> = {
     "integrations.scopes_label": "Required Scopes:",
     "integrations.modal_title": "Configure Integration Provider",
     "integrations.modal_save": "Save & Authenticate",
-    "integrations.token_placeholder": "Enter Access Token / API Key / Service Credentials...",
+    "integrations.token_placeholder":
+      "Enter Access Token / API Key / Service Credentials...",
     "integrations.category_all": "All Categories",
     "integrations.category_storage": "Workspace & Docs",
     "integrations.category_marketing": "Ads & Marketing",
@@ -701,7 +762,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Analytics (Milestone 10)
     "analytics.title": "Analytics & Cost Tracking",
-    "analytics.subtitle": "Comprehensive monitoring of token consumption, model costs, quality trends, and agent latency",
+    "analytics.subtitle":
+      "Comprehensive monitoring of token consumption, model costs, quality trends, and agent latency",
     "analytics.kpi_tokens": "Total Tokens Consumed",
     "analytics.kpi_cost": "Total Estimated Cost ($)",
     "analytics.kpi_quality": "Avg Quality Score",
@@ -723,7 +785,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.col_cost": "Cost ($)",
     "analytics.col_latency": "Latency (ms)",
     "analytics.empty": "No execution logs match the selected filters",
-  }
+  },
 };
 
 const I18nContext = createContext<I18nContextType>({
@@ -731,7 +793,7 @@ const I18nContext = createContext<I18nContextType>({
   isAr: true,
   setLang: () => {},
   toggleLang: () => {},
-  t: (key) => key,
+  t: key => key,
 });
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
@@ -763,7 +825,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <I18nContext.Provider value={{ lang, isAr, setLang, toggleLang, t }}>
-      <div dir={isAr ? "rtl" : "ltr"} className={isAr ? "font-cairo" : "font-inter"}>
+      <div
+        dir={isAr ? "rtl" : "ltr"}
+        className={isAr ? "font-cairo" : "font-inter"}
+      >
         {children}
       </div>
     </I18nContext.Provider>
