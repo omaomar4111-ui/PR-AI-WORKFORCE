@@ -225,7 +225,9 @@ async def call_llm(
         f"{agentkit_context}"
     )
 
-    # 1. Primary Engine: Google Gemini (gemini-1.5-flash - fast & free)
+    result: Optional[Dict[str, Any]] = None
+
+    # 1. Primary Engine: Google Gemini (gemini-3.5-flash-lite - fast & free)
     if gemini_key:
         try:
             result = await call_gemini(
@@ -239,12 +241,11 @@ async def call_llm(
                 img_url = generate_image_free(vis_prompt)
                 result["image_url"] = img_url
                 result["logo_url"] = img_url
-            return result
         except Exception as e:
             logger.warning(f"Google Gemini call failed: {e}. Trying secondary provider.")
 
     # 2. Secondary Engine: OpenAI GPT-4o if configured
-    if openai_key:
+    if result is None and openai_key:
         try:
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=openai_key)
@@ -273,19 +274,18 @@ async def call_llm(
                 img_url = generate_image_free(vis_prompt)
                 result["image_url"] = img_url
                 result["logo_url"] = img_url
-
-            return result
         except Exception as e:
             logger.warning(f"OpenAI GPT-4o call failed: {e}. Trying fallback.")
 
     # 3. Domain-Accurate Deterministic Generation (Guarantees 100% schema compliance for offline tests)
-    logger.warning("No LLM API keys provided (OPENAI_API_KEY / GEMINI_API_KEY) or calls failed. Falling back to deterministic domain mock generator.")
-    result = generate_domain_fallback(agent_id, task_input, output_schema)
-    if is_design_agent(agent_id):
-        vis_prompt = construct_visual_prompt(agent_id, compiled_user_prompt, task_input)
-        img_url = generate_image_free(vis_prompt)
-        result["image_url"] = img_url
-        result["logo_url"] = img_url
+    if result is None:
+        logger.warning("No LLM API keys provided (OPENAI_API_KEY / GEMINI_API_KEY) or calls failed. Falling back to deterministic domain mock generator.")
+        result = generate_domain_fallback(agent_id, task_input, output_schema)
+        if is_design_agent(agent_id):
+            vis_prompt = construct_visual_prompt(agent_id, compiled_user_prompt, task_input)
+            img_url = generate_image_free(vis_prompt)
+            result["image_url"] = img_url
+            result["logo_url"] = img_url
 
     # Audit & Score with Humanization Rubric
     try:
@@ -293,6 +293,8 @@ async def call_llm(
         result["human_score"] = eval_report["human_score"]
         result["human_grade"] = eval_report["human_grade"]
         result["slop_free"] = eval_report["is_slop_free"]
+        if marketing_obj:
+            result["marketing_framework"] = marketing_obj.upper()
         # Preserve contract quality_score >= 95 for workflow thresholds while exposing authentic human_score
         if "quality_score" not in result:
             result["quality_score"] = 95
