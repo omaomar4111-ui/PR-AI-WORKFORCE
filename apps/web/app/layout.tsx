@@ -7,9 +7,12 @@ const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), {
   ssr: false,
 });
 
-const WebVitalsReporter = dynamic(() => import("@/components/WebVitalsReporter"), {
-  ssr: false,
-});
+const WebVitalsReporter = dynamic(
+  () => import("@/components/WebVitalsReporter"),
+  {
+    ssr: false,
+  }
+);
 
 // Self-contained font configuration (prevents ETIMEDOUT during builds in air-gapped / limited network)
 const cairo = { className: "font-cairo" };
@@ -25,7 +28,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "PR AI WORKFORCE — Operating System",
-  description: "Internal AI Workforce Management Platform (Om Samah + 38 Specialized Agents)",
+  description:
+    "Internal AI Workforce Management Platform (Om Samah + 38 Specialized Agents)",
   manifest: "/manifest.webmanifest",
   applicationName: "PR Workforce",
   appleWebApp: {
@@ -39,7 +43,11 @@ export const metadata: Metadata = {
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
     ],
   },
 };

@@ -12,7 +12,8 @@ const DISMISS_KEY = "pwa_install_dismissed";
 const DISMISS_DAYS = 7;
 
 export default function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -25,16 +26,17 @@ export default function InstallPrompt() {
     // 1. Check if already running in standalone mode (already installed)
     const checkStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+      (window.navigator as unknown as { standalone?: boolean }).standalone ===
+        true;
 
     // Register Service Worker in production
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
-        .then((reg) => {
+        .then(reg => {
           console.log("[PWA] ServiceWorker registered with scope:", reg.scope);
         })
-        .catch((err) => {
+        .catch(err => {
           console.warn("[PWA] ServiceWorker registration failed:", err);
         });
     }
@@ -57,7 +59,8 @@ export default function InstallPrompt() {
     const ua = window.navigator.userAgent;
     const isIOSDevice =
       (/iPad|iPhone|iPod/.test(ua) ||
-        (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1)) &&
+        (window.navigator.platform === "MacIntel" &&
+          window.navigator.maxTouchPoints > 1)) &&
       !(window as unknown as { MSStream?: unknown }).MSStream;
 
     setIsIOS(isIOSDevice);
@@ -80,7 +83,10 @@ export default function InstallPrompt() {
     }
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
       if (iosTimer) clearTimeout(iosTimer);
     };
   }, []);
@@ -164,10 +170,14 @@ export default function InstallPrompt() {
                 </p>
                 <ol className="list-decimal list-inside space-y-1 text-[11px] text-gray-400">
                   <li>
-                    اضغط على زر المشاركة <Share className="inline h-3 w-3 text-blue-400 mx-0.5" /> في أسفل المتصفح.
+                    اضغط على زر المشاركة{" "}
+                    <Share className="inline h-3 w-3 text-blue-400 mx-0.5" /> في
+                    أسفل المتصفح.
                   </li>
                   <li>
-                    مرر لأسفل واختر <PlusSquare className="inline h-3 w-3 text-emerald-400 mx-0.5" /> &quot;إضافة إلى الصفحة الرئيسية&quot;.
+                    مرر لأسفل واختر{" "}
+                    <PlusSquare className="inline h-3 w-3 text-emerald-400 mx-0.5" />{" "}
+                    &quot;إضافة إلى الصفحة الرئيسية&quot;.
                   </li>
                   <li>اضغط &quot;إضافة&quot; في الزاوية العلوية.</li>
                 </ol>

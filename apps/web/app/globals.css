@@ -15,7 +15,9 @@
 body {
   color: var(--text-primary);
   background: var(--background);
-  font-family: var(--font-cairo), var(--font-inter), 'Cairo', 'Inter', system-ui, sans-serif;
+  font-family:
+    var(--font-cairo), var(--font-inter), "Cairo", "Inter", system-ui,
+    sans-serif;
   min-height: 100vh;
   margin: 0;
   padding: 0;

@@ -135,9 +135,7 @@ export default function ClientsPage() {
           <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
             {t("clients.title")}
           </h1>
-          <p className="mt-1 text-xs text-gray-400">
-            {t("clients.subtitle")}
-          </p>
+          <p className="mt-1 text-xs text-gray-400">{t("clients.subtitle")}</p>
         </div>
 
         <button
@@ -155,12 +153,15 @@ export default function ClientsPage() {
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={e => setSearch(e.target.value)}
           placeholder={t("clients.search")}
           className="ml-2 w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
         />
         {search && (
-          <button onClick={() => setSearch("")} className="text-gray-500 hover:text-white">
+          <button
+            onClick={() => setSearch("")}
+            className="text-gray-500 hover:text-white"
+          >
             <X className="h-3.5 w-3.5" />
           </button>
         )}
@@ -176,7 +177,9 @@ export default function ClientsPage() {
                 <th className="px-5 py-3.5">{t("clients.col_industry")}</th>
                 <th className="px-5 py-3.5">{t("clients.col_contact")}</th>
                 <th className="px-5 py-3.5">{t("clients.col_assigned")}</th>
-                <th className="px-5 py-3.5 text-right">{t("clients.col_actions")}</th>
+                <th className="px-5 py-3.5 text-right">
+                  {t("clients.col_actions")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/60">
@@ -187,10 +190,18 @@ export default function ClientsPage() {
                       <div className="h-4 w-32 bg-gray-800 rounded mb-1.5" />
                       <div className="h-3 w-20 bg-gray-800/60 rounded" />
                     </td>
-                    <td className="px-5 py-4"><div className="h-4 w-24 bg-gray-800 rounded" /></td>
-                    <td className="px-5 py-4"><div className="h-4 w-28 bg-gray-800 rounded" /></td>
-                    <td className="px-5 py-4"><div className="h-4 w-20 bg-gray-800 rounded" /></td>
-                    <td className="px-5 py-4 text-right"><div className="h-4 w-12 bg-gray-800 rounded ml-auto" /></td>
+                    <td className="px-5 py-4">
+                      <div className="h-4 w-24 bg-gray-800 rounded" />
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="h-4 w-28 bg-gray-800 rounded" />
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="h-4 w-20 bg-gray-800 rounded" />
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="h-4 w-12 bg-gray-800 rounded ml-auto" />
+                    </td>
                   </tr>
                 ))
               ) : clients.length === 0 ? (
@@ -203,14 +214,16 @@ export default function ClientsPage() {
                   </td>
                 </tr>
               ) : (
-                clients.map((client) => (
+                clients.map(client => (
                   <tr key={client.id} className="transition hover:bg-[#181a26]">
                     {/* Name + Brand Color */}
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div
                           className="h-3 w-3 shrink-0 rounded-full shadow"
-                          style={{ backgroundColor: client.brand_color || "#8b5cf6" }}
+                          style={{
+                            backgroundColor: client.brand_color || "#8b5cf6",
+                          }}
                         />
                         <div>
                           <Link
@@ -220,7 +233,9 @@ export default function ClientsPage() {
                             {client.name}
                           </Link>
                           <p className="text-[10px] text-gray-500 font-mono">
-                            {new Date(client.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US")}
+                            {new Date(client.created_at).toLocaleDateString(
+                              isAr ? "ar-EG" : "en-US"
+                            )}
                           </p>
                         </div>
                       </div>
@@ -252,7 +267,10 @@ export default function ClientsPage() {
                     <td className="px-5 py-3.5">
                       <span className="inline-flex items-center gap-1 rounded bg-[#8b5cf6]/10 px-2 py-0.5 text-[10px] font-semibold text-[#c4b5fd]">
                         <UserCheck className="h-3 w-3" />
-                        <span>{client.assigned_user_name || (isOwner ? "All Team" : "Assigned")}</span>
+                        <span>
+                          {client.assigned_user_name ||
+                            (isOwner ? "All Team" : "Assigned")}
+                        </span>
                       </span>
                     </td>
 
@@ -310,7 +328,7 @@ export default function ClientsPage() {
                   type="text"
                   required
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={e => setName(e.target.value)}
                   placeholder="e.g. Nile Media Group"
                   className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                 />
@@ -325,7 +343,7 @@ export default function ClientsPage() {
                   <input
                     type="text"
                     value={industry}
-                    onChange={(e) => setIndustry(e.target.value)}
+                    onChange={e => setIndustry(e.target.value)}
                     placeholder="e.g. Telecom / FMCG"
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                   />
@@ -339,11 +357,11 @@ export default function ClientsPage() {
                     <input
                       type="color"
                       value={brandColor}
-                      onChange={(e) => setBrandColor(e.target.value)}
+                      onChange={e => setBrandColor(e.target.value)}
                       className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent"
                     />
                     <div className="flex items-center gap-1">
-                      {PRESET_COLORS.map((c) => (
+                      {PRESET_COLORS.map(c => (
                         <button
                           key={c}
                           type="button"
@@ -366,7 +384,7 @@ export default function ClientsPage() {
                   <input
                     type="text"
                     value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
+                    onChange={e => setContactName(e.target.value)}
                     placeholder="e.g. Tarek Omar"
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                   />
@@ -379,7 +397,7 @@ export default function ClientsPage() {
                   <input
                     type="email"
                     value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
+                    onChange={e => setContactEmail(e.target.value)}
                     placeholder="tarek@nile.eg"
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                   />
@@ -392,7 +410,7 @@ export default function ClientsPage() {
                   <input
                     type="text"
                     value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
+                    onChange={e => setContactPhone(e.target.value)}
                     placeholder="+201..."
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                   />
@@ -407,11 +425,11 @@ export default function ClientsPage() {
                   </label>
                   <select
                     value={assignedTo}
-                    onChange={(e) => setAssignedTo(e.target.value)}
+                    onChange={e => setAssignedTo(e.target.value)}
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                   >
                     <option value="">{t("client_modal.unassigned")}</option>
-                    {users.map((u) => (
+                    {users.map(u => (
                       <option key={u.id} value={u.id}>
                         {u.full_name || u.email} ({u.role})
                       </option>
@@ -434,7 +452,9 @@ export default function ClientsPage() {
                   disabled={actionLoading}
                   className="rounded-lg bg-[#8b5cf6] px-4 py-2 text-xs font-bold text-white shadow-lg shadow-[#8b5cf6]/20 hover:bg-[#7c3aed] disabled:opacity-50"
                 >
-                  {actionLoading ? t("client_modal.saving") : t("client_modal.save")}
+                  {actionLoading
+                    ? t("client_modal.saving")
+                    : t("client_modal.save")}
                 </button>
               </div>
             </form>

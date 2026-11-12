@@ -17,14 +17,19 @@ export function useToast() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
   const showToast = useCallback(
-    (type: ToastType, title: string, message?: string, duration: number = 4000) => {
+    (
+      type: ToastType,
+      title: string,
+      message?: string,
+      duration: number = 4000
+    ) => {
       const id = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const newToast: ToastMessage = { id, type, title, message, duration };
-      setToasts((prev) => [...prev, newToast]);
+      setToasts(prev => [...prev, newToast]);
       return id;
     },
     []
@@ -131,7 +136,7 @@ export function ToastContainer({
       aria-live="polite"
       className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-auto"
     >
-      {toasts.map((toast) => (
+      {toasts.map(toast => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
     </div>

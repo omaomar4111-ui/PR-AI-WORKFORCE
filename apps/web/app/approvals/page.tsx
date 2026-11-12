@@ -41,7 +41,8 @@ export default function ApprovalsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   // Edit & Approve modal state
-  const [editingApproval, setEditingApproval] = useState<ApprovalRequest | null>(null);
+  const [editingApproval, setEditingApproval] =
+    useState<ApprovalRequest | null>(null);
   const [editPayloadJson, setEditPayloadJson] = useState<string>("");
   const [editNotes, setEditNotes] = useState<string>("");
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -72,10 +73,13 @@ export default function ApprovalsPage() {
         setWsConnected(true);
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = event => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.event === "approval_created" || msg.event === "approval_updated") {
+          if (
+            msg.event === "approval_created" ||
+            msg.event === "approval_updated"
+          ) {
             loadApprovals();
           }
         } catch (e) {
@@ -100,8 +104,8 @@ export default function ApprovalsPage() {
     const previousApprovals = [...approvals];
 
     // Optimistic UI update: instantly reflect approved state with zero perceived latency
-    setApprovals((prev) =>
-      prev.map((appr) =>
+    setApprovals(prev =>
+      prev.map(appr =>
         appr.id === id
           ? {
               ...appr,
@@ -122,7 +126,8 @@ export default function ApprovalsPage() {
       setApprovals(previousApprovals);
       showError(
         "Approval Failed — Rolled Back",
-        err.message || "Failed to reach server. Your changes have been restored."
+        err.message ||
+          "Failed to reach server. Your changes have been restored."
       );
     } finally {
       setActionLoadingId(null);
@@ -130,13 +135,14 @@ export default function ApprovalsPage() {
   };
 
   const handleReject = async (id: string) => {
-    const reason = prompt(t("approvals.notes_placeholder")) || "Rejected by user";
+    const reason =
+      prompt(t("approvals.notes_placeholder")) || "Rejected by user";
     setActionLoadingId(id);
     const previousApprovals = [...approvals];
 
     // Optimistic UI update: instantly reflect rejected state
-    setApprovals((prev) =>
-      prev.map((appr) =>
+    setApprovals(prev =>
+      prev.map(appr =>
         appr.id === id
           ? {
               ...appr,
@@ -158,7 +164,8 @@ export default function ApprovalsPage() {
       setApprovals(previousApprovals);
       showError(
         "Rejection Failed — Rolled Back",
-        err.message || "Failed to reach server. Your changes have been restored."
+        err.message ||
+          "Failed to reach server. Your changes have been restored."
       );
     } finally {
       setActionLoadingId(null);
@@ -180,8 +187,8 @@ export default function ApprovalsPage() {
       const previousApprovals = [...approvals];
 
       // Optimistic UI update
-      setApprovals((prev) =>
-        prev.map((appr) =>
+      setApprovals(prev =>
+        prev.map(appr =>
           appr.id === targetId
             ? {
                 ...appr,
@@ -293,10 +300,16 @@ export default function ApprovalsPage() {
             >
               <Radio
                 className={`h-3.5 w-3.5 ${
-                  wsConnected ? "text-emerald-400 animate-pulse" : "text-gray-500"
+                  wsConnected
+                    ? "text-emerald-400 animate-pulse"
+                    : "text-gray-500"
                 }`}
               />
-              <span>{wsConnected ? t("approvals.live_connected") : "WebSocket Offline"}</span>
+              <span>
+                {wsConnected
+                  ? t("approvals.live_connected")
+                  : "WebSocket Offline"}
+              </span>
             </div>
           </div>
         </div>
@@ -309,7 +322,7 @@ export default function ApprovalsPage() {
             { id: "approved", label: t("approvals.tab_approved") },
             { id: "rejected", label: t("approvals.tab_rejected") },
             { id: "edited", label: t("approvals.tab_edited") },
-          ].map((tab) => (
+          ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
@@ -341,7 +354,7 @@ export default function ApprovalsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {approvals.map((req) => {
+            {approvals.map(req => {
               const isPending = req.status === "pending";
               return (
                 <div
@@ -364,15 +377,20 @@ export default function ApprovalsPage() {
                             {req.action_type}
                           </span>
                           <span className="text-xs text-gray-400">
-                            by agent <span className="font-bold text-gray-200">@{req.requested_by_agent_id}</span>
+                            by agent{" "}
+                            <span className="font-bold text-gray-200">
+                              @{req.requested_by_agent_id}
+                            </span>
                           </span>
                           {getStatusBadge(req.status)}
                         </div>
                         <p className="text-xs text-gray-500 mt-1 font-mono">
-                          Workflow: {req.workflow_id} {req.step_id ? `| Step: ${req.step_id}` : ""}
+                          Workflow: {req.workflow_id}{" "}
+                          {req.step_id ? `| Step: ${req.step_id}` : ""}
                         </p>
                         <p className="text-[11px] text-gray-500 mt-0.5">
-                          Requested at {new Date(req.created_at).toLocaleString()}
+                          Requested at{" "}
+                          {new Date(req.created_at).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -417,7 +435,8 @@ export default function ApprovalsPage() {
                       </span>
                       {req.reviewed_by && (
                         <span className="text-[11px] text-gray-500">
-                          Reviewed by {req.reviewed_by} at {new Date(req.reviewed_at || "").toLocaleTimeString()}
+                          Reviewed by {req.reviewed_by} at{" "}
+                          {new Date(req.reviewed_at || "").toLocaleTimeString()}
                         </span>
                       )}
                     </div>
@@ -466,7 +485,7 @@ export default function ApprovalsPage() {
                 </label>
                 <textarea
                   value={editPayloadJson}
-                  onChange={(e) => {
+                  onChange={e => {
                     setEditPayloadJson(e.target.value);
                     setJsonError(null);
                   }}
@@ -488,7 +507,7 @@ export default function ApprovalsPage() {
                 <input
                   type="text"
                   value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
+                  onChange={e => setEditNotes(e.target.value)}
                   placeholder={t("approvals.notes_placeholder")}
                   className="w-full text-xs rounded-xl border border-gray-800 bg-[#0d0e12] px-3 py-2 text-white focus:border-[#8b5cf6] focus:outline-none"
                 />

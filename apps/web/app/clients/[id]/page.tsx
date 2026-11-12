@@ -42,7 +42,9 @@ export default function ClientDetailPage() {
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
-  const [projectStatus, setProjectStatus] = useState<"active" | "paused" | "completed">("active");
+  const [projectStatus, setProjectStatus] = useState<
+    "active" | "paused" | "completed"
+  >("active");
   const [projectRetainer, setProjectRetainer] = useState("5000");
   const [projectSubmitting, setProjectSubmitting] = useState(false);
 
@@ -130,9 +132,9 @@ export default function ClientDetailPage() {
   }
 
   const projects = client.projects || [];
-  const activeCount = projects.filter((p) => p.status === "active").length;
+  const activeCount = projects.filter(p => p.status === "active").length;
   const totalRetainer = projects
-    .filter((p) => p.status === "active")
+    .filter(p => p.status === "active")
     .reduce((sum, p) => sum + (p.retainer_amount || 0), 0);
 
   return (
@@ -143,7 +145,11 @@ export default function ClientDetailPage() {
           href="/clients"
           className="inline-flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-white"
         >
-          {isAr ? <ArrowRight className="h-3.5 w-3.5" /> : <ArrowLeft className="h-3.5 w-3.5" />}
+          {isAr ? (
+            <ArrowRight className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowLeft className="h-3.5 w-3.5" />
+          )}
           <span>{t("client_detail.back")}</span>
         </Link>
       </div>
@@ -164,14 +170,18 @@ export default function ClientDetailPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white sm:text-2xl">{client.name}</h1>
+                <h1 className="text-xl font-bold text-white sm:text-2xl">
+                  {client.name}
+                </h1>
                 <span className="rounded-md border border-gray-800 bg-[#1a1c27] px-2 py-0.5 text-[10px] font-semibold text-gray-300">
                   {client.industry}
                 </span>
               </div>
               <p className="mt-1 text-xs text-gray-400">
                 {isAr ? "تاريخ التسجيل:" : "Registered on:"}{" "}
-                {new Date(client.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US")}
+                {new Date(client.created_at).toLocaleDateString(
+                  isAr ? "ar-EG" : "en-US"
+                )}
               </p>
             </div>
           </div>
@@ -196,7 +206,9 @@ export default function ClientDetailPage() {
             {isAr ? "بيانات جهة الاتصال" : "Contact Details"}
           </h3>
           <div className="space-y-2 text-xs">
-            <p className="font-semibold text-white">{client.contact_name || "—"}</p>
+            <p className="font-semibold text-white">
+              {client.contact_name || "—"}
+            </p>
             {client.contact_email && (
               <p className="text-gray-400 flex items-center gap-2">
                 <Mail className="h-3.5 w-3.5 text-gray-500" />
@@ -220,7 +232,8 @@ export default function ClientDetailPage() {
           <div className="flex items-center gap-2 text-xs">
             <UserCheck className="h-4 w-4 text-[#8b5cf6]" />
             <span className="font-semibold text-white">
-              {client.assigned_user_name || (isAr ? "فريق الوكالة بالكامل" : "All Agency Team")}
+              {client.assigned_user_name ||
+                (isAr ? "فريق الوكالة بالكامل" : "All Agency Team")}
             </span>
           </div>
         </div>
@@ -235,7 +248,9 @@ export default function ClientDetailPage() {
               ${totalRetainer.toLocaleString()}
             </span>
             <span className="text-xs text-gray-400">
-              {isAr ? `(عبر ${activeCount} مشاريع نشطة)` : `(across ${activeCount} active projects)`}
+              {isAr
+                ? `(عبر ${activeCount} مشاريع نشطة)`
+                : `(across ${activeCount} active projects)`}
             </span>
           </div>
         </div>
@@ -265,7 +280,9 @@ export default function ClientDetailPage() {
                 <th className="px-5 py-3.5">{t("projects.col_project")}</th>
                 <th className="px-5 py-3.5">{t("projects.col_status")}</th>
                 <th className="px-5 py-3.5">{t("projects.col_retainer")}</th>
-                <th className="px-5 py-3.5 text-right">{t("projects.col_actions")}</th>
+                <th className="px-5 py-3.5 text-right">
+                  {t("projects.col_actions")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/60">
@@ -276,8 +293,11 @@ export default function ClientDetailPage() {
                   </td>
                 </tr>
               ) : (
-                projects.map((project) => (
-                  <tr key={project.id} className="transition hover:bg-[#181a26]">
+                projects.map(project => (
+                  <tr
+                    key={project.id}
+                    className="transition hover:bg-[#181a26]"
+                  >
                     <td className="px-5 py-3.5">
                       <Link
                         href={`/projects/${project.id}`}
@@ -298,8 +318,8 @@ export default function ClientDetailPage() {
                           project.status === "active"
                             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                             : project.status === "paused"
-                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
                         }`}
                       >
                         {project.status}
@@ -319,7 +339,9 @@ export default function ClientDetailPage() {
                           {t("projects.view")}
                         </Link>
                         <button
-                          onClick={() => handleDeleteProject(project.id, project.name)}
+                          onClick={() =>
+                            handleDeleteProject(project.id, project.name)
+                          }
                           className="text-red-400 hover:text-red-300 p-1"
                         >
                           {t("projects.delete")}
@@ -359,7 +381,7 @@ export default function ClientDetailPage() {
                   type="text"
                   required
                   value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
+                  onChange={e => setProjectName(e.target.value)}
                   placeholder="e.g. Annual Digital PR Retainer"
                   className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                 />
@@ -372,7 +394,7 @@ export default function ClientDetailPage() {
                 <textarea
                   rows={3}
                   value={projectDesc}
-                  onChange={(e) => setProjectDesc(e.target.value)}
+                  onChange={e => setProjectDesc(e.target.value)}
                   placeholder="Goals, media channels, key milestones..."
                   className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#8b5cf6] focus:outline-none"
                 />
@@ -385,12 +407,18 @@ export default function ClientDetailPage() {
                   </label>
                   <select
                     value={projectStatus}
-                    onChange={(e) => setProjectStatus(e.target.value as any)}
+                    onChange={e => setProjectStatus(e.target.value as any)}
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                   >
-                    <option value="active">{t("projects.status_active")}</option>
-                    <option value="paused">{t("projects.status_paused")}</option>
-                    <option value="completed">{t("projects.status_completed")}</option>
+                    <option value="active">
+                      {t("projects.status_active")}
+                    </option>
+                    <option value="paused">
+                      {t("projects.status_paused")}
+                    </option>
+                    <option value="completed">
+                      {t("projects.status_completed")}
+                    </option>
                   </select>
                 </div>
 
@@ -401,7 +429,7 @@ export default function ClientDetailPage() {
                   <input
                     type="number"
                     value={projectRetainer}
-                    onChange={(e) => setProjectRetainer(e.target.value)}
+                    onChange={e => setProjectRetainer(e.target.value)}
                     placeholder="5000"
                     className="w-full rounded-lg border border-gray-800 bg-[#181a26] px-3 py-2 text-xs text-white focus:border-[#8b5cf6] focus:outline-none"
                   />
@@ -421,7 +449,9 @@ export default function ClientDetailPage() {
                   disabled={projectSubmitting}
                   className="rounded-lg bg-[#8b5cf6] px-4 py-2 text-xs font-bold text-white shadow-lg shadow-[#8b5cf6]/20 hover:bg-[#7c3aed] disabled:opacity-50"
                 >
-                  {projectSubmitting ? t("project_modal.saving") : t("project_modal.save")}
+                  {projectSubmitting
+                    ? t("project_modal.saving")
+                    : t("project_modal.save")}
                 </button>
               </div>
             </form>

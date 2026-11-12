@@ -67,7 +67,7 @@ export const AgentCard = React.memo(function AgentCard({
             </span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {agent.tools?.slice(0, 3).map((tool) => (
+            {agent.tools?.slice(0, 3).map(tool => (
               <span
                 key={tool}
                 className="rounded bg-[#1a1c29] border border-gray-800 px-1.5 py-0.5 text-[9px] font-mono text-gray-300"
