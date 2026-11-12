@@ -23,6 +23,7 @@ import {
   Sliders,
   Layers,
   Wand2,
+  Brain,
   X,
   Eye,
 } from "lucide-react";
@@ -253,6 +254,8 @@ export default function ProductionStudioPage() {
         return <ShieldAlert className="h-5 w-5 text-rose-400" />;
       case "performance-growth":
         return <TrendingUp className="h-5 w-5 text-emerald-400" />;
+      case "founder-validation":
+        return <Brain className="h-5 w-5 text-blue-400" />;
     }
   };
 
@@ -338,7 +341,7 @@ export default function ProductionStudioPage() {
             </span>
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {STUDIO_PLAYBOOKS.map(pb => {
               const isSelected = pb.id === activePlaybookId;
               return (

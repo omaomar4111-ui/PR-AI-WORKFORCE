@@ -20,6 +20,7 @@ import {
   Megaphone,
   Radio,
   BookOpen,
+  Brain,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Deliverable } from "@/lib/api";
@@ -368,6 +369,90 @@ export default function DeliverableFormattedViewer({
                       "AI Generated Visual Concept Artwork"}
                   </p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════════════
+             SIMULATED BOARD OF DIRECTORS ADVISORY MEMO (FOUNDER SKILL)
+             ═════════════════════════════════════════════════════════════════════ */}
+          {Array.isArray(parsedContent.board_lenses) && (
+            <div className="rounded-xl border border-blue-500/30 bg-[#101528] p-4 space-y-4">
+              <div className="flex items-center justify-between border-b border-blue-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-blue-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                    {isAr
+                      ? "قرار ومذكرات مجلس الإدارة الاستشاري (Simulated Board of Directors)"
+                      : "Simulated Board of Directors Memo (3 Lenses)"}
+                  </span>
+                </div>
+                {parsedContent.board_verdict && (
+                  <span className="rounded-full bg-blue-500/20 border border-blue-500/40 px-2.5 py-0.5 text-[11px] font-bold text-blue-300">
+                    {parsedContent.board_verdict}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {parsedContent.board_lenses.map((lens: any, idx: number) => {
+                  const voteColor =
+                    lens.vote === "FUND"
+                      ? "text-emerald-400 border-emerald-500/40 bg-emerald-500/10"
+                      : lens.vote === "FUND IF"
+                        ? "text-amber-400 border-amber-500/40 bg-amber-500/10"
+                        : "text-rose-400 border-rose-500/40 bg-rose-500/10";
+
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-lg border border-gray-800 bg-[#0d101d] p-3 text-xs space-y-2 flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-bold text-white text-[11px]">
+                            {lens.lens}
+                          </span>
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-extrabold border ${voteColor}`}
+                          >
+                            {lens.vote} ({lens.score})
+                          </span>
+                        </div>
+                        {lens.strengths && (
+                          <div className="mb-1.5">
+                            <span className="text-[10px] uppercase font-bold text-emerald-400 block">
+                              {isAr ? "نقاط القوة:" : "Strengths:"}
+                            </span>
+                            <p className="text-[11px] text-gray-300 leading-relaxed">
+                              {lens.strengths}
+                            </p>
+                          </div>
+                        )}
+                        {lens.critical_risks && (
+                          <div className="mb-1.5">
+                            <span className="text-[10px] uppercase font-bold text-rose-400 block">
+                              {isAr ? "أخطر التهديدات:" : "Death Risks:"}
+                            </span>
+                            <p className="text-[11px] text-gray-300 leading-relaxed">
+                              {lens.critical_risks}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      {lens.founder_questions && (
+                        <div className="pt-2 border-t border-gray-800/80">
+                          <span className="text-[10px] uppercase font-bold text-cyan-400 block">
+                            {isAr ? "سؤال المجلس للمؤسس:" : "Board Question:"}
+                          </span>
+                          <p className="text-[11px] text-cyan-200 italic">
+                            "{lens.founder_questions}"
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

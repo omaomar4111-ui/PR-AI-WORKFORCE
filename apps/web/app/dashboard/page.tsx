@@ -20,6 +20,7 @@ import {
   Palette,
   ShieldAlert,
   TrendingUp,
+  Brain,
 } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
@@ -144,7 +145,24 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          <Link
+            href="/studio"
+            className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-950/20 p-3 transition hover:border-blue-500/50 hover:bg-blue-950/30"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-300">
+              <Brain className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-white">
+                {isAr ? "تقييم وجدوى الأفكار" : "Venture Validation"}
+              </h3>
+              <p className="text-[10px] text-blue-300">
+                {isAr ? "مجلس إدارة واقتصاديات" : "Board Lenses & Unit Econ"}
+              </p>
+            </div>
+          </Link>
+
           <Link
             href="/studio"
             className="flex items-center gap-3 rounded-xl border border-purple-500/20 bg-purple-950/20 p-3 transition hover:border-purple-500/50 hover:bg-purple-950/30"

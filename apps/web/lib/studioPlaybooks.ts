@@ -1,5 +1,9 @@
 export type PlaybookId =
-  "video-campaign" | "brand-identity" | "crisis-control" | "performance-growth";
+  | "video-campaign"
+  | "brand-identity"
+  | "crisis-control"
+  | "performance-growth"
+  | "founder-validation";
 
 export interface StudioStep {
   id: string;
@@ -444,6 +448,109 @@ export const STUDIO_PLAYBOOKS: StudioPlaybook[] = [
           "حدد خطة الكلمات المفتاحية لصفحة الهبوط (Landing Page SEO): العنوان الرئيسي H1، خمسة أسئلة شائعة ترفع معدل التحويل، والـ Meta Description الجاذب.",
         defaultPromptEn:
           "Build SEO landing page blueprint with high-intent keyword targets, conversion FAQ schema, and compelling Meta tags.",
+        deliverableType: "strategy",
+      },
+    ],
+  },
+  {
+    id: "founder-validation",
+    titleAr: "استوديو تقييم وجدوى الأفكار والشركات الناشئة",
+    titleEn: "Founder & Venture Validation Studio",
+    badgeAr: "مجلس إدارة واقتصاديات وحدة",
+    badgeEn: "Board Lenses & Unit Economics",
+    color: "#3b82f6",
+    accentBg: "from-blue-950/40 via-cyan-950/20 to-black",
+    borderClass: "border-blue-500/40",
+    descAr:
+      "فحص متكامل لجدوى أي فكرة تجارية قبل إطلاقها: مجلس إدارة استشاري (هورموزي، ثيل، جوبز)، محاكاة 100 زبون، حساب نقطة التعادل وهوامش الأرباح، وهندسة العرض الذي لا يقاوم.",
+    descEn:
+      "Full venture pressure-test before spending a dollar: Board of directors advisory memo, 100 buyer persona objections, unit economics break-even, and pricing sensitivity.",
+    defaultClient: "منصة ذكاء اصطناعي للرعاية الصحية / MediAI Platform",
+    defaultAudience: "المستشفيات والعيادات الخاصة والأطباء المستقلون في الخليج",
+    defaultTone: "Authoritative",
+    steps: [
+      {
+        id: "step-founder-board",
+        stepIndex: 1,
+        titleAr: "مجلس الإدارة والعدسات الثلاث (Board of Directors Memo)",
+        titleEn: "Board of Directors Advisory Memo",
+        descAr:
+          "فحص الفكرة عبر 3 عدسات (العرض لهورموزي، الاحتكار لثيل، والمنتج لجوبز) مع تصويت صريح: Fund / Fund If / Pass.",
+        descEn:
+          "Critique across 3 published lenses (Offers, Monopoly, Product) with binding votes and death risks.",
+        agentId: "dr-ibrahim",
+        agentNameAr: "د. إبراهيم (Dr. Ibrahim)",
+        agentNameEn: "Dr. Ibrahim",
+        agentRoleAr: "كبير مستشاري السوق والتحليل الاستراتيجي",
+        agentRoleEn: "Chief Market & Intelligence Strategist",
+        agentAvatar: "bot",
+        defaultPromptAr:
+          "طبق عدسات مجلس الإدارة الثلاث (Offers Lens, Monopoly Lens, Product Lens) لتقييم فكرة المنصة الطبية: اذكر نقاط القوة، أخطر 3 تهديدات قد تقتلها، أسئلة المؤسس، والتصويت النهائي.",
+        defaultPromptEn:
+          "Apply the three Board of Directors lenses (Offers, Monopoly, Product) to evaluate the venture: list strengths, top 3 death risks, founder questions, and final vote.",
+        deliverableType: "strategy",
+      },
+      {
+        id: "step-founder-consumer-panel",
+        stepIndex: 2,
+        titleAr: "محاكاة لجنة الـ 100 مشترٍ واعتراضاتهم (100 Buyer Panel)",
+        titleEn: "Simulated 100-Buyer Objections Panel",
+        descAr:
+          "توليد محاكاة 100 عميل محتمل بمدخولات واعتراضات مختلفة لمعرفة نسبة الشراء الحقيقية ونقاط التردد.",
+        descEn:
+          "100 buyer persona simulation to surface raw objections, price resistance, and deal-makers.",
+        agentId: "dr-ibrahim",
+        agentNameAr: "د. إبراهيم (Dr. Ibrahim)",
+        agentNameEn: "Dr. Ibrahim",
+        agentRoleAr: "كبير مستشاري السوق والتحليل الاستراتيجي",
+        agentRoleEn: "Chief Market & Intelligence Strategist",
+        agentAvatar: "bot",
+        defaultPromptAr:
+          "قم بمحاكاة عينة من 100 مشترٍ ومسؤول مشتريات بالمستشفيات: حدد نسبة من سيشتري، الاعتراضات الثلاثة الأكثر تكراراً، والشرط الذي يحول العميل المتردد إلى مشترٍ فوري.",
+        defaultPromptEn:
+          "Simulate a 100-buyer healthcare panel: calculate conversion rate, top 3 raw objections, and what single incentive flips a pass to a buy.",
+        deliverableType: "strategy",
+      },
+      {
+        id: "step-founder-unit-economics",
+        stepIndex: 3,
+        titleAr: "اقتصاديات الوحدة ونقطة التعادل (CFO & Unit Economics)",
+        titleEn: "Unit Economics & Daily Break-Even",
+        descAr:
+          "حساب تكلفة الوحدة، هامش المساهمة، كم مبيعة يومية تحتاج لتفادي الخسارة، وجدول السنة الأولى شهراً بشهر.",
+        descEn:
+          "Contribution per unit, daily break-even threshold, Year 1 monthly ramp, cash cushion, and payback month.",
+        agentId: "account-executive",
+        agentNameAr: "المستشار المالي (CFO Lead)",
+        agentNameEn: "CFO Lead",
+        agentRoleAr: "دراسات الجدوى والتحليل المالي للشركات",
+        agentRoleEn: "Venture Financials & Unit Economics",
+        agentAvatar: "bot",
+        defaultPromptAr:
+          "قم بتحليل اقتصاديات الوحدة للمنصة بسعر اشتراك $499 شهرياً وتكلفة متغيرة $45: احسب هامش المساهمة، نقطة التعادل بعد خصم المصاريف الثابتة $15,000، والسيولة المطلوبة للبدء بأمان.",
+        defaultPromptEn:
+          "Calculate unit economics at $499/mo subscription and $45 variable cost: report contribution margin, break-even accounts, and cash runway needed.",
+        deliverableType: "strategy",
+      },
+      {
+        id: "step-founder-grand-offer",
+        stepIndex: 4,
+        titleAr: "هندسة العرض الذي لا يقاوم وخطة الإطلاق (Grand Offer)",
+        titleEn: "Grand Offer Architecture & Launch Plan",
+        descAr:
+          "تجميع بونصات حصرية، ضمان استرجاع حقيقي يلغي المخاطرة، وخطة الـ 30 يوماً الأولى لاكتساب أول 100 عميل.",
+        descEn:
+          "Irresistible offer stack (bonuses, risk-reversal guarantee, scarcity) and 30-day zero-waste execution roadmap.",
+        agentId: "growth-hacker",
+        agentNameAr: "خبير النمو (Growth Hacker)",
+        agentNameEn: "Growth Hacker",
+        agentRoleAr: "استراتيجيات النمو واكتساب المستخدمين",
+        agentRoleEn: "Growth & Viral Funnels",
+        agentAvatar: "bot",
+        defaultPromptAr:
+          "صمم حزمة العرض الذي لا يقاوم (Grand Offer Stack): 3 بونصات استثنائية، صيغة الضمان الذهبي لرد الأموال، وخطة الـ 30 يوماً الأولى للحصول على أول 100 عميل مدفوع.",
+        defaultPromptEn:
+          "Design the Grand Offer stack: 3 high-value bonuses, unconditional money-back guarantee, and 30-day tactical roadmap to first 100 paying accounts.",
         deliverableType: "strategy",
       },
     ],
