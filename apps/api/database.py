@@ -323,12 +323,15 @@ def create_user(
     norm_email = email.strip().lower()
     if norm_email in MOCK_USERS:
         raise ValueError("User already exists")
+
+    from auth.tokens import hash_password
+    stored_password = hash_password(password) if not password.startswith("$argon2") else password
     
     new_user = {
         "id": str(uuid.uuid4()),
         "email": norm_email,
         "full_name": full_name,
-        "password": password,
+        "password": stored_password,
         "role": role,
         "organization_id": org_id,
         "organization_name": MOCK_ORGANIZATIONS.get(org_id, {}).get("name", "PR Agency"),
@@ -373,10 +376,21 @@ def update_user_password(user_id: str, current_password: str, new_password: str)
     if not user:
         raise ValueError("User not found")
 
-    if user.get("password") != current_password:
+    from auth.tokens import verify_password, hash_password
+    if not verify_password(user.get("password", ""), current_password):
         raise ValueError("Current password is incorrect")
 
-    user["password"] = new_password
+    user["password"] = hash_password(new_password)
+    return True
+
+
+def reset_user_password_by_email(email: str, new_password: str) -> bool:
+    user = get_user_by_email(email)
+    if not user:
+        raise ValueError("User not found")
+
+    from auth.tokens import hash_password
+    user["password"] = hash_password(new_password)
     return True
 
 

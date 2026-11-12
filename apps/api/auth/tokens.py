@@ -83,3 +83,58 @@ def verify_jwt_token(token: str) -> Optional[Dict[str, Any]]:
         return payload
     except Exception:
         return None
+
+
+try:
+    from argon2 import PasswordHasher
+    _hasher = PasswordHasher()
+except ImportError:
+    _hasher = None
+
+
+def hash_password(password: str) -> str:
+    """Hashes password using Argon2id with default secure parameters."""
+    if _hasher is not None:
+        return _hasher.hash(password)
+    salt = settings.APP_SECRET[:16]
+    return f"sha256${hashlib.sha256((salt + password).encode()).hexdigest()}"
+
+
+def verify_password(stored_password: str, provided_password: str) -> bool:
+    """Verifies password against Argon2id hash, salted sha256, or legacy plain text."""
+    if not stored_password or not provided_password:
+        return False
+    if stored_password.startswith("$argon2"):
+        if _hasher is None:
+            return False
+        try:
+            return _hasher.verify(stored_password, provided_password)
+        except Exception:
+            return False
+    if stored_password.startswith("sha256$"):
+        salt = settings.APP_SECRET[:16]
+        expected = f"sha256${hashlib.sha256((salt + provided_password).encode()).hexdigest()}"
+        return hmac.compare_digest(stored_password, expected)
+    return hmac.compare_digest(stored_password, provided_password)
+
+
+def create_password_reset_token(email: str, expires_in_seconds: int = 900) -> str:
+    """Generates a signed, single-use password reset token with 15-minute expiration."""
+    now = int(time.time())
+    payload = {
+        "email": email.strip().lower(),
+        "action": "password_reset",
+        "iat": now,
+        "exp": now + expires_in_seconds,
+    }
+    return create_jwt_token(payload, expires_in=expires_in_seconds)
+
+
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """Verifies single-use password reset token and returns email if valid."""
+    payload = verify_jwt_token(token)
+    if not payload:
+        return None
+    if payload.get("action") != "password_reset":
+        return None
+    return payload.get("email")

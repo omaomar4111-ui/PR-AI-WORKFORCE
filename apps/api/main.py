@@ -98,7 +98,17 @@ from database import (
     record_web_vital_db,
     list_web_vitals_db,
 )
-from auth import create_jwt_token, get_current_user, require_role, require_org_member, validate_password_strength
+from auth import (
+    create_jwt_token,
+    get_current_user,
+    require_role,
+    require_org_member,
+    validate_password_strength,
+    verify_password,
+    hash_password,
+    create_password_reset_token,
+    verify_password_reset_token,
+)
 from middleware import RateLimitMiddleware
 from agents.registry import get_agent, list_agents, get_all_agents_dict
 from memory.service import (
@@ -345,6 +355,15 @@ class UserProfileUpdate(BaseModel):
 
 class UserPasswordUpdate(BaseModel):
     current_password: str
+    new_password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
     new_password: str
 
 
@@ -687,7 +706,7 @@ async def app_shutdown():
 @app.post("/api/auth/login", response_model=AuthResponse)
 def login(req: LoginRequest):
     user = get_user_by_email(req.email)
-    if not user or user["password"] != req.password:
+    if not user or not verify_password(user.get("password", ""), req.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
     if not user.get("is_active", True):
@@ -784,6 +803,44 @@ def change_my_password(
             req.new_password
         )
         return {"status": "success", "message": "Password updated successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
+
+@app.post("/api/auth/forgot-password")
+def forgot_password(req: ForgotPasswordRequest):
+    """Generates a signed, single-use password reset token expiring in 15 minutes."""
+    user = get_user_by_email(req.email)
+    # Anti-enumeration response: always return generic message
+    if not user:
+        return {"status": "ok", "message": "If this email exists, a password reset link has been dispatched."}
+    
+    reset_token = create_password_reset_token(user["email"], expires_in_seconds=900)
+    return {
+        "status": "ok",
+        "message": "If this email exists, a password reset link has been dispatched.",
+        "reset_token": reset_token,
+        "expires_in": 900
+    }
+
+
+@app.post("/api/auth/reset-password")
+def reset_password(req: ResetPasswordRequest):
+    """Verifies single-use reset token and resets password using Argon2id."""
+    email = verify_password_reset_token(req.token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid or expired password reset token")
+    
+    try:
+        validate_password_strength(req.new_password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    try:
+        database.reset_user_password_by_email(email, req.new_password)
+        return {"status": "success", "message": "Password has been reset successfully with Argon2id encryption"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
