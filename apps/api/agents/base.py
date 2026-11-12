@@ -63,7 +63,12 @@ class BaseAgent:
             return
 
         # Normalize creative brief fields if user provided brief instead of raw schema
-        if "brief" in task_input or "task_description" in task_input:
+        if "brief_text" in task_input and "brief" not in task_input:
+            task_input["brief"] = task_input["brief_text"]
+        if "brief" in task_input and "brief_text" not in task_input:
+            task_input["brief_text"] = task_input["brief"]
+
+        if "brief" in task_input or "brief_text" in task_input or "task_description" in task_input:
             brief_val = str(task_input.get("brief") or task_input.get("task_description") or "")
             reqs = self.input_schema.get("required", [])
             props = self.input_schema.get("properties", {})
@@ -97,7 +102,7 @@ class BaseAgent:
         try:
             jsonschema.validate(instance=task_input, schema=self.input_schema)
         except jsonschema.ValidationError as e:
-            if "brief" in task_input:
+            if "brief" in task_input or "brief_text" in task_input:
                 logger.warning(f"Brief schema relaxation for agent '{self.name}': {e.message}")
             else:
                 raise ValueError(f"Input validation error for agent '{self.name}': {e.message}")

@@ -165,6 +165,7 @@ export default function AgentExecutionModal({
       // Compile from Creative Brief Form
       parsedInput = {
         brief: briefText.trim() || taskTitle,
+        brief_text: briefText.trim() || taskTitle,
         task_brief: briefText.trim() || taskTitle,
         client_name: clientOrProject.trim() || "General Client",
         project_name: clientOrProject.trim() || "General Project",
@@ -184,6 +185,7 @@ export default function AgentExecutionModal({
         ...(briefText.trim()
           ? {
               brief: briefText.trim(),
+              brief_text: briefText.trim(),
               campaign_goal: briefText.trim(),
             }
           : {}),
@@ -353,15 +355,15 @@ export default function AgentExecutionModal({
                         : "Task Brief & Deliverable Requirements"}
                     </label>
                     <textarea
-                      rows={3}
+                      rows={5}
                       value={briefText}
                       onChange={e => setBriefText(e.target.value)}
                       placeholder={
                         isAr
-                          ? "اكتب تفاصيل طلبك هنا باللغة الطبيعية..."
-                          : "Describe the task, objectives, and deliverables..."
+                          ? "اكتب تفاصيل طلبك بلغة طبيعية (مثلاً: أريد شعار لمقهى قهوة مختصة اسمه سُكر، ألوان دافئة وخط عربي معاصر)..."
+                          : "Describe your creative brief in natural language (e.g. Design a logo for a specialty coffee shop named Sukkar, warm colors and modern typography)..."
                       }
-                      className="w-full text-xs rounded-lg border border-gray-800 bg-[#12141f] p-2.5 text-gray-100 focus:border-[#8b5cf6] focus:outline-none placeholder-gray-600"
+                      className="w-full text-xs rounded-lg border border-gray-800 bg-[#12141f] p-3 text-gray-100 focus:border-[#8b5cf6] focus:outline-none placeholder-gray-500 leading-relaxed"
                     />
                   </div>
 

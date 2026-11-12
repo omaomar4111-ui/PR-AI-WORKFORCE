@@ -334,8 +334,8 @@ export default function DeliverableFormattedViewer({
                   <Sparkles className="h-4 w-4 text-[#a78bfa]" />
                   <span className="text-xs font-bold text-white uppercase tracking-wider">
                     {isAr
-                      ? "التصميم البصري المولد بالذكاء الاصطناعي (DALL-E 3 / Visual Output)"
-                      : "AI Generated Artwork & Brand Visual (DALL-E 3)"}
+                      ? "التصميم البصري المولد بالذكاء الاصطناعي (Pollinations.ai / Real Visual)"
+                      : "AI Generated Artwork & Brand Visual (Pollinations.ai / Real Visual)"}
                   </span>
                 </div>
                 <a

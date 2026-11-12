@@ -1,7 +1,9 @@
 import os
 import json
+import re
 import logging
 from typing import Dict, Any, Optional
+from agents.image_service import generate_image_free, construct_visual_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ def compile_brief_to_prompt(task_input: Dict[str, Any]) -> str:
     parts = []
     brief = (
         task_input.get("brief")
+        or task_input.get("brief_text")
         or task_input.get("task_description")
         or task_input.get("prompt")
         or task_input.get("user_request")
@@ -61,7 +64,7 @@ def compile_brief_to_prompt(task_input: Dict[str, Any]) -> str:
 
     # Add extra specialized task inputs if present
     skip_keys = {
-        "brief", "task_description", "prompt", "user_request", "project_name",
+        "brief", "brief_text", "task_description", "prompt", "user_request", "project_name",
         "client_name", "brand_name", "target_audience", "tone", "colors",
         "visual_style", "visual_mood", "brand_guidelines", "approved", "action_type",
         "retrieved_context"
@@ -100,6 +103,95 @@ async def generate_image(prompt: str, size: str = "1024x1024") -> str:
     return "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80"
 
 
+def extract_json_from_gemini(raw_text: str) -> Dict[str, Any]:
+    """
+    Safely extracts and parses JSON from Gemini LLM output.
+    Uses direct parsing first, then falls back to regex matching for markdown code blocks or object boundaries.
+    """
+    if not raw_text or not raw_text.strip():
+        raise ValueError("Empty response received from LLM.")
+
+    text = raw_text.strip()
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    # Match ```json { ... } ``` or ``` { ... } ```
+    code_block = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text)
+    if code_block:
+        try:
+            return json.loads(code_block.group(1))
+        except Exception:
+            pass
+
+    # Match outer { ... }
+    brace_match = re.search(r"(\{[\s\S]*\})", text)
+    if brace_match:
+        try:
+            return json.loads(brace_match.group(1))
+        except Exception:
+            pass
+
+    # Match array [ ... ] and wrap in items
+    arr_match = re.search(r"(\[[\s\S]*\])", text)
+    if arr_match:
+        try:
+            return {"items": json.loads(arr_match.group(1))}
+        except Exception:
+            pass
+
+    raise ValueError(f"Failed to extract structured JSON from response: {text[:200]}")
+
+
+async def call_gemini(
+    prompt: str,
+    system_prompt: str,
+    schema: Optional[Dict[str, Any]] = None,
+    max_tokens: int = 4000
+) -> Dict[str, Any]:
+    """
+    Invokes Google Gemini API using the fast & free gemini-1.5-flash model.
+    Passes agent system prompt and user brief, requesting structured JSON output (response_mime_type="application/json").
+    Falls back to regex JSON extraction if direct parsing fails.
+    Falls back to mock domain data if GEMINI_API_KEY is not set or if the call fails.
+    """
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key:
+        logger.warning("GEMINI_API_KEY environment variable is not set. Falling back to domain mock generator.")
+        return generate_domain_fallback("general", {"brief": prompt, "prompt": prompt}, schema)
+
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=gemini_key)
+
+        generation_config = {
+            "temperature": 0.2,
+            "max_output_tokens": max_tokens,
+            "response_mime_type": "application/json",
+        }
+
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            system_instruction=system_prompt,
+            generation_config=generation_config,
+        )
+
+        prompt_content = f"USER BRIEF & REQUIREMENTS:\n{prompt}\n\n"
+        if schema:
+            prompt_content += (
+                f"REQUIRED JSON SCHEMA:\n{json.dumps(schema, ensure_ascii=False, indent=2)}\n\n"
+                f"Respond ONLY with a valid JSON object matching the above schema."
+            )
+
+        response = await model.generate_content_async(prompt_content)
+        raw_text = getattr(response, "text", "") or "{}"
+        return extract_json_from_gemini(raw_text)
+    except Exception as e:
+        logger.warning(f"Google Gemini (gemini-1.5-flash) call failed: {e}. Falling back to domain mock generator.")
+        return generate_domain_fallback("general", {"brief": prompt, "prompt": prompt}, schema)
+
+
 async def call_llm(
     agent_id: str,
     system_prompt: str,
@@ -108,7 +200,8 @@ async def call_llm(
     max_tokens: int = 4000
 ) -> Dict[str, Any]:
     """
-    Executes real LLM call using OpenAI (GPT-4o) or Google Gemini (Gemini 1.5 Pro).
+    Executes real LLM call using Google Gemini (gemini-1.5-flash) or OpenAI (GPT-4o).
+    Generates real image assets via Pollinations.ai for visual design agents.
     Falls back gracefully to domain-accurate deterministic engine if keys are not present or if calls fail.
     Guarantees valid JSON matching output_schema.
     """
@@ -116,7 +209,25 @@ async def call_llm(
     gemini_key = os.getenv("GEMINI_API_KEY")
     compiled_user_prompt = compile_brief_to_prompt(task_input)
 
-    # 1. Try OpenAI GPT-4o if configured
+    # 1. Primary Engine: Google Gemini (gemini-1.5-flash - fast & free)
+    if gemini_key:
+        try:
+            result = await call_gemini(
+                prompt=compiled_user_prompt,
+                system_prompt=system_prompt,
+                schema=output_schema,
+                max_tokens=max_tokens,
+            )
+            if is_design_agent(agent_id):
+                vis_prompt = construct_visual_prompt(agent_id, compiled_user_prompt, task_input)
+                img_url = generate_image_free(vis_prompt)
+                result["image_url"] = img_url
+                result["logo_url"] = img_url
+            return result
+        except Exception as e:
+            logger.warning(f"Google Gemini call failed: {e}. Trying secondary provider.")
+
+    # 2. Secondary Engine: OpenAI GPT-4o if configured
     if openai_key:
         try:
             from openai import AsyncOpenAI
@@ -141,52 +252,22 @@ async def call_llm(
             raw_text = response.choices[0].message.content or "{}"
             result = json.loads(raw_text)
 
-            # Generate image asset for design agents
             if is_design_agent(agent_id):
-                img_url = await generate_image(compiled_user_prompt)
+                vis_prompt = construct_visual_prompt(agent_id, compiled_user_prompt, task_input)
+                img_url = generate_image_free(vis_prompt)
                 result["image_url"] = img_url
                 result["logo_url"] = img_url
 
             return result
         except Exception as e:
-            logger.warning(f"OpenAI GPT-4o call failed: {e}. Trying Gemini or fallback.")
-
-    # 2. Try Google Gemini (Gemini 1.5 Pro) if configured
-    if gemini_key:
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel(
-                model_name="gemini-1.5-pro",
-                system_instruction=system_prompt,
-                generation_config={
-                    "temperature": 0.2,
-                    "max_output_tokens": max_tokens,
-                    "response_mime_type": "application/json",
-                }
-            )
-            prompt_content = (
-                f"USER BRIEF & REQUIREMENTS:\n{compiled_user_prompt}\n\n"
-                f"REQUIRED JSON SCHEMA:\n{json.dumps(output_schema, indent=2)}"
-            )
-            response = await model.generate_content_async(prompt_content)
-            raw_text = response.text or "{}"
-            result = json.loads(raw_text)
-
-            if is_design_agent(agent_id):
-                img_url = await generate_image(compiled_user_prompt)
-                result["image_url"] = img_url
-                result["logo_url"] = img_url
-
-            return result
-        except Exception as e:
-            logger.warning(f"Google Gemini call failed: {e}. Falling back to domain engine.")
+            logger.warning(f"OpenAI GPT-4o call failed: {e}. Trying fallback.")
 
     # 3. Domain-Accurate Deterministic Generation (Guarantees 100% schema compliance for offline tests)
     logger.warning("No LLM API keys provided (OPENAI_API_KEY / GEMINI_API_KEY) or calls failed. Falling back to deterministic domain mock generator.")
     result = generate_domain_fallback(agent_id, task_input, output_schema)
     if is_design_agent(agent_id):
-        img_url = await generate_image(compiled_user_prompt)
+        vis_prompt = construct_visual_prompt(agent_id, compiled_user_prompt, task_input)
+        img_url = generate_image_free(vis_prompt)
         result["image_url"] = img_url
         result["logo_url"] = img_url
     return result
